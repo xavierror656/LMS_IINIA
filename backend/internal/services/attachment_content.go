@@ -65,7 +65,7 @@ func NormalizeAttachment(name string, data []byte) ([]byte, string, error) {
 	if (format != "png" && format != "jpeg") || (ext == ".png" && format != "png") || (ext != ".png" && format != "jpeg") {
 		return nil, "", models.ErrAcademicInput
 	}
-	if cfg.Width <= 0 || cfg.Height <= 0 || int64(cfg.Width)*int64(cfg.Height) > 4_000_000 {
+	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > 4_000_000/cfg.Height {
 		return nil, "", ErrAttachmentTooLarge
 	}
 	img, _, e := image.Decode(bytes.NewReader(data))

@@ -39,7 +39,11 @@ func (s AcademicService) Gradebook(user, course int64, page, activityPage int) (
 			cell := models.GradebookCell{ActivityID: activity.ActivityID, State: "not_submitted"}
 			if entry, ok := entries[[2]int64{student.ID, activity.ActivityID}]; ok {
 				cell.State = "submitted"
-				cell.SubmissionID = &entry.SubmissionID
+				if entry.QuizAttemptID != nil {
+					cell.QuizAttemptID = entry.QuizAttemptID
+				} else {
+					cell.SubmissionID = &entry.SubmissionID
+				}
 				if entry.GradeStatus != nil {
 					cell.State = "graded"
 					cell.Score = entry.Score

@@ -1,0 +1,33 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import ServiceError from "../../../components/astro/ServiceError.astro";
+import AttachmentList from "../../../components/astro/AttachmentList.astro";
+import RubricView from "../../../components/astro/RubricView.astro";
+import { api,type Submission } from "../../../lib/api";
+import type { components } from "../../../lib/generated/api";
+const id=encodeURIComponent(Astro.params.lessonId??"");
+const requested=Astro.url.searchParams.get("submissionId");
+const cookie=Astro.request.headers.get("cookie")??"";
+let error=Astro.locals.apiError;
+let items:components['schemas']['SubmissionHistoryItem'][]=[];
+let submission:Submission|null=null;
+if(!error)try{
+  items=(await api<components['schemas']['SubmissionHistory']>(`/lessons/${id}/submission/history`,{},cookie)).items;
+  if(requested)submission=(await api<{submission:Submission|null}>(`/lessons/${id}/submission?submissionId=${encodeURIComponent(requested)}`,{},cookie)).submission;
+}catch(e){error=e instanceof Error?e.message:"No se pudieron cargar tus intentos.";}
+---
+<Layout title="Mis intentos">
+  <a class="crumb" href={`/lessons/${id}`}>← Volver al intento actual</a><h1>Mis intentos</h1>
+  {error ? <ServiceError message={error}/> : <>
+    <p>El historial conserva tus trabajos. Solo puedes editar el borrador del intento actual desde la tarea.</p>
+    <nav class="toolbar" aria-label="Historial de intentos">{items.map(item=><a class="button quiet" href={`?submissionId=${item.id}`}>Intento {item.attempt} · {item.status==='draft'?'Borrador':'Enviado'}</a>)}</nav>
+    {items.length===0 && <p>Aún no has guardado ningún intento.</p>}
+    {submission && <article class="panel">
+      <h2>Intento {submission.attempt}</h2><p>{submission.status==='draft'?'Borrador':'Enviado'}</p>
+      <details><summary>Instrucciones de este intento</summary><p class="reading-body">{submission.instructions}</p></details>
+      <p class="reading-body">{submission.body}</p><AttachmentList files={submission.attachments}/>
+      {submission.rubric && <RubricView rubric={submission.rubric} assessment={submission.grade?.assessment}/>}
+      {submission.grade ? <><h3>Devolución publicada</h3><p>Calificación: {submission.grade.score} / 100</p><p class="reading-body">{submission.grade.feedback}</p></> : <p>No hay devolución publicada para este intento.</p>}
+    </article>}
+  </>}
+</Layout>

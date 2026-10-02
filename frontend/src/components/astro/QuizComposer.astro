@@ -1,0 +1,47 @@
+---
+import type{components}from'../../lib/generated/api';
+interface Props{activity:components['schemas']['Activity'];options:components['schemas']['QuizQuestionOptions'];}
+const{activity,options}=Astro.props;const chosen=activity.quizConfig?.items??[];
+const candidates=chosen.map(item=>({...item,name:options.selected.find(q=>q.id===item.questionId&&q.version===item.version)?.name??'Pregunta seleccionada',checked:true}));
+for(const q of options.items)if(!candidates.some(i=>i.questionId===q.id&&i.version===q.version))candidates.push({questionId:q.id,version:q.version,weight:1,name:q.name,checked:false});
+---
+<quiz-composer data-id={activity.id} data-version={activity.version} data-page="1">
+ <form class="academic-form">
+  <label for="quiz-maximum">Máximo de intentos</label><input id="quiz-maximum" name="maxAttempts" type="number" min="1" max="10" required value={activity.maxAttempts}/>
+  <label for="quiz-weight">Peso en el libro de calificaciones</label><input id="quiz-weight" name="weight" type="number" min="1" max="1000" required value={activity.weight}/>
+  <label for="quiz-policy">Nota que cuenta en el libro</label><select id="quiz-policy" name="gradePolicy"><option value="last" selected={activity.quizConfig?.gradePolicy==='last'}>Último intento</option><option value="first" selected={activity.quizConfig?.gradePolicy==='first'}>Primer intento</option><option value="highest" selected={activity.quizConfig?.gradePolicy==='highest'}>Mejor nota</option><option value="average" selected={activity.quizConfig?.gradePolicy==='average'}>Promedio de intentos</option></select>
+  <label for="quiz-review">Cuándo mostrar las soluciones</label><select id="quiz-review" name="reviewPolicy"><option value="never" selected={activity.quizConfig?.reviewPolicy==='never'}>No mostrar soluciones</option><option value="after_attempt" selected={activity.quizConfig?.reviewPolicy==='after_attempt'}>Después de enviar cada intento</option></select>
+  <p>Si muestras soluciones y permites más intentos, el estudiante podrá usarlas para preparar el siguiente. La política de revisión queda fijada al comenzar cada intento. Cambiar la política de nota publicada sí recalcula el libro usando los resultados conservados.</p>
+  <fieldset><legend>Preguntas (entre 1 y 20)</legend><p>Cada selección fija su versión. Guardar o publicar no actualiza preguntas automáticamente. El orden mostrado será el orden del cuestionario.</p>
+   <div data-options>{candidates.map(q=><div class="quiz-option" data-item data-question={q.questionId} data-question-version={q.version}>
+    <label><input type="checkbox" data-selected checked={q.checked}/>{q.name} · versión {q.version}</label>
+    <label>Peso de {q.name}<input type="number" data-weight min="1" max="1000" required value={q.weight} disabled={!q.checked}/></label>
+   </div>)}</div>
+   <button type="button" class="quiet" data-more disabled={options.items.length<20}>Ver más preguntas del banco</button><p data-more-status role="status">Al avanzar se conservan las seleccionadas.</p>
+  </fieldset>
+  <button type="submit">Guardar configuración del cuestionario</button><p data-status role="status" aria-live="polite">Después de guardar, vuelve a la actividad y publica.</p>
+ </form>
+</quiz-composer>
+<style>:global(quiz-composer .quiz-option){padding-block:1rem;border-bottom:1px solid var(--color-line)}:global(quiz-composer .quiz-option label:first-child){display:flex;align-items:center;gap:.75rem;min-height:44px}:global(quiz-composer .quiz-option input[type=checkbox]){width:24px;height:24px;flex:none}</style>
+<script>
+ import{api}from'../../lib/api';import type{components}from'../../lib/generated/api';
+ class QuizComposerElement extends HTMLElement{
+  private controller?:AbortController;private dirty=false;private busy=false;
+  connectedCallback(){if(this.controller)return;this.controller=new AbortController();const signal=this.controller.signal;const form=this.querySelector('form')!;const status=this.querySelector<HTMLElement>('[data-status]')!;const more=this.querySelector<HTMLButtonElement>('[data-more]')!;const moreStatus=this.querySelector<HTMLElement>('[data-more-status]')!;const options=this.querySelector<HTMLElement>('[data-options]')!;
+   form.addEventListener('input',e=>{this.dirty=true;const target=e.target as HTMLInputElement;if(target.hasAttribute('data-selected')){const row=target.closest<HTMLElement>('[data-item]')!;if(target.checked)for(const other of options.querySelectorAll<HTMLElement>('[data-item]'))if(other!==row&&other.dataset.question===row.dataset.question){other.querySelector<HTMLInputElement>('[data-selected]')!.checked=false;other.querySelector<HTMLInputElement>('[data-weight]')!.disabled=true;}if(options.querySelectorAll('[data-selected]:checked').length>20){target.checked=false;status.textContent='El cuestionario admite hasta 20 preguntas.';}row.querySelector<HTMLInputElement>('[data-weight]')!.disabled=!target.checked;}},{signal});
+   window.addEventListener('beforeunload',e=>{if(this.dirty||this.busy)e.preventDefault();},{signal});document.addEventListener('click',e=>{if(!(this.dirty||this.busy)||!(e.target as Element)?.closest?.('a[href]'))return;if(!window.confirm('Hay configuración sin guardar. ¿Quieres salir?')){e.preventDefault();e.stopImmediatePropagation();}else this.dirty=false;},{signal,capture:true});
+   more.addEventListener('click',async()=>{if(this.busy)return;more.disabled=true;try{const next=Number(this.dataset.page)+1;const result=await api<components['schemas']['QuizQuestionOptions']>(`/teacher/activities/${this.dataset.id}/quiz-questions?page=${next}`);for(const row of options.querySelectorAll('[data-item]'))if(!row.querySelector<HTMLInputElement>('[data-selected]')!.checked)row.remove();
+    for(const q of result.items){if(Array.from(options.querySelectorAll<HTMLElement>('[data-item]')).some(row=>Number(row.dataset.question)===q.id&&Number(row.dataset.questionVersion)===q.version))continue;
+     const row=document.createElement('div');row.className='quiz-option';row.setAttribute('data-item','');row.dataset.question=String(q.id);row.dataset.questionVersion=String(q.version);const label=document.createElement('label');const check=document.createElement('input');check.type='checkbox';check.setAttribute('data-selected','');label.append(check,document.createTextNode(`${q.name} · versión ${q.version}`));const weightLabel=document.createElement('label');weightLabel.textContent=`Peso de ${q.name}`;const weight=document.createElement('input');weight.type='number';weight.min='1';weight.max='1000';weight.value='1';weight.required=true;weight.disabled=true;weight.setAttribute('data-weight','');weightLabel.append(weight);row.append(label,weightLabel);options.append(row);
+    }this.dataset.page=String(next);more.disabled=result.items.length<20;moreStatus.textContent=result.items.length?'Se conservaron las preguntas seleccionadas.':'No hay más preguntas en el banco.';
+   }catch(error){moreStatus.textContent=error instanceof Error?error.message:'No se pudieron cargar más preguntas.';more.disabled=false;}},{signal});
+   form.addEventListener('submit',async e=>{e.preventDefault();if(this.busy)return;const data=new FormData(form);const items=Array.from(options.querySelectorAll<HTMLElement>('[data-item]')).filter(row=>row.querySelector<HTMLInputElement>('[data-selected]')!.checked).map(row=>({questionId:Number(row.dataset.question),version:Number(row.dataset.questionVersion),weight:Number(row.querySelector<HTMLInputElement>('[data-weight]')!.value)}));
+    if(items.length<1||items.length>20){status.textContent='Selecciona entre 1 y 20 preguntas.';return;}
+    this.busy=true;const fields=form.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLButtonElement>('input,select,button');const previous=Array.from(fields,f=>f.disabled);fields.forEach(f=>f.disabled=true);status.textContent='Guardando configuración…';
+    try{await api(`/teacher/activities/${this.dataset.id}/quiz-config`,{method:'PUT',body:JSON.stringify({version:Number(this.dataset.version),maxAttempts:Number(data.get('maxAttempts')),weight:Number(data.get('weight')),gradePolicy:data.get('gradePolicy'),reviewPolicy:data.get('reviewPolicy'),items})});this.dirty=false;this.busy=false;window.location.reload();}catch(error){status.textContent=(error instanceof Error?error.message:'No se pudo guardar.')+' Tu selección permanece aquí. Revisa las versiones y guarda antes de publicar.';}finally{this.busy=false;fields.forEach((f,i)=>f.disabled=previous[i]??false);}
+   },{signal});
+  }
+  disconnectedCallback(){this.controller?.abort();this.controller=undefined;}
+ }
+ if(!customElements.get('quiz-composer'))customElements.define('quiz-composer',QuizComposerElement);
+</script>

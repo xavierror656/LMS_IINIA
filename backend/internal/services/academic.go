@@ -66,6 +66,14 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			out = a
 			return nil
 		}
+		if a.Type == "quiz" {
+			if a.QuizConfig == nil || a.QuizConfig.Validate() != nil {
+				return models.ErrAcademicInput
+			}
+			if e = validateQuizItems(tx, user, a.ModuleID, *a.QuizConfig); e != nil {
+				return e
+			}
+		}
 		conf, _ := json.Marshal(map[string]any{"body": a.Body, "version": a.Version, "rubric": a.Rubric})
 		if a.LessonID == nil {
 			// Serialize append positions across different activities in the same module.
@@ -91,11 +99,29 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			}
 			rubricJSON = string(raw)
 		}
-		if e = tx.Exec(`UPDATE lessons SET grade_weight=?,opens_at=?,due_at=?,closes_at=? WHERE id=?`, a.Weight, a.OpensAt, a.DueAt, a.ClosesAt, *a.LessonID).Error; e != nil {
+		if e = tx.Exec(`UPDATE lessons SET grade_weight=?,opens_at=?,due_at=?,closes_at=?,max_attempts=? WHERE id=?`, a.Weight, a.OpensAt, a.DueAt, a.ClosesAt, a.MaxAttempts, *a.LessonID).Error; e != nil {
 			return e
 		}
-		if e = tx.Exec(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by,rubric) VALUES (?,?,?,?,?,?,?::jsonb)`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user, rubricJSON).Error; e != nil {
+		var quizJSON any
+		if a.QuizConfig != nil {
+			b, e := json.Marshal(a.QuizConfig)
+			if e != nil {
+				return e
+			}
+			quizJSON = string(b)
+		}
+		var publication int64
+		if e = tx.Raw(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by,rubric,quiz_config) VALUES (?,?,?,?,?,?,?::jsonb,?::jsonb) RETURNING id`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user, rubricJSON, quizJSON).Scan(&publication).Error; e != nil {
 			return e
+		}
+		if a.Type == "quiz" {
+			if e = tx.Exec(`UPDATE lessons SET quiz_grade_policy=? WHERE id=?`, a.QuizConfig.GradePolicy, *a.LessonID).Error; e != nil {
+				return e
+			}
+			items, _ := json.Marshal(a.QuizConfig.Items)
+			if e = tx.Exec(`INSERT INTO quiz_publication_items(publication_id,position,question_id,question_version,weight) SELECT ?,ordinality,(value->>'questionId')::bigint,(value->>'version')::integer,(value->>'weight')::integer FROM jsonb_array_elements(?::jsonb) WITH ORDINALITY`, publication, string(items)).Error; e != nil {
+				return e
+			}
 		}
 		return tx.Raw(`UPDATE authored_activities SET lesson_id=?,published_version=version WHERE id=? RETURNING *`, *a.LessonID, a.ID).Scan(&out).Error
 	})
@@ -140,7 +166,7 @@ func (s AcademicService) SaveSubmission(user, lesson int64, body string, version
 			return ErrAcademicConflict
 		}
 		var current models.Submission
-		if e := tx.Raw(`SELECT * FROM submissions WHERE lesson_id=? AND user_id=? FOR UPDATE`, lesson, user).Scan(&current).Error; e != nil {
+		if e := tx.Raw(`SELECT * FROM submissions WHERE lesson_id=? AND user_id=? ORDER BY attempt DESC LIMIT 1 FOR UPDATE`, lesson, user).Scan(&current).Error; e != nil {
 			return e
 		}
 		if current.Version != version || (current.ID != 0 && current.Status != "draft") {
@@ -176,7 +202,7 @@ func (s AcademicService) Submit(user, lesson int64, version int) (models.Submiss
 			return e
 		}
 		var sub models.Submission
-		if e := tx.Raw(`SELECT s.* FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN enrollments e ON e.course_id=m.course_id AND e.user_id=s.user_id WHERE s.lesson_id=? AND s.user_id=? FOR UPDATE OF s FOR SHARE OF e`, lesson, user).Scan(&sub).Error; e != nil {
+		if e := tx.Raw(`SELECT s.* FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN enrollments e ON e.course_id=m.course_id AND e.user_id=s.user_id WHERE s.lesson_id=? AND s.user_id=? ORDER BY s.attempt DESC LIMIT 1 FOR UPDATE OF s FOR SHARE OF e`, lesson, user).Scan(&sub).Error; e != nil {
 			return e
 		}
 		if sub.ID == 0 {
@@ -222,8 +248,19 @@ func (s AcademicService) grade(user, id int64, score int, feedback string, versi
 		return out, models.ErrAcademicInput
 	}
 	e := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
+		var target struct{ LessonID, UserID int64 }
+		if e := tx.Raw(`SELECT lesson_id,user_id FROM submissions WHERE id=? AND status='submitted'`, id).Scan(&target).Error; e != nil {
+			return e
+		}
+		if target.LessonID == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		// Match student writes and reopen: lesson, enrollment, then submission.
+		if e := lockAssignment(tx, target.UserID, target.LessonID); e != nil {
+			return e
+		}
 		var sub int64
-		if e := tx.Raw(`SELECT s.id FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN course_staff cs ON cs.course_id=m.course_id JOIN teacher_students ts ON ts.teacher_id=cs.user_id AND ts.student_id=s.user_id WHERE s.id=? AND s.status='submitted' AND cs.user_id=? FOR UPDATE OF s FOR SHARE OF cs,ts`, id, user).Scan(&sub).Error; e != nil {
+		if e := tx.Raw(`SELECT s.id FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN enrollments en ON en.course_id=m.course_id AND en.user_id=s.user_id JOIN course_staff cs ON cs.course_id=m.course_id JOIN teacher_students ts ON ts.teacher_id=cs.user_id AND ts.student_id=s.user_id WHERE s.id=? AND s.status='submitted' AND cs.user_id=? FOR UPDATE OF s FOR SHARE OF cs,ts,en`, id, user).Scan(&sub).Error; e != nil {
 			return e
 		}
 		if sub == 0 {

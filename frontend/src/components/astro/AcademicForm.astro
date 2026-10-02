@@ -1,7 +1,7 @@
 ---
 interface Props {
   path: string;
-  kind: "create" | "activity" | "submission" | "grade" | "evaluation" | "schedule" | "extension";
+  kind: "create" | "activity" | "submission" | "grade" | "evaluation" | "schedule" | "extension" | "attempt-policy" | "reopen";
   version?: number;
   lessonVersion?: number;
   canPublish?: boolean;
@@ -12,18 +12,19 @@ const { path, kind, version = 0, lessonVersion, canPublish = false } = Astro.pro
   <form class="academic-form">
     <slot />
     <div class="toolbar">
-      <button type="submit" value="save">{kind === "grade" ? "Guardar calificación" : kind === "extension" ? "Guardar prórroga" : "Guardar borrador"}</button>
-      {kind !== "create" && kind !== "evaluation" && kind !== "schedule" && kind !== "extension" && <button type="submit" value="publish" class="quiet" disabled={!canPublish}>
+      <button type="submit" value="save">{kind === "reopen" ? "Autorizar nuevo intento" : kind === "grade" ? "Guardar calificación" : kind === "extension" ? "Guardar prórroga" : "Guardar borrador"}</button>
+      {!['create','evaluation','schedule','extension','attempt-policy','reopen'].includes(kind) && <button type="submit" value="publish" class="quiet" disabled={!canPublish}>
         {kind === "submission" ? "Enviar al docente" : kind === "grade" ? "Publicar devolución" : "Publicar actividad"}
       </button>}
     </div>
     <p class="helper" data-status role="status" aria-live="polite">
-      {kind === "create" ? "El borrador será privado hasta que lo publiques." : kind === "extension" ? "La prórroga entra en vigor al guardar." : "Guarda los cambios antes de publicar o enviar."}
+      {kind === "reopen" ? "Autorizar crea un borrador vacío. Las fechas siguen vigentes y la entrega anterior se conserva." : kind === "create" ? "El borrador será privado hasta que lo publiques." : kind === "extension" ? "La prórroga entra en vigor al guardar." : "Guarda los cambios antes de publicar o enviar."}
     </p>
   </form>
 </academic-form>
 <script>
   import { api, type Activity, type Submission, type Grade } from "../../lib/api";
+  import type { components } from "../../lib/generated/api";
   class AcademicFormElement extends HTMLElement {
     private dirty = false;
     private busy = false;
@@ -70,6 +71,10 @@ const { path, kind, version = 0, lessonVersion, canPublish = false } = Astro.pro
             const fields = kind === "schedule" ? ["opensAt","dueAt","closesAt"] : ["dueAt","closesAt"];
             for (const field of fields) {const value=data.get(field);payload[field]=value ? new Date(`${value}Z`).toISOString() : null;}
             if(kind==="extension") payload.reason=data.get("reason");
+          } else if (kind === "attempt-policy") {
+            payload.maxAttempts=Number(data.get("maxAttempts"));
+          } else if (kind === "reopen") {
+            payload.reason=data.get("reason");
           } else if (kind === "evaluation") {
             const rubric = data.has("useRubric") ? { criteria: Array.from(form.querySelectorAll(".rubric-criterion"), (criterion) => ({
               title: criterion.querySelector<HTMLInputElement>('[name="criterionTitle"]')!.value,
@@ -89,17 +94,17 @@ const { path, kind, version = 0, lessonVersion, canPublish = false } = Astro.pro
         status.textContent = publishing ? "Confirmando…" : "Guardando…";
         try {
           const suffix = publishing ? (kind === "submission" ? "/submit" : "/publish") : "";
-          const result = await api<Activity | Submission | Grade>(this.dataset.path! + suffix, {
-            method: publishing || kind === "create" ? "POST" : "PUT",
+          const result = await api<Activity | Submission | Grade | components['schemas']['ReopenReceipt']>(this.dataset.path! + suffix, {
+            method: publishing || kind === "create" || kind === "reopen" ? "POST" : "PUT",
             body: JSON.stringify(payload),
           });
-          this.dataset.version = String(result.version);
+          if ('version' in result) this.dataset.version = String(result.version);
           this.dirty = false;
           canPublish = !publishing;
-          status.textContent = publishing ? "Confirmado y guardado en el servidor." : `Borrador guardado · versión ${result.version}.`;
+          status.textContent = kind === "reopen" ? "Nuevo intento autorizado. La entrega anterior se conserva." : publishing ? "Confirmado y guardado en el servidor." : `Borrador guardado · versión ${this.dataset.version}.`;
           this.busy = false;
           if (kind === "create") window.location.assign(`/teacher/activities/${(result as Activity).id}`);
-          else if (publishing || kind === "evaluation" || kind === "schedule" || kind === "extension") window.location.reload();
+          else if (publishing || ['evaluation','schedule','extension','attempt-policy','reopen'].includes(kind)) window.location.reload();
         } catch (error) {
           status.textContent = (error instanceof Error ? error.message : "No se pudo guardar.") + " Tu texto permanece en el formulario. Si cambió la versión, copia tus cambios antes de recargar.";
         } finally {

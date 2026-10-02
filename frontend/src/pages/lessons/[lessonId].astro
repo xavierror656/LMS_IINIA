@@ -3,6 +3,9 @@ import Layout from "../../layouts/Layout.astro";
 import ServiceError from "../../components/astro/ServiceError.astro";
 import CodePlayground from "../../components/react/CodePlayground";
 import H5PPlayer from "../../components/react/H5PPlayer";
+import Quiz from "../../components/astro/Quiz.astro";
+import type {components} from "../../lib/generated/api";
+let quiz:components["schemas"]["QuizOverview"]|undefined;
 import Assignment from "../../components/astro/Assignment.astro";
 import { api, type Lesson, type Submission, type Availability } from "../../lib/api";
 import type { DemoPlugin } from "../../lib/demoPlugins";
@@ -18,6 +21,7 @@ if (!error)
       {},
       Astro.request.headers.get("cookie") ?? "",
     );
+    if (lesson.type === "quiz") {const selected=Astro.url.searchParams.get("attemptId");quiz=await api<components["schemas"]["QuizOverview"]>(`/lessons/${lesson.id}/quiz${selected?`?attemptId=${encodeURIComponent(selected)}`:""}`,{},Astro.request.headers.get("cookie")??"");}
     if (lesson.type === "assignment") {
       availability = await api<Availability>(`/lessons/${lesson.id}/availability`, {}, Astro.request.headers.get("cookie") ?? "");
       submission = (await api<{submission: Submission | null}>(`/lessons/${lesson.id}/submission`, {}, Astro.request.headers.get("cookie") ?? "")).submission;
@@ -81,7 +85,7 @@ if (!error)
               </p>
             </div>
           </article>
-        ) : lesson.type === "assignment" ? (
+        ) : lesson.type === "quiz" ? (<Quiz lessonId={lesson.id} overview={quiz!} body={lesson.config.body??""}/>) : lesson.type === "assignment" ? (
           <Assignment lesson={lesson} submission={submission} availability={availability!} />
         ) : lesson.type === "code" ? (
           <CodePlayground

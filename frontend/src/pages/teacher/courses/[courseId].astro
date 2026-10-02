@@ -17,6 +17,7 @@ if (!error) try {
     <span class="eyebrow">Taller de actividades</span><h1>{result.course.title}</h1>
     <p>Los cambios se guardan como borrador. Tú decides cuándo publicarlos.</p>
     <a class="button quiet" href={`/teacher/courses/${courseId}/gradebook`}>Ver calificaciones →</a>
+    <a class="button quiet" href={`/teacher/courses/${courseId}/questions`}>Banco de preguntas →</a>
     <div class="academic-columns">
       <section class="panel">
         <h2>Crear una actividad</h2>
@@ -25,7 +26,7 @@ if (!error) try {
           <label for="activity-module">Módulo</label>
           <select id="activity-module" name="moduleId" required>{result.modules.map((m) => <option value={m.id}>{m.title}</option>)}</select>
           <label for="activity-type">Tipo de actividad</label>
-          <select id="activity-type" name="type"><option value="reading">Lectura</option><option value="assignment">Tarea</option></select>
+          <select id="activity-type" name="type"><option value="reading">Lectura</option><option value="assignment">Tarea</option><option value="quiz">Cuestionario</option></select>
           <label for="activity-title">Título</label><input id="activity-title" name="title" required maxlength="160" />
           <label for="activity-description">Descripción breve</label><textarea id="activity-description" name="description" maxlength="1000" rows="2"></textarea>
           <label for="activity-body">Contenido o instrucciones</label><textarea id="activity-body" name="body" required maxlength="12000" rows="9"></textarea>
@@ -38,7 +39,7 @@ if (!error) try {
         {result.items.length === 0 && <p class="panel">Todavía no hay actividades creadas en esta página.</p>}
         <div class="path">{result.items.map((a) => <article class="panel">
           <span class="tag">{a.publishedVersion === 0 ? "Borrador privado" : a.publishedVersion === a.version ? "Publicada" : "Cambios sin publicar"}</span>
-          <h3>{a.title}</h3><p>{a.type === "reading" ? "Lectura" : "Tarea"}</p>
+          <h3>{a.title}</h3><p>{a.type === "reading" ? "Lectura" : a.type === "quiz" ? "Cuestionario" : "Tarea"}</p>
           <a class="button quiet" href={`/teacher/activities/${a.id}`}>Editar{a.type === "assignment" ? " y revisar entregas" : " actividad"} →</a>
         </article>)}</div>
         <nav class="toolbar" aria-label="Páginas de actividades">{page > 1 && <a class="crumb" href={`?page=${page-1}`}>← Anterior</a>}{result.items.length === 20 && <a class="crumb" href={`?page=${page+1}`}>Siguiente →</a>}</nav>

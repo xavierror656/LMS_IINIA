@@ -1,0 +1,20 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import ServiceError from "../../../../components/astro/ServiceError.astro";
+import AcademicForm from "../../../../components/astro/AcademicForm.astro";
+import { api, type Activity } from "../../../../lib/api";
+let error=Astro.locals.apiError;
+let activity:Activity|undefined;
+const id=encodeURIComponent(Astro.params.activityId??"");
+if(!error)try {activity=await api<Activity>(`/teacher/activities/${id}`,{},Astro.request.headers.get("cookie")??"");if(activity.type!=="assignment")error="Los intentos solo aplican a tareas.";}catch(e){error=e instanceof Error?e.message:"No se pudo abrir la configuración.";}
+---
+<Layout title="Intentos de la tarea">
+  <a class="crumb" href={`/teacher/activities/${id}`}>← Volver a la actividad</a><h1>Intentos de la tarea</h1>
+  {error ? <ServiceError message={error}/> : activity && <section class="panel">
+    <h2>{activity.title}</h2>
+    <p>Guarda y publica la actividad para aplicar el límite. Cada nuevo intento requiere autorización del docente desde la entrega anterior. Reducir el límite conserva los intentos ya autorizados.</p>
+    <AcademicForm kind="attempt-policy" path={`/teacher/activities/${id}/attempt-policy`} version={activity.version}>
+      <label for="max-attempts">Máximo de intentos (incluye el primero)</label><input id="max-attempts" name="maxAttempts" type="number" min="1" max="10" step="1" required value={activity.maxAttempts}/>
+    </AcademicForm>
+  </section>}
+</Layout>

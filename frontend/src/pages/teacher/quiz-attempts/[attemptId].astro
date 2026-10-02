@@ -1,0 +1,6 @@
+---
+import Layout from '../../../layouts/Layout.astro';import ServiceError from '../../../components/astro/ServiceError.astro';import QuizAttempt from '../../../components/astro/QuizAttempt.astro';import{api}from'../../../lib/api';import type{components}from'../../../lib/generated/api';
+let error=Astro.locals.apiError;let attempt:components['schemas']['QuizAttempt']|undefined;
+if(!error)try{attempt=await api<components['schemas']['QuizAttempt']>(`/teacher/quiz-attempts/${encodeURIComponent(Astro.params.attemptId??'')}`,{},Astro.request.headers.get('cookie')??'');}catch(e){error=e instanceof Error?e.message:'No se pudo abrir el intento.';}
+---
+<Layout title="Revisar cuestionario"><a class="crumb" href="/teacher/courses">← Mis cursos</a><h1>Revisar cuestionario</h1><p>La calificación de este intento fue calculada en el servidor. El libro aplica la política publicada al conjunto de intentos terminados.</p>{error?<ServiceError message={error}/>:attempt&&<QuizAttempt attempt={attempt} readonly/>}</Layout>

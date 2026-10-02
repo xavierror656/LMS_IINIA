@@ -1,0 +1,36 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import ServiceError from '../../../components/astro/ServiceError.astro';
+import QuestionForm from '../../../components/astro/QuestionForm.astro';
+import QuestionPreview from '../../../components/astro/QuestionPreview.astro';
+import {api} from '../../../lib/api';import type {components} from '../../../lib/generated/api';
+const id=encodeURIComponent(Astro.params.questionId??'');const selected=Astro.url.searchParams.get('version');const page=Math.max(1,Number(Astro.url.searchParams.get('page'))||1);
+let error=Astro.locals.apiError;let question:components['schemas']['Question']|undefined;let history:components['schemas']['QuestionList']|undefined;
+if(!error)try{[question,history]=await Promise.all([api<components['schemas']['Question']>(`/teacher/questions/${id}${selected!==null?`/versions/${encodeURIComponent(selected)}`:''}`,{},Astro.request.headers.get('cookie')??''),api<components['schemas']['QuestionList']>(`/teacher/questions/${id}/versions?page=${page}`,{},Astro.request.headers.get('cookie')??'')]);}catch(e){error=e instanceof Error?e.message:'No se pudo abrir la pregunta.';}
+---
+<Layout title={question?.content.name??'Pregunta'}>
+ {error?<ServiceError message={error}/>:question&&history&&<>
+  <a class="crumb" href={`/teacher/courses/${question.courseId}/questions`}>← Volver al banco</a><h1>{question.content.name}</h1>
+  <p>Versión {question.version} · {question.archived?'Archivada':'Activa'} · <time datetime={question.createdAt}>{new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(question.createdAt))} UTC</time></p>
+  {selected!==null?<aside class="notice">Esta versión histórica es de solo lectura. <a class="crumb" href={`/teacher/questions/${id}`}>Abrir versión actual</a></aside>:question.archived?<p class="notice">Restaura esta pregunta antes de editarla. Su historial sigue disponible.</p>:<section class="panel"><h2>Editar pregunta</h2><QuestionForm courseId={question.courseId} question={question}/></section>}
+  <details class="panel admin-section"><summary>Solución de esta versión</summary><p class="reading-body">{question.content.prompt}</p><ul>{(question.content.type==='short_answer'?question.content.acceptedAnswers:question.content.correctChoices.map(i=>question!.content.options[i])).map(answer=><li>{answer}</li>)}</ul><p>{question.content.explanation}</p></details>
+  <section class="admin-section"><QuestionPreview question={question}/></section>
+  {selected===null&&<question-archive data-id={id} data-version={question.version} data-archived={String(!question.archived)}><form class="panel academic-form"><h2>{question.archived?'Restaurar pregunta':'Archivar pregunta'}</h2><p>Se conserva el historial. Archivar la retira de la lista activa y evita nuevas ediciones hasta restaurarla.</p><button type="submit" class="quiet">{question.archived?'Restaurar pregunta':'Archivar pregunta'}</button><p data-status role="status" aria-live="polite"></p></form></question-archive>}
+  <section class="admin-section"><h2>Historial de versiones</h2><ul>{history.items.map(v=><li><a class="crumb" href={`?version=${v.version}`}>Versión {v.version} · {v.name} · {v.archived?'Archivada':'Activa'}</a></li>)}</ul>
+   <nav class="toolbar" aria-label="Páginas del historial">{page>1&&<a class="crumb" href={`?page=${page-1}${selected!==null?`&version=${encodeURIComponent(selected)}`:''}`}>← Anterior</a>}{history.items.length===20&&<a class="crumb" href={`?page=${page+1}${selected!==null?`&version=${encodeURIComponent(selected)}`:''}`}>Siguiente →</a>}</nav>
+  </section>
+ </>}
+</Layout>
+<script>
+ import {api} from '../../../lib/api';
+ class QuestionArchiveElement extends HTMLElement{
+  private controller?:AbortController;
+  connectedCallback(){if(this.controller)return;this.controller=new AbortController();const form=this.querySelector('form')!;const button=form.querySelector('button')!;const status=this.querySelector<HTMLElement>('[data-status]')!;
+   form.addEventListener('submit',async e=>{e.preventDefault();if(button.disabled)return;
+    const editor=document.querySelector('question-form');if(editor?.hasAttribute('data-dirty')){status.textContent='Guarda primero los cambios de la pregunta o recarga antes de cambiar su estado.';return;}
+    button.disabled=true;try{await api(`/teacher/questions/${this.dataset.id}/archive`,{method:'POST',body:JSON.stringify({version:Number(this.dataset.version),archived:this.dataset.archived==='true'})});window.location.reload();}catch(error){status.textContent=(error instanceof Error?error.message:'No se pudo cambiar el estado.')+' Recarga si hay una versión más reciente.';}finally{button.disabled=false;}},{signal:this.controller.signal});
+  }
+  disconnectedCallback(){this.controller?.abort();this.controller=undefined;}
+ }
+ if(!customElements.get('question-archive'))customElements.define('question-archive',QuestionArchiveElement);
+</script>

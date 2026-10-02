@@ -18,8 +18,10 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
   <span class="eyebrow">Evaluación</span><h1>Libro de calificaciones</h1>
   {error ? <ServiceError message={error} /> : book && <>
     <h2>{book.course.title}</h2>
-    <p>Consulta las tareas publicadas de tus estudiantes vinculados e inscritos en este curso.</p>
+    <p>Consulta las tareas y cuestionarios publicados de tus estudiantes vinculados e inscritos en este curso.</p>
     <p id="gradebook-help">El promedio ponderado incluye únicamente notas publicadas, según el peso de cada tarea. Un peso de 2 cuenta el doble que 1. Las tareas sin nota no cuentan como cero. Los resúmenes abarcan todas las páginas de actividades; no son una calificación final del curso.</p>
+    <p>Los cuestionarios usan la política publicada: primera, última, mejor nota o promedio de intentos terminados.</p>
+    <p>Cuenta el último intento enviado de cada tarea. Autorizar un borrador nuevo conserva la nota anterior hasta que el estudiante lo envíe; entonces queda pendiente de calificar.</p>
     {book.totalActivities === 0 && <p class="panel">Todavía no hay tareas publicadas. <a class="crumb" href={`/teacher/courses/${courseId}`}>Crear una tarea</a></p>}
     {book.totalStudents === 0 && <p class="panel">No tienes estudiantes vinculados e inscritos en este curso.</p>}
     {book.totalActivities > 0 && book.totalStudents > 0 && <>
@@ -33,6 +35,7 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
             {row.cells.map((cell) => <td>
               <span class="gradebook-state">{labels[cell.state]}</span>
               {cell.score !== null && <strong>{cell.score} / 100</strong>}
+              {cell.quizAttemptId !== null && <a class="crumb" href={`/teacher/quiz-attempts/${cell.quizAttemptId}`}>Ver intento de cuestionario →</a>}
               {cell.submissionId !== null && <a class="crumb" aria-label={`Revisar entrega de ${row.alias}: ${book!.activities.find((a) => a.activityId === cell.activityId)?.title}`} href={`/teacher/activities/${cell.activityId}?submissionId=${cell.submissionId}#submission-${cell.submissionId}`}>Revisar entrega →</a>}
             </td>)}
             <td><strong>{row.summary.weightedAverageHundredths === null ? "Sin notas publicadas" : `${format.format(row.summary.weightedAverageHundredths / 100)} / 100`}</strong><span class="gradebook-state">{row.summary.published} de {row.summary.totalActivities} notas publicadas</span><span class="gradebook-state">Peso evaluado: {row.summary.publishedWeight} de {row.summary.totalWeight}</span></td>

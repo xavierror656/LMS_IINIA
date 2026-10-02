@@ -48,7 +48,7 @@ func (l Lesson) Validate() error {
 		return e
 	}
 	switch l.Type {
-	case "reading", "assignment":
+	case "reading", "assignment", "quiz":
 		if c.Body != "" {
 			return nil
 		}

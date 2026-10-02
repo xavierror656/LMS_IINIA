@@ -1,0 +1,28 @@
+---
+import type {components} from '../../lib/generated/api';
+interface Props{question:components['schemas']['Question'];}
+const {question}=Astro.props;const q=question.content;
+---
+<question-preview data-id={question.id} data-version={question.version}>
+ <form class="academic-form panel">
+  <h2>Probar evaluación</h2><p class="notice">Prueba del docente · no guarda calificaciones</p><p>Versión {question.version}. La evaluación se calcula en el servidor.</p>
+  <p class="reading-body">{q.prompt}</p>
+  {q.type==='short_answer'?<><label for="preview-text">Tu respuesta de prueba</label><input id="preview-text" name="text" maxlength="200"/></>:<fieldset><legend>Elige tu respuesta de prueba</legend>
+   {q.options.map((option,i)=><label class="preview-choice"><input type={q.type==='multiple_choice'?'checkbox':'radio'} name="choice" value={i}/>{option}</label>)}
+  </fieldset>}
+  <p class="helper">Las respuestas vacías puntúan 0. Selección múltiple requiere todas las correctas y ninguna incorrecta.</p>
+  <button type="submit">Evaluar respuesta de prueba</button><p role="status" aria-live="polite" data-result></p>
+ </form>
+</question-preview>
+<style>.preview-choice{display:flex;align-items:center;gap:.75rem;min-height:44px}.preview-choice input{width:24px;height:24px;flex:none}</style>
+<script>
+ import {api} from '../../lib/api';import type {components} from '../../lib/generated/api';
+ class QuestionPreviewElement extends HTMLElement{
+  private controller?:AbortController;
+  connectedCallback(){if(this.controller)return;this.controller=new AbortController();const form=this.querySelector('form')!;const button=form.querySelector('button')!;const status=this.querySelector<HTMLElement>('[data-result]')!;
+   form.addEventListener('submit',async e=>{e.preventDefault();if(button.disabled)return;const data=new FormData(form);button.disabled=true;status.textContent='Evaluando en el servidor…';try{const result=await api<components['schemas']['QuestionPreview']>(`/teacher/questions/${this.dataset.id}/versions/${this.dataset.version}/preview`,{method:'POST',body:JSON.stringify({choices:data.getAll('choice').map(Number),text:String(data.get('text')??'')})});status.textContent=`Resultado de prueba: ${result.score} / 100. ${result.explanation} No se guardó ninguna calificación.`;}catch(error){status.textContent=(error instanceof Error?error.message:'No se pudo evaluar.')+' Puedes volver a intentarlo.';}finally{button.disabled=false;}},{signal:this.controller.signal});
+  }
+  disconnectedCallback(){this.controller?.abort();this.controller=undefined;}
+ }
+ if(!customElements.get('question-preview'))customElements.define('question-preview',QuestionPreviewElement);
+</script>

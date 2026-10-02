@@ -1,0 +1,40 @@
+---
+import type {components} from '../../lib/generated/api';
+interface Props{attempt:components['schemas']['QuizAttempt'];readonly?:boolean;}
+const {attempt,readonly=false}=Astro.props;const editable=!readonly&&attempt.status==='in_progress';
+---
+<quiz-attempt data-lesson={attempt.lessonId} data-id={attempt.id} data-version={attempt.version} data-editable={String(editable)}>
+ <form class="academic-form">
+  <h2>Intento {attempt.attempt}</h2>
+  <details><summary>Instrucciones de este intento</summary><p class="reading-body">{attempt.instructions}</p></details>
+  {attempt.score!==null&&<p class="notice"><strong>Resultado de este intento: {attempt.score} / 100</strong></p>}
+  <p>{editable?'Guarda tus respuestas antes de enviarlas. Al enviar, este intento ya no se puede editar.':'Este intento es de solo lectura.'}</p>
+  {attempt.questions.map((q,i)=><fieldset class="panel" data-question data-type={q.type} disabled={!editable}>
+   <legend>Pregunta {i+1} · peso {q.weight}</legend><p class="reading-body">{q.prompt}</p>
+   {q.type==='short_answer'?<><label for={`quiz-text-${i}`}>Respuesta a la pregunta {i+1}</label><input id={`quiz-text-${i}`} name={`text-${i}`} maxlength="200" value={attempt.answers[i]?.text??''}/></>:q.options.map((option,n)=><label class="quiz-choice"><input type={q.type==='multiple_choice'?'checkbox':'radio'} name={`choice-${i}`} value={n} checked={attempt.answers[i]?.choices.includes(n)}/>{option}</label>)}
+   {q.review&&<aside class="notice"><h3>Revisión de la pregunta {i+1}</h3><p>{q.review.score} / 100</p><p>Respuesta: {q.type==='short_answer'?q.review.acceptedAnswers.join(' / '):q.review.correctChoices.map(n=>q.options[n]).join(' / ')}</p><p>{q.review.explanation}</p></aside>}
+  </fieldset>)}
+  {editable&&<><div class="toolbar"><button type="submit" value="save">Guardar respuestas</button><button type="submit" value="submit" class="quiet">Enviar cuestionario</button></div><p data-status role="status" aria-live="polite">Las preguntas sin responder puntúan cero. Enviar evalúa las respuestas guardadas.</p></>}
+ </form>
+</quiz-attempt>
+<style>.quiz-choice{display:flex;align-items:center;gap:.75rem;min-height:44px}.quiz-choice input{width:24px;height:24px;flex:none}fieldset{margin-block:1rem}fieldset:disabled{opacity:1}</style>
+<script>
+ import {api} from '../../lib/api';import type{components}from'../../lib/generated/api';
+ class QuizAttemptElement extends HTMLElement{
+  private controller?:AbortController;private dirty=false;private busy=false;
+  connectedCallback(){if(this.controller||this.dataset.editable!=='true')return;this.controller=new AbortController();const signal=this.controller.signal;const form=this.querySelector('form')!;const status=this.querySelector<HTMLElement>('[data-status]')!;const send=form.querySelector<HTMLButtonElement>('button[value="submit"]')!;
+   form.addEventListener('input',()=>{this.dirty=true;send.disabled=true;status.textContent='Tienes respuestas sin guardar.';},{signal});
+   window.addEventListener('beforeunload',e=>{if(this.dirty||this.busy)e.preventDefault();},{signal});
+   document.addEventListener('click',e=>{if(!(this.dirty||this.busy)||!(e.target as Element)?.closest?.('a[href]'))return;if(!window.confirm('Tienes respuestas sin guardar. ¿Quieres salir?')){e.preventDefault();e.stopImmediatePropagation();}else this.dirty=false;},{capture:true,signal});
+   form.addEventListener('submit',async e=>{e.preventDefault();if(this.busy)return;const submitting=(e.submitter as HTMLButtonElement)?.value==='submit';if(submitting&&this.dirty)return;
+    const data=new FormData(form);const answers=Array.from(form.querySelectorAll('[data-question]'),(_,i)=>({choices:data.getAll(`choice-${i}`).map(Number),text:String(data.get(`text-${i}`)??'')}));
+    const payload=submitting?{version:Number(this.dataset.version)}:{version:Number(this.dataset.version),answers};this.busy=true;const fields=form.querySelectorAll<HTMLInputElement|HTMLButtonElement>('input,button');fields.forEach(f=>f.disabled=true);status.textContent=submitting?'Evaluando tu cuestionario…':'Guardando respuestas…';
+    try{const result=await api<components['schemas']['QuizAttempt']>(`/lessons/${this.dataset.lesson}/quiz/attempts/${this.dataset.id}${submitting?'/submit':''}`,{method:submitting?'POST':'PUT',body:JSON.stringify(payload)});this.dataset.version=String(result.version);this.dirty=false;status.textContent='Respuestas guardadas en el servidor.';if(submitting){this.busy=false;window.location.reload();}}
+    catch(error){status.textContent=(error instanceof Error?error.message:'No se pudo guardar.')+' Tus respuestas permanecen aquí. Si cambió la versión, cópialas antes de recargar.';}
+    finally{this.busy=false;fields.forEach(f=>f.disabled=false);send.disabled=this.dirty;}
+   },{signal});
+  }
+  disconnectedCallback(){this.controller?.abort();this.controller=undefined;}
+ }
+ if(!customElements.get('quiz-attempt'))customElements.define('quiz-attempt',QuizAttemptElement);
+</script>

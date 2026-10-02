@@ -1,0 +1,80 @@
+---
+import type { components } from "../../lib/generated/api";
+type Question=components['schemas']['Question'];
+interface Props {courseId:number;question?:Question;}
+const {courseId,question}=Astro.props;
+const content=question?.content;
+const kind=content?.type??'single_choice';
+---
+<question-form data-course={courseId} data-id={question?.id} data-version={question?.version}>
+  <form class="academic-form">
+    <label for="question-name">Nombre interno</label><input id="question-name" name="name" maxlength="160" required value={content?.name}/>
+    <label for="question-type">Tipo de pregunta</label><select id="question-type" name="type">
+      <option value="single_choice" selected={kind==='single_choice'}>Selección única</option><option value="multiple_choice" selected={kind==='multiple_choice'}>Selección múltiple</option><option value="true_false" selected={kind==='true_false'}>Verdadero o falso</option><option value="short_answer" selected={kind==='short_answer'}>Respuesta corta</option>
+    </select>
+    <label for="question-prompt">Enunciado</label><textarea id="question-prompt" name="prompt" rows="4" maxlength="4000" required>{content?.prompt??''}</textarea>
+    <fieldset data-choice-fields hidden={kind==='short_answer'||kind==='true_false'} disabled={kind==='short_answer'||kind==='true_false'}>
+      <legend>Opciones y solución</legend><p>Escribe entre 2 y 8 opciones distintas. Deja vacías las que no uses. Marca una solución para selección única, o todas las correctas para selección múltiple.</p>
+      {Array.from({length:8},(_,i)=><div class="question-option">
+        <div><label for={`option-${i}`}>Opción {i+1}</label><input id={`option-${i}`} name={`option-${i}`} maxlength="500" value={content?.options[i]??''}/></div>
+        <label class="answer-check"><input type="checkbox" name="correct" value={i} checked={content?.correctChoices.includes(i)}/>Correcta {i+1}</label>
+      </div>)}
+    </fieldset>
+    <fieldset data-boolean-fields hidden={kind!=='true_false'} disabled={kind!=='true_false'}>
+      <legend>Solución</legend><label for="boolean-answer">Respuesta correcta</label><select id="boolean-answer" name="booleanAnswer"><option value="0" selected={content?.correctChoices[0]===0}>Verdadero</option><option value="1" selected={content?.correctChoices[0]===1}>Falso</option></select>
+    </fieldset>
+    <fieldset data-text-fields hidden={kind!=='short_answer'} disabled={kind!=='short_answer'}>
+      <legend>Respuestas aceptadas</legend><label for="accepted-answers">Una respuesta por línea (hasta 10)</label><textarea id="accepted-answers" name="acceptedAnswers" rows="4">{content?.acceptedAnswers.join('\n')??''}</textarea>
+      <label class="answer-check"><input type="checkbox" name="caseSensitive" checked={content?.caseSensitive}/>Distinguir mayúsculas y minúsculas</label>
+      <p class="helper">Se ignoran espacios al principio y al final. Los acentos y espacios entre palabras sí cuentan. No se admiten expresiones regulares.</p>
+    </fieldset>
+    <label for="question-explanation">Explicación de la solución</label><textarea id="question-explanation" name="explanation" rows="3" maxlength="4000">{content?.explanation??''}</textarea>
+    <p>Estas soluciones son privadas del docente. Guardar no publica una actividad para el alumnado. Cada cambio conserva la versión anterior.</p>
+    <button type="submit">{question?'Guardar nueva versión':'Crear pregunta'}</button><p data-status role="status" aria-live="polite"></p>
+  </form>
+</question-form>
+<style>
+ .question-option{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;align-items:end;margin-block:.5rem}
+ .answer-check{display:flex;align-items:center;gap:.5rem;min-height:44px}
+ .answer-check input{width:24px;height:24px;flex:none}
+ fieldset[hidden]{display:none}
+</style>
+<script>
+ import {api} from '../../lib/api';
+ import type {components} from '../../lib/generated/api';
+ class QuestionFormElement extends HTMLElement{
+  private controller?:AbortController;private dirty=false;private busy=false;
+  connectedCallback(){
+   if(this.controller)return;this.controller=new AbortController();const signal=this.controller.signal;
+   const form=this.querySelector('form')!;const status=this.querySelector<HTMLElement>('[data-status]')!;
+   const type=form.querySelector<HTMLSelectElement>('[name="type"]')!;
+   const toggle=()=>{for(const [selector,show] of [['[data-choice-fields]',type.value==='single_choice'||type.value==='multiple_choice'],['[data-boolean-fields]',type.value==='true_false'],['[data-text-fields]',type.value==='short_answer']] as const){const field=form.querySelector<HTMLFieldSetElement>(selector)!;field.hidden=!show;field.disabled=!show;}};
+   type.addEventListener('change',toggle,{signal});toggle();
+   form.addEventListener('input',()=>{this.dirty=true;this.setAttribute('data-dirty','');},{signal});
+   window.addEventListener('beforeunload',e=>{if(this.dirty||this.busy)e.preventDefault();},{signal});
+   document.addEventListener('click',e=>{if(!(this.dirty||this.busy)||!(e.target as Element)?.closest?.('a[href]'))return;if(!window.confirm('Hay cambios sin guardar. ¿Quieres salir de esta página?')){e.preventDefault();e.stopImmediatePropagation();}else this.dirty=false;},{capture:true,signal});
+   form.addEventListener('submit',async e=>{
+    e.preventDefault();if(this.busy)return;
+    const data=new FormData(form);let options:string[]=[];let correctChoices:number[]=[];let acceptedAnswers:string[]=[];
+    const kind=type.value as components['schemas']['QuestionContent']['type'];
+    if(kind==='true_false'){options=['Verdadero','Falso'];correctChoices=[Number(data.get('booleanAnswer'))];}
+    else if(kind==='short_answer')acceptedAnswers=String(data.get('acceptedAnswers')??'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    else{
+     const marked=new Set(data.getAll('correct').map(Number));
+     for(let i=0;i<8;i++){const value=String(data.get(`option-${i}`)??'').trim();if(value){if(marked.has(i))correctChoices.push(options.length);options.push(value);}else if(marked.has(i)){status.textContent='Escribe el texto de cada opción marcada como correcta.';return;}}
+    }
+    const content:components['schemas']['QuestionContent']={name:String(data.get('name')??''),prompt:String(data.get('prompt')??''),type:kind,options,correctChoices,acceptedAnswers,caseSensitive:kind==='short_answer'&&data.has('caseSensitive'),explanation:String(data.get('explanation')??'')};
+    this.busy=true;status.textContent='Guardando en el banco…';
+    const fields=form.querySelectorAll<HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement|HTMLButtonElement>('input,textarea,select,button');const disabled=Array.from(fields,field=>field.disabled);fields.forEach(field=>field.disabled=true);
+    try{
+     const editing=!!this.dataset.id;
+     const result=await api<components['schemas']['Question']>(editing?`/teacher/questions/${this.dataset.id}`:`/teacher/courses/${this.dataset.course}/questions`,{method:editing?'PUT':'POST',body:JSON.stringify(editing?{version:Number(this.dataset.version),content}:content)});
+     this.dirty=false;this.removeAttribute('data-dirty');this.busy=false;window.location.assign(`/teacher/questions/${result.id}`);
+    }catch(error){status.textContent=(error instanceof Error?error.message:'No se pudo guardar.')+' Tus entradas permanecen en el formulario. Si cambió la versión, copia tus cambios antes de recargar.';}
+    finally{this.busy=false;fields.forEach((field,i)=>field.disabled=disabled[i]??false);toggle();}
+   },{signal});
+  }
+  disconnectedCallback(){this.controller?.abort();this.controller=undefined;}
+ }
+ if(!customElements.get('question-form'))customElements.define('question-form',QuestionFormElement);
+</script>

@@ -1,0 +1,8 @@
+---
+import Layout from '../../../../layouts/Layout.astro';import ServiceError from '../../../../components/astro/ServiceError.astro';import{api}from'../../../../lib/api';import type{components}from'../../../../lib/generated/api';
+const id=encodeURIComponent(Astro.params.activityId??'');const page=Math.max(1,Number(Astro.url.searchParams.get('page'))||1);let error=Astro.locals.apiError;let result:components['schemas']['QuizResultList']|undefined;
+if(!error)try{result=await api<components['schemas']['QuizResultList']>(`/teacher/activities/${id}/quiz-results?page=${page}`,{},Astro.request.headers.get('cookie')??'');}catch(e){error=e instanceof Error?e.message:'No se pudieron consultar los resultados.';}
+---
+<Layout title="Intentos del cuestionario"><a class="crumb" href={`/teacher/activities/${id}`}>← Volver a la actividad</a><h1>Intentos del cuestionario</h1><p>Solo aparecen intentos enviados de estudiantes vinculados e inscritos. El libro aplica la política publicada; estos son los resultados individuales.</p>
+ {error?<ServiceError message={error}/>:result&&<><div class="path">{result.items.map(item=><article class="panel"><h2>{item.alias} · intento {item.attempt}</h2><p>{item.score} / 100</p><a class="button quiet" href={`/teacher/quiz-attempts/${item.id}`}>Revisar intento {item.attempt} de {item.alias}</a></article>)}</div>{result.items.length===0&&<p>No hay intentos enviados en esta página.</p>}<nav class="toolbar" aria-label="Páginas de resultados">{page>1&&<a class="crumb" href={`?page=${page-1}`}>← Anterior</a>}{result.items.length===20&&<a class="crumb" href={`?page=${page+1}`}>Siguiente →</a>}</nav></>}
+</Layout>

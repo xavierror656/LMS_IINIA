@@ -29,6 +29,7 @@ Estudiante necesita propiedad e inscripción vigente para descargar. Docente nec
 - Astro check: 45 archivos, cero errores/warnings/hints. Build SSR aprobado; permanece aviso previo de chunks superiores a 500 kB.
 - Vitest `--pool=threads`: cuatro pruebas aprobadas, 28.29 s.
 - E2E de adjuntos aprobada: 22.6 s en primera ejecución y 6.5 s en la última, que además espera al HUD reconciliado antes de capturar. Comprueba rechazo de PNG falso conservando selección, creación de borrador por subida, descarga real y contenido exacto, recarga, borrado, nueva subida, envío sin texto y acceso docente después de enviar. Capturas tablet inspeccionadas: `screenshots/attachments-student-tablet.png`, `screenshots/attachments-teacher-tablet.png`.
+- Regresión final de autoría/libro/aprendizaje: siete pruebas aprobadas en 29.5 s. Con FL5, ocho escenarios de navegador aprobados en ejecuciones separadas.
 - OpenSpec strict válido y `git diff --check` sin errores.
 
 Incidencia: al agregar archivos al final de la integración académica, su instancia acumuló más de 180 solicitudes/min y respondió 429 antes de concluir permisos. Las pruebas de archivos usan ahora una instancia de transporte separada con la misma configuración y limitadores activos, conservando base y sesiones de prueba. No se aumentó ni desactivó el límite de producción.
@@ -52,5 +53,9 @@ E2E_ACADEMIC=1 E2E_STUDENT_PASSWORD='change-this-student-password' E2E_TEACHER_P
 No compilar en paralelo con E2E del servidor dev. Separar suites intensivas según la ventana del limitador. Las pruebas agregan datos sintéticos y no borran datos ajenos.
 
 ## Pendientes reales
+
+### Recuperación local del 2 de octubre de 2026
+
+Se reiniciaron PostgreSQL persistente (55439), la API Go con el último ajuste del límite de píxeles (8083) y Astro (4323). PostgreSQL completó su recuperación automática; no se reinicializó ni borró la base. La suite `learning.spec.ts` pasó sus cinco escenarios en 25.0 s: sesión/progreso/HUD/recarga/logout, WebSocket y cancelación simulados, estado H5P ausente, acceso docente vinculado, teclado/tablet/movimiento reducido y recuperación ante fallo de API. Son resultados de esta ejecución local, no una garantía de disponibilidad futura de los procesos temporales.
 
 PDF/ofimática con análisis externo, otros formatos, archivos de instrucciones/devoluciones, almacenamiento de objetos, interfaz administrativa de cuota/retención y borrado de archivos enviados. No modificar archivos congelados para recuperar cuota sin un flujo autorizado. No se ejecutaron análisis antivirus, auditoría WCAG, pruebas de carga, Docker ni equivalencia Moodle. Runner sigue simulado y H5P sin contenido válido verificado. El objetivo general continúa activo.

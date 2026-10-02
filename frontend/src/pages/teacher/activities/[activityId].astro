@@ -20,13 +20,15 @@ if (!error) try {
 <Layout title={activity?.title ?? "Editar actividad"}>
   <a class="crumb" href="/teacher/courses">← Mis cursos</a>
   {error ? <ServiceError message={error} /> : activity && <>
-    <span class="eyebrow">{activity.type === "reading" ? "Lectura" : "Tarea"}</span><h1>{activity.title}</h1>
+    <span class="eyebrow">{activity.type === "reading" ? "Lectura" : activity.type === "quiz" ? "Cuestionario" : "Tarea"}</span><h1>{activity.title}</h1>
     <p>Versión guardada: {activity.version}. {activity.publishedVersion ? `Última versión publicada: ${activity.publishedVersion}.` : "Todavía no es visible para estudiantes."}</p>
     {activity.type === "assignment" && <a class="button quiet" href={`/teacher/activities/${id}/evaluation`}>Configurar rúbrica y peso</a>}
+    {activity.type === "assignment" && <a class="button quiet" href={`/teacher/activities/${id}/attempt-policy`}>Configurar intentos</a>}
     {activity.type === "assignment" && <div class="toolbar"><a class="button quiet" href={`/teacher/activities/${id}/schedule`}>Configurar fechas</a>{activity.lessonId && <a class="button quiet" href={`/teacher/activities/${id}/extensions`}>Gestionar prórrogas</a>}</div>}
+    {activity.type === "quiz" && <div class="toolbar"><a class="button quiet" href={`/teacher/activities/${id}/quiz`}>Configurar cuestionario</a><a class="button quiet" href={`/teacher/activities/${id}/quiz-results`}>Ver intentos del cuestionario</a></div>}
     <section class="panel">
       <h2>Editar contenido</h2>
-      <AcademicForm kind="activity" path={`/teacher/activities/${id}`} version={activity.version} canPublish={activity.version !== activity.publishedVersion}>
+      <AcademicForm kind="activity" path={`/teacher/activities/${id}`} version={activity.version} canPublish={activity.version !== activity.publishedVersion && (activity.type !== "quiz" || !!activity.quizConfig)}>
         <label for="edit-title">Título</label><input id="edit-title" name="title" required maxlength="160" value={activity.title} />
         <label for="edit-description">Descripción breve</label><textarea id="edit-description" name="description" maxlength="1000" rows="2">{activity.description}</textarea>
         <label for="edit-body">Contenido o instrucciones</label><textarea id="edit-body" name="body" required maxlength="12000" rows="9">{activity.body}</textarea>
@@ -40,6 +42,7 @@ if (!error) try {
       <div class="path">{submissions.map((s) => <article class="panel" id={`submission-${s.id}`}>
         <span class="tag">{s.grade?.status === "published" ? "Devolución publicada" : s.grade ? "Calificación en borrador" : "Por calificar"}</span>
         <h3>Entrega de {s.alias}</h3>
+        <p>Intento {s.attempt}</p>
         <p>{s.effectiveDueAt ? s.late ? "Entrega tardía" : "Entrega a tiempo" : "Sin vencimiento registrado"}</p>
         <details><summary>Instrucciones de esta entrega</summary><p class="reading-body">{s.instructions}</p></details>
         <p class="reading-body">{s.body}</p>
@@ -54,6 +57,12 @@ if (!error) try {
           </fieldset> : <><label for={`score-${s.id}`}>Calificación de {s.alias} (0 a 100)</label><input id={`score-${s.id}`} type="number" name="score" min="0" max="100" step="1" required value={s.grade?.score} /></>}
           <label for={`feedback-${s.id}`}>Comentario para {s.alias}</label><textarea id={`feedback-${s.id}`} name="feedback" rows="4" maxlength="4000">{s.grade?.feedback ?? ""}</textarea>
         </AcademicForm>
+        <details><summary>Autorizar otro intento para {s.alias}</summary>
+          <p>El límite publicado debe permitirlo. El nuevo intento no cambia las fechas y conserva este trabajo y su devolución en el historial. Repetir la autorización de esta entrega no crea intentos adicionales.</p>
+          <AcademicForm kind="reopen" path={`/teacher/submissions/${s.id}/reopen`} version={s.version}>
+            <label for={`reason-${s.id}`}>Motivo de reapertura</label><textarea id={`reason-${s.id}`} name="reason" required maxlength="1000" rows="2" />
+          </AcademicForm>
+        </details>
       </article>)}</div>
       {submissionId === null && <nav class="toolbar" aria-label="Páginas de entregas">{page > 1 && <a class="crumb" href={`?page=${page-1}`}>← Anterior</a>}{submissions.length === 20 && <a class="crumb" href={`?page=${page+1}`}>Siguiente →</a>}</nav>}
     </section>}

@@ -21,13 +21,15 @@ func ValidText(s string, min, max int) bool {
 	return utf8.ValidString(s) && !strings.ContainsRune(s, '\x00') && utf8.RuneCountInString(strings.TrimSpace(s)) >= min && utf8.RuneCountInString(s) <= max
 }
 func (a ActivityInput) Validate() error {
-	if a.ModuleID < 1 || (a.Type != "reading" && a.Type != "assignment") || !ValidText(a.Title, 1, 160) || !ValidText(a.Description, 0, 1000) || !ValidText(a.Body, 1, 12000) {
+	if a.ModuleID < 1 || (a.Type != "reading" && a.Type != "assignment" && a.Type != "quiz") || !ValidText(a.Title, 1, 160) || !ValidText(a.Description, 0, 1000) || !ValidText(a.Body, 1, 12000) {
 		return ErrAcademicInput
 	}
 	return nil
 }
 
 type Activity struct {
+	QuizConfig  *QuizConfig `json:"quizConfig" gorm:"serializer:json"`
+	MaxAttempts int         `json:"maxAttempts"`
 	Schedule
 	Rubric           *Rubric `json:"rubric" gorm:"serializer:json"`
 	Weight           int     `json:"weight"`
@@ -49,6 +51,7 @@ type Grade struct {
 	Status     string            `json:"status"`
 }
 type Submission struct {
+	Attempt        int          `json:"attempt"`
 	Attachments    []Attachment `json:"attachments" gorm:"-"`
 	EffectiveDueAt *time.Time   `json:"effectiveDueAt"`
 	Late           bool         `json:"late"`

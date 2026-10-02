@@ -151,11 +151,21 @@ func (a API) ownSubmission(c *fiber.Ctx) error {
 	if l.Type != "assignment" {
 		return fiber.ErrConflict
 	}
+	var requested int64
+	if c.Query("submissionId") != "" {
+		requested, e = strconv.ParseInt(c.Query("submissionId"), 10, 64)
+		if e != nil || requested < 1 {
+			return fiber.ErrBadRequest
+		}
+	}
 	var sub int64
-	if e = a.Repo.DB.Raw(`SELECT id FROM submissions WHERE lesson_id=? AND user_id=?`, id, middleware.User(c).ID).Scan(&sub).Error; e != nil {
+	if e = a.Repo.DB.Raw(`SELECT id FROM submissions WHERE lesson_id=? AND user_id=? AND (?::bigint=0 OR id=?) ORDER BY attempt DESC LIMIT 1`, id, middleware.User(c).ID, requested, requested).Scan(&sub).Error; e != nil {
 		return dbError(e)
 	}
 	if sub == 0 {
+		if requested != 0 {
+			return fiber.ErrNotFound
+		}
 		return c.JSON(fiber.Map{"submission": nil})
 	}
 	out, e := a.Repo.Submission(sub, false)
@@ -224,7 +234,7 @@ func (a API) staffSubmissions(c *fiber.Ctx) error {
 	}
 	items := []models.Submission{}
 	if activity.LessonID != nil {
-		if e = a.Repo.DB.Raw(`SELECT s.*,u.alias,p.body instructions,p.rubric FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id JOIN teacher_students ts ON ts.student_id=s.user_id WHERE ts.teacher_id=? AND s.lesson_id=? AND s.status='submitted' AND (?::bigint=0 OR s.id=?) ORDER BY s.id LIMIT 20 OFFSET ?`, middleware.User(c).ID, *activity.LessonID, submissionID, submissionID, (p-1)*20).Scan(&items).Error; e != nil {
+		if e = a.Repo.DB.Raw(`SELECT s.*,u.alias,p.body instructions,p.rubric FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN enrollments en ON en.user_id=s.user_id AND en.course_id=m.course_id JOIN teacher_students ts ON ts.student_id=s.user_id WHERE ts.teacher_id=? AND s.lesson_id=? AND s.status='submitted' AND (?::bigint=0 OR s.id=?) ORDER BY s.id LIMIT 20 OFFSET ?`, middleware.User(c).ID, *activity.LessonID, submissionID, submissionID, (p-1)*20).Scan(&items).Error; e != nil {
 			return dbError(e)
 		}
 		ids := []int64{}

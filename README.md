@@ -243,3 +243,15 @@ Los formularios usan **UTC explícito**, sin convertir silenciosamente la hora l
 Desde una tarea, el estudiante abre **Gestionar adjuntos**, sube TXT/PNG/JPEG, vuelve y envía la tarea. Puede entregar texto, archivos o ambos. Hasta 5 archivos por entrega, 2 MiB por archivo, 4 millones de píxeles por imagen y 50 MiB por estudiante. Las imágenes se recodifican sin metadatos. El docente solo descarga archivos de entregas enviadas y autorizadas; los archivos enviados quedan congelados.
 
 Aplica `go run ./cmd/migrate` desde backend para `005_submission_attachments.sql`. Los archivos se almacenan en PostgreSQL, sin directorio público. JSON conserva 128 KiB; solo la ruta multipart admite 2 MiB + 64 KiB. PDF/ofimática y archivos de retroalimentación siguen pendientes. Evidencia y límites: [docs/attachments-validation.md](docs/attachments-validation.md).
+
+### Reentregas e historial
+
+En **Configurar intentos**, el docente establece de 1 a 10 intentos totales, guarda y publica. Desde una entrega enviada puede **Autorizar otro intento** con motivo. El estudiante recibe un borrador vacío y consulta los anteriores mediante **Ver mis intentos anteriores**. Se conservan texto, archivos y devoluciones; reabrir no modifica las fechas ni concede recompensas. El libro cuenta solo el último intento enviado, manteniendo la nota anterior mientras el nuevo sea borrador. Aplica la migración 006 con el comando de migración habitual. Evidencia y límites: [docs/attempts-validation.md](docs/attempts-validation.md). Prueba de navegador: `npm run test:e2e -- attempts.spec.ts` con las variables E2E anteriores.
+
+### Banco de preguntas privado del docente
+
+Desde un curso abre **Banco de preguntas** para crear selección única, selección múltiple, verdadero/falso o respuesta corta. Cada edición conserva una versión; puedes archivarla/restaurarla y consultar su historial. **Probar evaluación** calcula la respuesta en Go contra esa versión, sin crear calificaciones ni recompensas. Para usar preguntas con alumnos, crea una actividad **Cuestionario** como se describe abajo. Ejecuta `go run ./cmd/migrate` desde backend para aplicar la migración 007 antes de usar la API actualizada. Evidencia y pendientes: [docs/question-bank-validation.md](docs/question-bank-validation.md). Prueba de navegador: `npm run test:e2e -- questions.spec.ts` con las variables E2E anteriores.
+
+### Cuestionarios del alumno y libro
+
+Aplica también la migración 008 con `go run ./cmd/migrate`. Docente crea una actividad **Cuestionario**, abre **Configurar cuestionario**, selecciona preguntas/versiones/pesos, máximo de intentos y políticas de nota/revisión; guarda y publica. El alumno comienza, guarda respuestas y envía lo guardado. La calificación se calcula en Go y el libro incluye un solo ítem por cuestionario: primera, última, mejor nota o promedio. Se conservan intentos y claves privadas, sin premios por enviar. Docente revisa únicamente intentos enviados de alumnos vinculados e inscritos. Fechas y temporizador siguen pendientes. Evidencia: [docs/quiz-validation.md](docs/quiz-validation.md). Prueba: `npm run test:e2e -- quizzes.spec.ts` con las variables E2E anteriores.

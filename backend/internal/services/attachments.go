@@ -16,7 +16,7 @@ func editableAttachmentSubmission(tx *gorm.DB, user, lesson int64, version int) 
 	if e := lockAssignment(tx, user, lesson); e != nil {
 		return sub, e
 	}
-	if e := tx.Raw(`SELECT * FROM submissions WHERE user_id=? AND lesson_id=? FOR UPDATE`, user, lesson).Scan(&sub).Error; e != nil {
+	if e := tx.Raw(`SELECT * FROM submissions WHERE user_id=? AND lesson_id=? ORDER BY attempt DESC LIMIT 1 FOR UPDATE`, user, lesson).Scan(&sub).Error; e != nil {
 		return sub, e
 	}
 	if sub.Version != version || (sub.ID != 0 && sub.Status != "draft") {

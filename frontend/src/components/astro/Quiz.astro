@@ -1,0 +1,27 @@
+---
+import QuizAttempt from './QuizAttempt.astro';import type{components}from'../../lib/generated/api';
+interface Props{lessonId:number;overview:components['schemas']['QuizOverview'];body:string;}
+const{lessonId,overview,body}=Astro.props;const latest=overview.attempts[0];const canStart=(!latest||latest.status==='finished')&&overview.attempts.length<overview.maxAttempts;
+const policies={first:'primera nota',last:'última nota',highest:'mejor nota',average:'promedio de notas'};
+---
+<section>
+ <div class="panel"><span class="tag">Cuestionario</span><p class="reading-body">{body}</p><p>{overview.questionCount} preguntas · máximo {overview.maxAttempts} intentos · el libro usa {policies[overview.gradePolicy]}.</p>
+ <p>{overview.reviewPolicy==='after_attempt'?'Las soluciones de los nuevos intentos se podrán revisar después de enviarlos.':'Las soluciones de los nuevos intentos no se mostrarán al enviar.'}</p>
+ {canStart&&<quiz-start data-lesson={lessonId} data-after={latest?.attempt??0}><form><button type="submit">Comenzar intento {(latest?.attempt??0)+1}</button><p role="status" data-status></p></form></quiz-start>}
+ {!canStart&&latest?.status==='finished'&&<p>Ya usaste los intentos disponibles. Puedes seguir consultando tu trabajo.</p>}
+ </div>
+ {overview.attempts.length>0&&<nav class="toolbar" aria-label="Intentos del cuestionario">{overview.attempts.map(a=><a class="button quiet" href={`?attemptId=${a.id}`}>Intento {a.attempt} · {a.status==='finished'?'Enviado':'En progreso'}</a>)}</nav>}
+ {overview.attempt&&overview.attempt.instructions!==body&&<p class="notice">Las instrucciones cambiaron. Tu intento conserva las anteriores: puedes consultarlas en «Instrucciones de este intento».</p>}
+ {overview.attempt&&<QuizAttempt attempt={overview.attempt}/>}
+</section>
+<script>
+ import{api}from'../../lib/api';import type{components}from'../../lib/generated/api';
+ class QuizStartElement extends HTMLElement{
+  private controller?:AbortController;
+  connectedCallback(){if(this.controller)return;this.controller=new AbortController();const form=this.querySelector('form')!;const button=form.querySelector('button')!;const status=this.querySelector<HTMLElement>('[data-status]')!;
+   form.addEventListener('submit',async e=>{e.preventDefault();if(button.disabled)return;button.disabled=true;status.textContent='Preparando tu intento…';try{const attempt=await api<components['schemas']['QuizAttempt']>(`/lessons/${this.dataset.lesson}/quiz/start`,{method:'POST',body:JSON.stringify({afterAttempt:Number(this.dataset.after)})});window.location.assign(`/lessons/${this.dataset.lesson}?attemptId=${attempt.id}`);}catch(error){status.textContent=(error instanceof Error?error.message:'No se pudo comenzar.')+' Puedes volver a intentarlo.';button.disabled=false;}},{signal:this.controller.signal});
+  }
+  disconnectedCallback(){this.controller?.abort();this.controller=undefined;}
+ }
+ if(!customElements.get('quiz-start'))customElements.define('quiz-start',QuizStartElement);
+</script>

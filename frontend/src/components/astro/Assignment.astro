@@ -11,6 +11,7 @@ const unavailable = availability.state === "closed" || availability.state === "u
 ---
 <article class="panel reading">
   <span class="tag">Tarea</span>
+  {submission && <p>Intento {submission.attempt} · <a class="crumb" href={`/lessons/${lesson.id}/attempts`}>Ver mis intentos anteriores</a></p>}
   <ScheduleView schedule={availability}/>
   {availability.extended && <p class="notice">Tienes una prórroga. Estas son tus fechas efectivas.</p>}
   {availability.state === "late" && submission?.status !== "submitted" && <p class="notice">La fecha de entrega pasó, pero todavía puedes enviar tu trabajo. Quedará registrado como entrega tardía.</p>}
