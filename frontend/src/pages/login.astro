@@ -1,0 +1,92 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Entrar">
+  <section class="login-wrap panel">
+    <span class="eyebrow">Qué bueno verte por aquí</span>
+    <h1>Vamos a descubrir algo nuevo</h1>
+    <p>Usa la cuenta que te compartió tu docente.</p>
+    {import.meta.env.PUBLIC_DEMO_MODE === "true" && (
+      <aside class="demo-access">
+        <strong>Prueba la aplicación</strong>
+        <p>
+          Estudiante: <code>luna</code> o <code>sol</code>
+          <br />
+          Docente: <code>profe</code>
+          <br />
+          Administrador: <code>admin</code>
+          <br />
+          Contraseña para todos: <code>aulaquest-demo</code>
+        </p>
+      </aside>
+    )}
+    <form id="login-form" method="post" action="/api/v1/auth/login">
+      <div class="form-field">
+        <label for="username">Tu usuario</label>
+        <input
+          id="username"
+          name="username"
+          autocomplete="username"
+          maxlength="64"
+          required
+        />
+      </div>
+      <div class="form-field">
+        <label for="password">Tu contraseña</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          minlength="12"
+          maxlength="72"
+          required
+        />
+      </div>
+      <p id="login-status" role="status" class="error"></p>
+      <button type="submit" disabled>
+        Entrar a mi aventura →
+      </button>
+      <noscript>
+        <p>Activa JavaScript para iniciar sesión de forma segura.</p>
+      </noscript>
+    </form>
+    <p class="helper" style="margin-top:24px">
+      ¿Necesitas ayuda? Pídele a tu docente que revise tu acceso.
+    </p>
+  </section>
+</Layout>
+<script>
+  import { api, type SessionUser, roleHome } from "../lib/api";
+  import { clearProgress } from "../store/progress";
+  document.addEventListener("astro:page-load", () => {
+    const loginForm = document.querySelector<HTMLFormElement>("#login-form");
+    if (!loginForm) return;
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget as HTMLFormElement;
+      const button = form.querySelector("button")!;
+      const status = document.querySelector("#login-status")!;
+      button.disabled = true;
+      status.textContent = "Conectando…";
+      const data = new FormData(form);
+      try {
+        const user = await api<SessionUser>("/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            username: data.get("username"),
+            password: data.get("password"),
+          }),
+        });
+        clearProgress();
+        window.location.assign(roleHome(user.role));
+      } catch (e) {
+        status.textContent =
+          e instanceof Error ? e.message : "No se pudo entrar.";
+        button.disabled = false;
+      }
+    });
+    loginForm.querySelector("button")!.disabled = false;
+  });
+</script>

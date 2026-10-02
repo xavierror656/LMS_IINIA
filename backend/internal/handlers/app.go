@@ -1,0 +1,56 @@
+package handlers
+
+import (
+	"aulaquest/internal/config"
+	"aulaquest/internal/repositories"
+	"aulaquest/internal/runner"
+	"aulaquest/internal/ws"
+	"errors"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"gorm.io/gorm"
+	"log/slog"
+	"net/http"
+	"time"
+)
+
+func New(db *gorm.DB, cfg config.Config) (*fiber.App, *ws.Hub) {
+	app := fiber.New(fiber.Config{DisableStartupMessage: true, BodyLimit: 128 * 1024, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, ErrorHandler: func(c *fiber.Ctx, e error) error {
+		status := 500
+		message := "No se pudo completar la solicitud"
+		var f *fiber.Error
+		if errors.As(e, &f) {
+			status = f.Code
+			message = map[int]string{400: "Revisa los datos enviados", 401: "Revisa tu acceso o vuelve a iniciar sesión", 403: "No tienes acceso a esta acción", 404: "Esta aventura no está disponible", 409: "Hay cambios más recientes o esta actividad ya no admite esa acción. Revisa la versión guardada antes de continuar", 429: "Hagamos una pausa. Inténtalo en un minuto", 503: "No podemos conectar. Vuelve a intentarlo"}[status]
+			if message == "" {
+				message = "No se pudo completar la solicitud"
+			}
+		}
+		return c.Status(status).JSON(fiber.Map{"error": fiber.Map{"code": http.StatusText(status), "message": message, "requestId": c.GetRespHeader("X-Request-ID")}})
+	}})
+	app.Use(requestid.New(), recover.New())
+	app.Use(func(c *fiber.Ctx) error {
+		c.Set("Cache-Control", "no-store")
+		c.Set("X-Content-Type-Options", "nosniff")
+		start := time.Now()
+		e := c.Next()
+		status := c.Response().StatusCode()
+		if e != nil {
+			status = 500
+			var f *fiber.Error
+			if errors.As(e, &f) {
+				status = f.Code
+			}
+		}
+		slog.Info("request", "requestId", c.GetRespHeader("X-Request-ID"), "method", c.Method(), "status", status, "duration_ms", time.Since(start).Milliseconds())
+		return e
+	})
+	app.Use(limiter.New(limiter.Config{Max: 180, Expiration: time.Minute}))
+	repo := repositories.Repository{DB: db}
+	hub := ws.New(repo, runner.MockRunner{})
+	(API{Repo: repo, Config: cfg, Revoke: hub.Revoke}).Register(app)
+	hub.Register(app, cfg.Origin)
+	return app, hub
+}

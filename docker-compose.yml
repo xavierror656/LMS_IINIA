@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:18.4-alpine
+    environment:
+      POSTGRES_DB: aulaquest
+      POSTGRES_USER: aulaquest
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aulaquest -d aulaquest"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  migrate:
+    build: ./backend
+    command: ["migrate"]
+    environment: &backend_env
+      DATABASE_URL: postgres://aulaquest:${POSTGRES_PASSWORD}@db:5432/aulaquest?sslmode=disable
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:4321}
+      APP_ENV: ${APP_ENV:-development}
+      LISTEN_ADDR: 0.0.0.0:8080
+      SEED_STUDENT_PASSWORD: ${SEED_STUDENT_PASSWORD:?Set synthetic student password}
+      SEED_TEACHER_PASSWORD: ${SEED_TEACHER_PASSWORD:?Set synthetic teacher password}
+    depends_on:
+      db:
+        condition: service_healthy
+  seed:
+    build: ./backend
+    command: ["seed"]
+    environment: *backend_env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+  api:
+    build: ./backend
+    environment: *backend_env
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+  frontend:
+    build: ./frontend
+    environment:
+      API_INTERNAL_URL: http://api:8080
+    depends_on:
+      - api
+  proxy:
+    image: nginx:1.28-alpine
+    ports:
+      - "127.0.0.1:4321:80"
+    volumes:
+      - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - api
+volumes:
+  postgres_data:

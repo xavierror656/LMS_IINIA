@@ -1,0 +1,15 @@
+---
+interface Props {
+  message: string;
+}
+const { message } = Astro.props;
+---
+
+<section class="panel notice" role="alert">
+  <span class="eyebrow">Hagamos una pausa</span>
+  <h1>No pudimos cargar esta aventura</h1>
+  <p>{message}</p>
+  <a class="button" href={Astro.url.pathname} data-astro-reload>
+    Volver a intentar
+  </a>
+</section>

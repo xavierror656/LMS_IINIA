@@ -1,0 +1,3 @@
+- [x] T13.1 Definir LMS-013, contrato y diseño.
+- [x] T13.2 Persistencia demo, autorización y formularios docentes.
+- [x] T13.3 Validar permisos, errores, persistencia y flujo del navegador.

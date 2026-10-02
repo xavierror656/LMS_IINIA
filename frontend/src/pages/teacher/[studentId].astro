@@ -1,0 +1,64 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ServiceError from "../../components/astro/ServiceError.astro";
+import { api, type StudentProgress } from "../../lib/api";
+let data: StudentProgress | undefined;
+let error = Astro.locals.apiError;
+if (!error)
+  try {
+    data = await api<StudentProgress>(
+      `/teacher/students/${encodeURIComponent(Astro.params.studentId ?? "")}/progress`,
+      {},
+      Astro.request.headers.get("cookie") ?? "",
+    );
+  } catch (e) {
+    error =
+      e instanceof Error ? e.message : "No se pudo consultar el progreso.";
+  }
+---
+
+<Layout title="Progreso del estudiante">
+  {error ? (
+    <ServiceError message={error} />
+  ) : (
+    data && (
+      <>
+        <a class="crumb" href="/teacher">
+          ← Mi grupo
+        </a>
+        <span class="eyebrow">Acompañando su aprendizaje</span>
+        <h1>El camino de {data.progress.alias}</h1>
+        <p>
+          Nivel {data.progress.level} · {data.progress.xp} XP ·{" "}
+          {data.progress.completed} lecturas completadas
+        </p>
+        <section class="panel table-wrap">
+          <table>
+            <caption class="sr-only">Progreso por curso</caption>
+            <thead>
+              <tr>
+                <th scope="col">Aventura</th>
+                <th scope="col">Lecciones completadas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.courses.map((c) => (
+                <tr>
+                  <td>{c.title}</td>
+                  <td>
+                    {c.completed} de {c.total}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p class="helper" style="margin-top:24px">
+            Las lecturas se completan por declaración del estudiante. Los
+            resultados H5P reportados y la consola simulada no son evaluaciones
+            validadas.
+          </p>
+        </section>
+      </>
+    )
+  )}
+</Layout>

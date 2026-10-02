@@ -1,0 +1,92 @@
+---
+import Icon from "../../components/astro/Icon.astro";
+import Layout from "../../layouts/Layout.astro";
+import ServiceError from "../../components/astro/ServiceError.astro";
+import { api, type Course } from "../../lib/api";
+let courses: Course[] = [];
+let error = Astro.locals.apiError;
+const page = Math.max(1, Number(Astro.url.searchParams.get("page")) || 1);
+if (!error)
+  try {
+    courses = (
+      await api<{ items: Course[] }>(
+        `/courses?page=${page}`,
+        {},
+        Astro.request.headers.get("cookie") ?? "",
+      )
+    ).items;
+  } catch (e) {
+    error =
+      e instanceof Error ? e.message : "No se pudieron cargar tus cursos.";
+  }
+---
+
+<Layout title="Mis aventuras">
+  {error ? (
+    <ServiceError message={error} />
+  ) : (
+    <>
+      <section class="hero">
+        <div>
+          <span class="eyebrow">Tu mapa de descubrimientos</span>
+          <h1>
+            ¡Hola, {Astro.locals.user?.alias}!<br />
+            ¿Qué exploramos hoy?
+          </h1>
+          <p>
+            Cada aventura empieza con un pequeño paso. Elige tu camino y sigue
+            aprendiendo a tu ritmo.
+          </p>
+          <span class="tag">✦ Aquí, cada intento cuenta</span>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="orbit"></div>
+          <div class="planet"><Icon name="rocket" size={100}/></div>
+          <span class="sticker top">Tu imaginación despega</span>
+          <span class="sticker bottom">¡Vamos a explorar! ✦</span>
+        </div>
+      </section>
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">Elige tu siguiente paso</span>
+          <h2>Mis aventuras</h2>
+        </div>
+        <p>{courses.length} cursos en esta página</p>
+      </div>
+      <section class="grid">
+        {courses.map((course) => (
+          <article class="course-card">
+            <div class="course-visual" aria-hidden="true">
+              <Icon name={course.slug==="reading-worlds"?"sprout":"rocket"} size={82}/>
+            </div>
+            <div>
+              <span class="tag">A tu ritmo · Sin límites de intentos</span>
+            </div>
+            <h2>{course.title}</h2>
+            <p>{course.description}</p>
+            <a class="button" href={`/courses/${course.id}`}>
+              Ver mi camino <span aria-hidden="true">→</span>
+            </a>
+          </article>
+        ))}
+      </section>
+      {courses.length === 0 && (
+        <p class="panel">
+          Aún no hay aventuras aquí. Tu docente puede ayudarte a empezar.
+        </p>
+      )}
+      <nav aria-label="Páginas de cursos" class="toolbar">
+        {page > 1 && (
+          <a class="crumb" href={`/courses?page=${page - 1}`}>
+            ← Anterior
+          </a>
+        )}
+        {courses.length === 20 && (
+          <a class="crumb" href={`/courses?page=${page + 1}`}>
+            Siguiente →
+          </a>
+        )}
+      </nav>
+    </>
+  )}
+</Layout>

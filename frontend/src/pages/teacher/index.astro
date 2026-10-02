@@ -1,0 +1,75 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ServiceError from "../../components/astro/ServiceError.astro";
+import { api, type User } from "../../lib/api";
+let students: User[] = [];
+let error = Astro.locals.apiError;
+const page = Math.max(1, Number(Astro.url.searchParams.get("page")) || 1);
+if (!error)
+  try {
+    students = (
+      await api<{ items: User[] }>(
+        `/teacher/students?page=${page}`,
+        {},
+        Astro.request.headers.get("cookie") ?? "",
+      )
+    ).items;
+  } catch (e) {
+    error = e instanceof Error ? e.message : "No se pudo consultar el grupo.";
+  }
+---
+
+<Layout title="Mi grupo">
+  {error ? (
+    <ServiceError message={error} />
+  ) : (
+    <>
+      <span class="eyebrow">Espacio docente</span>
+      <h1>Cada estudiante, su propio camino</h1>
+      <p>Consulta los avances de los estudiantes vinculados a tu cuenta.</p>
+      {import.meta.env.PUBLIC_DEMO_MODE === "true" && (
+        <p>
+          <a class="button" href="/teacher/plugins">
+            Editar plugins →
+          </a>
+        </p>
+      )}
+      <section class="panel table-wrap">
+        <table>
+          <caption class="sr-only">Estudiantes de mi grupo</caption>
+          <thead>
+            <tr>
+              <th scope="col">Estudiante</th>
+              <th scope="col">Seguimiento</th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((s) => (
+              <tr>
+                <td>{s.alias}</td>
+                <td>
+                  <a href={`/teacher/${s.id}`}>Ver progreso de {s.alias} →</a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {students.length === 0 && (
+          <p>No hay estudiantes vinculados en esta página.</p>
+        )}
+      </section>
+      <nav class="toolbar" aria-label="Páginas de estudiantes">
+        {page > 1 && (
+          <a class="crumb" href={`/teacher?page=${page - 1}`}>
+            ← Anterior
+          </a>
+        )}
+        {students.length === 20 && (
+          <a class="crumb" href={`/teacher?page=${page + 1}`}>
+            Siguiente →
+          </a>
+        )}
+      </nav>
+    </>
+  )}
+</Layout>

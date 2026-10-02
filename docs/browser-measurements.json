@@ -1,0 +1,94 @@
+{
+  "environment": "Astro compiled SSR + temporary Node proxy, Go 1.27.1, PostgreSQL 18.4, Linux x86_64",
+  "method": "20 warmed sequential requests via localhost proxy; Chromium 820x1180; initial JS from Resource Timing in fresh browser contexts, uncompressed bytes, H5P disabled",
+  "timing": {
+    "/api/v1/courses": {
+      "n": 20,
+      "medianMs": 1.6000000000931323,
+      "p95Ms": 2.1000000000931323
+    },
+    "/api/v1/me/progress": {
+      "n": 20,
+      "medianMs": 1.7000000001862645,
+      "p95Ms": 2.2000000001862645
+    }
+  },
+  "initialJavaScript": {
+    "/": {
+      "decodedBytes": 18957,
+      "files": [
+        "/_astro/ClientRouter.astro_astro_type_script_index_0_lang.CYDbzu1r.js",
+        "/_astro/Layout.astro_astro_type_script_index_0_lang.rXL0GFTt.js",
+        "/_astro/api.BDyZMWsy.js",
+        "/_astro/progress.CxxACLa3.js"
+      ],
+      "inlineBytes": 0
+    },
+    "/courses": {
+      "decodedBytes": 371836,
+      "files": [
+        "/_astro/ClientRouter.astro_astro_type_script_index_0_lang.CYDbzu1r.js",
+        "/_astro/Layout.astro_astro_type_script_index_0_lang.rXL0GFTt.js",
+        "/_astro/HUD.BcQFBuqu.js",
+        "/_astro/client.RMePetAg.js",
+        "/_astro/api.BDyZMWsy.js",
+        "/_astro/progress.CxxACLa3.js",
+        "/_astro/react.yIOJJ3r4.js",
+        "/_astro/createLucideIcon.zAw1zFRa.js",
+        "/_astro/jsx-runtime.s_hmvXF6.js"
+      ],
+      "inlineBytes": 4510
+    },
+    "/lessons/1": {
+      "decodedBytes": 372389,
+      "files": [
+        "/_astro/ClientRouter.astro_astro_type_script_index_0_lang.CYDbzu1r.js",
+        "/_astro/Layout.astro_astro_type_script_index_0_lang.rXL0GFTt.js",
+        "/_astro/_lessonId_.astro_astro_type_script_index_0_lang.D-yD19l5.js",
+        "/_astro/HUD.BcQFBuqu.js",
+        "/_astro/client.RMePetAg.js",
+        "/_astro/api.BDyZMWsy.js",
+        "/_astro/progress.CxxACLa3.js",
+        "/_astro/createLucideIcon.zAw1zFRa.js",
+        "/_astro/jsx-runtime.s_hmvXF6.js",
+        "/_astro/react.yIOJJ3r4.js"
+      ],
+      "inlineBytes": 4510
+    },
+    "/lessons/2": {
+      "decodedBytes": 920885,
+      "files": [
+        "/_astro/ClientRouter.astro_astro_type_script_index_0_lang.CYDbzu1r.js",
+        "/_astro/Layout.astro_astro_type_script_index_0_lang.rXL0GFTt.js",
+        "/_astro/_lessonId_.astro_astro_type_script_index_0_lang.D-yD19l5.js",
+        "/_astro/HUD.BcQFBuqu.js",
+        "/_astro/client.RMePetAg.js",
+        "/_astro/CodePlayground.C0CJCqcW.js",
+        "/_astro/api.BDyZMWsy.js",
+        "/_astro/progress.CxxACLa3.js",
+        "/_astro/createLucideIcon.zAw1zFRa.js",
+        "/_astro/jsx-runtime.s_hmvXF6.js",
+        "/_astro/react.yIOJJ3r4.js"
+      ],
+      "inlineBytes": 4510
+    },
+    "/lessons/3": {
+      "decodedBytes": 375827,
+      "files": [
+        "/_astro/ClientRouter.astro_astro_type_script_index_0_lang.CYDbzu1r.js",
+        "/_astro/Layout.astro_astro_type_script_index_0_lang.rXL0GFTt.js",
+        "/_astro/_lessonId_.astro_astro_type_script_index_0_lang.D-yD19l5.js",
+        "/_astro/HUD.BcQFBuqu.js",
+        "/_astro/client.RMePetAg.js",
+        "/_astro/H5PPlayer.Dwz0bGGr.js",
+        "/_astro/api.BDyZMWsy.js",
+        "/_astro/progress.CxxACLa3.js",
+        "/_astro/react.yIOJJ3r4.js",
+        "/_astro/jsx-runtime.s_hmvXF6.js",
+        "/_astro/createLucideIcon.zAw1zFRa.js"
+      ],
+      "inlineBytes": 4640
+    }
+  },
+  "pageErrors": []
+}

@@ -1,0 +1,106 @@
+---
+import { ClientRouter } from "astro:transitions";
+import { roleHome } from "../lib/api";
+import HUD from "../components/react/HUD";
+import { brand } from "../config/brand";
+import "../styles/global.css";
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+const user = Astro.locals.user;
+const demo = import.meta.env.PUBLIC_DEMO_MODE === "true";
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={brand.description} />
+    <meta name="theme-color" content="#6534cf" />
+    <title>{title} · {brand.name}</title>
+    <ClientRouter />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">
+      Saltar al contenido
+    </a>
+    <header class="site-header">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">
+          {brand.mark}
+        </span>
+        {brand.name}
+      </a>
+      <nav aria-label="Navegación principal">
+        <a
+          href={roleHome(user?.role)}
+          aria-current={
+            Astro.url.pathname === roleHome(user?.role) ? "page" : undefined
+          }
+        >
+          {user?.role === "admin"
+            ? "Administración"
+            : user?.role === "teacher"
+              ? "Mi grupo"
+              : "Mis aventuras"}
+        </a>
+        {user ? (
+          <button class="quiet" id="logout">
+            Salir
+          </button>
+        ) : (
+          <a class="button small" href="/login">
+            Entrar
+          </a>
+        )}
+      </nav>
+    </header>
+    <div class="page-shell">
+      {demo && (
+        <aside class="demo-notice" aria-label="Modo de demostración">
+          <strong>Modo demo · Datos ficticios</strong>
+          <span>
+            Tus avances se guardan solo en este equipo. No necesitas Docker ni
+            PostgreSQL.
+          </span>
+        </aside>
+      )}
+      {user?.role === "student" && (
+        <HUD
+          userId={user.id}
+          client:load
+          transition:persist={`hud-${user.id}`}
+        />
+      )}
+      <main id="main" tabindex="-1">
+        <slot />
+      </main>
+      <footer>
+        {brand.mark} {brand.name}
+        <span>Aprende a tu ritmo. Cada intento cuenta.</span>
+      </footer>
+    </div>
+    <script>
+      import { api } from "../lib/api";
+      import { clearProgress } from "../store/progress";
+      document.addEventListener("astro:page-load", () => {
+        document
+          .querySelector("#logout")
+          ?.addEventListener("click", async (event) => {
+            const button = event.currentTarget as HTMLButtonElement;
+            button.disabled = true;
+            try {
+              await api("/auth/logout", { method: "POST" });
+              clearProgress();
+              window.location.assign("/login");
+            } catch {
+              button.textContent = "No se pudo salir. Reintentar";
+              button.disabled = false;
+            }
+          });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,123 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ServiceError from "../../components/astro/ServiceError.astro";
+import { api, type Course, type SessionUser } from "../../lib/api";
+if (import.meta.env.PUBLIC_DEMO_MODE !== "true")
+  return Astro.redirect("/login");
+interface Overview {
+  users: (SessionUser & { username: string })[];
+  courses: (Course & { lessonCount: number })[];
+  plugins: number;
+}
+let overview: Overview | undefined;
+let error = Astro.locals.apiError;
+const roleLabels = {
+  admin: "Administrador",
+  teacher: "Docente",
+  student: "Estudiante",
+};
+if (!error)
+  try {
+    overview = await api<Overview>(
+      "/admin/overview",
+      {},
+      Astro.request.headers.get("cookie") ?? "",
+    );
+  } catch (e) {
+    error =
+      e instanceof Error ? e.message : "No se pudo cargar la administración.";
+  }
+---
+
+<Layout title="Administración">
+  <span class="eyebrow">Administración · Demo local</span>
+  <h1>El punto de partida de cada aventura</h1>
+  <p>
+    Consulta las cuentas y los cursos de la demo y personaliza sus herramientas
+    de aprendizaje.
+  </p>
+  {error ? (
+    <ServiceError message={error} />
+  ) : (
+    overview && (
+      <>
+        <div class="admin-stats" aria-label="Resumen de la plataforma">
+          <article class="panel">
+            <strong>{overview.users.length}</strong>
+            <span>Cuentas de demostración</span>
+          </article>
+          <article class="panel">
+            <strong>{overview.courses.length}</strong>
+            <span>Cursos disponibles</span>
+          </article>
+          <article class="panel">
+            <strong>{overview.plugins}</strong>
+            <span>Plugins configurables</span>
+          </article>
+        </div>
+        <section class="panel admin-tools">
+          <div>
+            <h2>Herramientas de aprendizaje</h2>
+            <p>
+              Ajusta los nombres, las instrucciones y el lenguaje inicial del
+              laboratorio.
+            </p>
+          </div>
+          <a class="button" href="/admin/plugins">
+            Editar plugins →
+          </a>
+        </section>
+        <section class="panel table-wrap admin-section">
+          <h2>Usuarios</h2>
+          <p class="helper">
+            Cuentas sintéticas. La creación de usuarios y el cambio de roles
+            todavía no están disponibles.
+          </p>
+          <table>
+            <caption class="sr-only">Cuentas y roles de la demo</caption>
+            <thead>
+              <tr>
+                <th scope="col">Alias</th>
+                <th scope="col">Usuario</th>
+                <th scope="col">Rol</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overview.users.map((user) => (
+                <tr>
+                  <td>{user.alias}</td>
+                  <td>{user.username}</td>
+                  <td>{roleLabels[user.role]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+        <section class="panel table-wrap admin-section">
+          <h2>Cursos</h2>
+          <p class="helper">
+            Catálogo de demostración. La edición de cursos aún no está
+            disponible.
+          </p>
+          <table>
+            <caption class="sr-only">Cursos y número de lecciones</caption>
+            <thead>
+              <tr>
+                <th scope="col">Curso</th>
+                <th scope="col">Lecciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overview.courses.map((course) => (
+                <tr>
+                  <td>{course.title}</td>
+                  <td>{course.lessonCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </>
+    )
+  )}
+</Layout>

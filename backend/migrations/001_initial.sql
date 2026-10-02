@@ -1,0 +1,14 @@
+CREATE TABLE users (id bigserial PRIMARY KEY, username varchar(64) UNIQUE NOT NULL, alias varchar(64) NOT NULL, password_hash text NOT NULL, role text NOT NULL CHECK(role IN ('student','teacher')), created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE sessions (token_hash text PRIMARY KEY, user_id bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at timestamptz NOT NULL);
+CREATE INDEX sessions_user ON sessions(user_id);
+CREATE INDEX sessions_expiration ON sessions(expires_at);
+CREATE TABLE teacher_students (teacher_id bigint REFERENCES users(id), student_id bigint REFERENCES users(id), PRIMARY KEY(teacher_id,student_id), CHECK(teacher_id<>student_id));
+CREATE TABLE courses (id bigserial PRIMARY KEY, slug text NOT NULL UNIQUE, title text NOT NULL, description text NOT NULL, icon text NOT NULL);
+CREATE TABLE modules (id bigserial PRIMARY KEY, course_id bigint NOT NULL REFERENCES courses(id), title text NOT NULL, position int NOT NULL CHECK(position>0), UNIQUE(course_id,position));
+CREATE TABLE lessons (id bigserial PRIMARY KEY, module_id bigint NOT NULL REFERENCES modules(id), title text NOT NULL, description text NOT NULL, position int NOT NULL CHECK(position>0), type text NOT NULL CHECK(type IN ('reading','code','h5p')), config jsonb NOT NULL CHECK(jsonb_typeof(config)='object'), UNIQUE(module_id,position));
+CREATE TABLE enrollments (user_id bigint REFERENCES users(id), course_id bigint REFERENCES courses(id), PRIMARY KEY(user_id,course_id));
+CREATE TABLE gamification_profiles (user_id bigint PRIMARY KEY REFERENCES users(id), xp int NOT NULL DEFAULT 0 CHECK(xp>=0), stars int NOT NULL DEFAULT 0 CHECK(stars>=0), gems int NOT NULL DEFAULT 0 CHECK(gems>=0), lives int NOT NULL DEFAULT 5 CHECK(lives>=0));
+CREATE TABLE lesson_progress (user_id bigint REFERENCES users(id), lesson_id bigint REFERENCES lessons(id), status text NOT NULL CHECK(status IN ('in_progress','completed')), updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(user_id,lesson_id));
+CREATE TABLE reward_events (id bigserial PRIMARY KEY, user_id bigint NOT NULL REFERENCES users(id), lesson_id bigint NOT NULL REFERENCES lessons(id), xp int NOT NULL CHECK(xp=25), stars int NOT NULL CHECK(stars=1), gems int NOT NULL CHECK(gems=2), created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(user_id,lesson_id));
+CREATE TABLE activity_attempts (id bigserial PRIMARY KEY, user_id bigint NOT NULL REFERENCES users(id), lesson_id bigint NOT NULL REFERENCES lessons(id), verb text NOT NULL CHECK(verb IN ('completed','answered','passed','failed')), score double precision CHECK(score>=0 AND score<=1), trust text NOT NULL DEFAULT 'client_reported' CHECK(trust='client_reported'), created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX attempts_user_lesson ON activity_attempts(user_id,lesson_id,created_at);

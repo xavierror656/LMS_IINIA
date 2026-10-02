@@ -1,0 +1,52 @@
+{
+  "name": "aulaquest-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "node scripts/copy-h5p.mjs && astro dev --host 0.0.0.0",
+    "check": "astro check",
+    "build": "node scripts/copy-h5p.mjs && astro build",
+    "start": "node dist/server/entry.mjs",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "types:api": "openapi-typescript ../contracts/openapi.json -o src/lib/generated/api.d.ts",
+    "demo": "node scripts/demo.mjs",
+    "test:demo": "node --test scripts/demo/server.test.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "11.1.6",
+    "@astrojs/react": "7.0.0",
+    "@codemirror/lang-javascript": "6.2.5",
+    "@codemirror/lang-python": "6.2.1",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.13",
+    "@fontsource/lexend": "5.3.0",
+    "@nanostores/react": "2.0.1",
+    "@tailwindcss/vite": "4.3.3",
+    "astro": "7.3.5",
+    "codemirror": "6.0.2",
+    "framer-motion": "13.5.0",
+    "h5p-standalone": "3.8.2",
+    "lucide-react": "1.49.0",
+    "nanostores": "1.5.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tailwindcss": "4.3.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@playwright/test": "1.63.0",
+    "@types/node": "26.6.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "jsdom": "30.1.1",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3",
+    "ws": "8.22.0"
+  }
+}

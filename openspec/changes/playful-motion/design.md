@@ -1,0 +1,4 @@
+# Design
+CSS para contenido Astro: entrada finita y escalonada, cohete que despega al entrar, tarjetas elevadas con hover o foco interno, botones con respuesta táctil sin cambio de dimensiones. No ocultar contenido si falta JavaScript. Limitar efectos hover a puntero fino.
+HUD React: comparar progreso canónico consecutivo del mismo usuario. Primera hidratación, repetición, error y cambio de usuario no celebran. Aumento confirmado muestra aviso de XP/estrellas/gemas y nivel durante tres segundos; partículas decorativas sin interacción. Timer limpiado al cambiar estado o desmontar. Framer Motion para barra e iconos; prefers-reduced-motion elimina transformaciones/partículas y conserva texto estático.
+Las animaciones no conceden premios ni guardan estado. No se agregan sonidos, parpadeos ni bucles infinitos. Pruebas de navegador verifican movimiento finito, respuesta correcta a aumento y ausencia de celebración al recargar; variante de movimiento reducido.

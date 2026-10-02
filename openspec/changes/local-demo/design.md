@@ -1,0 +1,4 @@
+# Design
+API mock Node explícita en frontend/scripts/demo/, limitada a loopback. npm run demo inicia API en puerto libre y Astro en localhost:4321 con API_INTERNAL_URL y PUBLIC_DEMO_MODE=true. La store y las páginas conservan el mismo contrato. No hay fallback silencioso si falla la API normal.
+Las cuentas son públicas y sintéticas. Cookie HttpOnly por sesión; comprobación de Origin exacto (localhost:4321 y 127.0.0.1:4321) y roles. Progreso demo se guarda atómicamente en frontend/.demo/state.json, ignorado por Git. Sesiones en memoria, descartadas al reiniciar. Recompensas demo idempotentes en un único proceso; no equivalen a las garantías transaccionales de PostgreSQL.
+WebSocket real de demostración con ws; solo mensajes fijos y cancelación, nunca ejecución. H5P permanece explícitamente sin paquete configurado. Se prohíbe iniciar demo con NODE_ENV=production.

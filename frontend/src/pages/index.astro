@@ -1,0 +1,61 @@
+---
+import Icon from "../components/astro/Icon.astro";
+import Layout from "../layouts/Layout.astro";
+import { brand } from "../config/brand";
+export const prerender = true;
+---
+
+<Layout title="Aprender es una aventura">
+  <section class="hero">
+    <div>
+      <span class="eyebrow">Un universo por descubrir</span>
+      <h1>{brand.welcome}</h1>
+      <p>
+        {brand.description} Prueba una idea, encuentra una historia y celebra
+        cada pequeño paso.
+      </p>
+      <a class="button" href="/courses">
+        Explorar mis aventuras <span aria-hidden="true">↗</span>
+      </a>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="orbit"></div>
+      <div class="planet"><Icon name="rocket" size={100}/></div>
+      <span class="sticker top">✦ ¡Tú puedes crear!</span>
+      <span class="sticker bottom">Un paso a la vez ✦</span>
+    </div>
+  </section>
+  <div class="section-heading">
+    <div>
+      <span class="eyebrow">Aprender a tu manera</span>
+      <h2>Hay más de un camino para crecer</h2>
+    </div>
+  </div>
+  <section class="features" aria-label="Formas de aprender">
+    <div>
+      <span aria-hidden="true"><Icon name="book" size={36}/></span>
+      <h3>Imagina leyendo</h3>
+      <p>Historias cortas y preguntas que despiertan grandes ideas.</p>
+    </div>
+    <div>
+      <span aria-hidden="true"><Icon name="code" size={36}/></span>
+      <h3>Experimenta creando</h3>
+      <p>Tu primer laboratorio para conocer el mundo del código.</p>
+    </div>
+    <div>
+      <span aria-hidden="true">✦</span>
+      <h3>Celebra tus pasos</h3>
+      <p>Una mochila de logros que crece contigo, sin prisas.</p>
+    </div>
+  </section>
+  <section class="panel">
+    <h2>Aquí, volver a intentar está bien.</h2>
+    <p>
+      Sin carreras ni comparaciones. Tus vidas nunca te impiden seguir
+      aprendiendo.
+    </p>
+    <a class="crumb" href="/login">
+      Ya tengo una cuenta →
+    </a>
+  </section>
+</Layout>

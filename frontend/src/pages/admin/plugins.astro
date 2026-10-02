@@ -1,0 +1,7 @@
+---
+import PluginSettings from "../../components/astro/PluginSettings.astro";
+if (import.meta.env.PUBLIC_DEMO_MODE !== "true")
+  return Astro.redirect("/login");
+---
+
+<PluginSettings area="admin" />

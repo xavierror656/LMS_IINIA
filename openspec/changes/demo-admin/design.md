@@ -1,0 +1,2 @@
+# Diseño
+Cuenta sintética admin, panel Astro SSR /admin y /admin/plugins. Middleware de páginas con destinos explícitos por rol, API Node con autorización administrativa propia. Resumen acotado de cuentas y cursos sintéticos, sin hashes, sesiones ni código. Componente de edición compartido con docente; endpoint administrativo separado con misma validación y persistencia. SessionUser extiende el tipo del contrato Go exclusivamente para la variante admin demo, sin alterar tipos generados. Sin creación/borrado de usuarios ni cambio de roles en este incremento.

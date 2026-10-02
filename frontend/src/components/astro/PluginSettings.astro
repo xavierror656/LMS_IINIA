@@ -1,0 +1,157 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ServiceError from "../../components/astro/ServiceError.astro";
+import { api } from "../../lib/api";
+import type { DemoPlugin } from "../../lib/demoPlugins";
+interface Props {
+  area: "teacher" | "admin";
+}
+const { area } = Astro.props;
+if (import.meta.env.PUBLIC_DEMO_MODE !== "true")
+  return Astro.redirect(`/${area}`);
+let plugins: DemoPlugin[] = [];
+let error = Astro.locals.apiError;
+if (!error)
+  try {
+    plugins = (
+      await api<{ items: DemoPlugin[] }>(
+        "/plugins",
+        {},
+        Astro.request.headers.get("cookie") ?? "",
+      )
+    ).items;
+  } catch (e) {
+    error =
+      e instanceof Error ? e.message : "No se pudieron cargar los plugins.";
+  }
+---
+
+<Layout title="Editar plugins">
+  <a class="crumb" href={`/${area}`}>
+    ← {area === "admin" ? "Administración" : "Mi grupo"}
+  </a>
+  <span class="eyebrow">
+    {area === "admin" ? "Administración" : "Espacio docente"} · Demo
+  </span>
+  <h1>Un laboratorio a tu manera</h1>
+  <p>
+    Edita los plugins de tus aventuras. Los cambios se guardan en esta demo y
+    aparecen al abrir una lección.
+  </p>
+  {error ? (
+    <ServiceError message={error} />
+  ) : (
+    <div class="plugin-grid">
+      {plugins.map((plugin) => (
+        <form
+          class="panel plugin-settings"
+          data-plugin={plugin.id}
+          data-area={area}
+        >
+          <span class="tag">
+            {plugin.id === "code"
+              ? "Código · Ejecución simulada"
+              : "H5P · Actividad aún no configurada"}
+          </span>
+          <h2>
+            {plugin.id === "code" ? "Laboratorio de código" : "Actividades H5P"}
+          </h2>
+          <label for={`${plugin.id}-title`}>Nombre del plugin</label>
+          <input
+            id={`${plugin.id}-title`}
+            name="title"
+            required
+            maxlength="60"
+            value={plugin.title}
+          />
+          <label for={`${plugin.id}-instructions`}>
+            Instrucciones para estudiantes
+          </label>
+          <textarea
+            id={`${plugin.id}-instructions`}
+            name="instructions"
+            required
+            maxlength="300"
+            rows="4"
+          >{plugin.instructions}</textarea>
+          {plugin.id === "code" && (
+            <>
+              <label for="code-language">Lenguaje inicial</label>
+              <select id="code-language" name="defaultLanguage">
+                <option
+                  value="lesson"
+                  selected={plugin.defaultLanguage === "lesson"}
+                >
+                  El de cada lección
+                </option>
+                <option
+                  value="javascript"
+                  selected={plugin.defaultLanguage === "javascript"}
+                >
+                  JavaScript
+                </option>
+                <option
+                  value="python"
+                  selected={plugin.defaultLanguage === "python"}
+                >
+                  Python
+                </option>
+              </select>
+              <p class="helper">
+                Se aplica al abrir el laboratorio; elegir un lenguaje reemplaza
+                su ejemplo inicial.
+              </p>
+            </>
+          )}
+          {plugin.id === "h5p" && (
+            <p class="helper">
+              Editar estos textos no instala una actividad. El contenido H5P
+              revisado se configura por separado.
+            </p>
+          )}
+          <button type="submit">Guardar cambios</button>
+          <p role="status" aria-live="polite" class="helper plugin-status"></p>
+        </form>
+      ))}
+    </div>
+  )}
+</Layout>
+<script>
+  import { api } from "../../lib/api";
+  import type { DemoPlugin } from "../../lib/demoPlugins";
+  document.addEventListener("astro:page-load", () => {
+    document
+      .querySelectorAll<HTMLFormElement>(".plugin-settings")
+      .forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const button = form.querySelector<HTMLButtonElement>("button")!;
+          if (button.disabled) return;
+          const status = form.querySelector(".plugin-status")!;
+          const body = Object.fromEntries(new FormData(form));
+          button.disabled = true;
+          status.textContent = "Guardando cambios…";
+          try {
+            const saved = await api<DemoPlugin>(
+              `/${form.dataset.area}/plugins/${form.dataset.plugin}`,
+              { method: "POST", body: JSON.stringify(body) },
+            );
+            (form.elements.namedItem("title") as HTMLInputElement).value =
+              saved.title;
+            (
+              form.elements.namedItem("instructions") as HTMLTextAreaElement
+            ).value = saved.instructions;
+            status.textContent =
+              "Cambios guardados. Se verán al abrir la lección.";
+          } catch (e) {
+            status.textContent =
+              e instanceof Error
+                ? e.message
+                : "No se pudo guardar. Inténtalo de nuevo.";
+          } finally {
+            button.disabled = false;
+          }
+        });
+      });
+  });
+</script>

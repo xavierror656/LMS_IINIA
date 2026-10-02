@@ -1,0 +1,2 @@
+# Diseño
+Página Astro /teacher/plugins, formularios accesibles y cliente API central. Registro cerrado code/h5p. JSON local con escritura atómica conserva progreso existente; estados antiguos reciben valores predeterminados. Sesión docente y Origin requerido para mutaciones. Validación estricta, límites de texto y renderizado escapado. Las lecciones leen configuración canónica. H5P permanece sin contenido configurado y código sigue simulado. Sin dependencias nuevas ni carga de código de plugins.

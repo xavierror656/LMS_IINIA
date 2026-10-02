@@ -1,0 +1,38 @@
+[
+  {
+    "pair": "Texto principal",
+    "foreground": "#292442",
+    "background": "#f8f7fc",
+    "ratio": 13.82
+  },
+  {
+    "pair": "Texto secundario",
+    "foreground": "#635d78",
+    "background": "#ffffff",
+    "ratio": 6.24
+  },
+  {
+    "pair": "Bot\u00f3n principal",
+    "foreground": "#ffffff",
+    "background": "#6534cf",
+    "ratio": 7.13
+  },
+  {
+    "pair": "Texto sobre lima",
+    "foreground": "#292442",
+    "background": "#d5f578",
+    "ratio": 12.04
+  },
+  {
+    "pair": "Texto sobre amarillo",
+    "foreground": "#292442",
+    "background": "#ffdb66",
+    "ratio": 10.93
+  },
+  {
+    "pair": "Error",
+    "foreground": "#a12240",
+    "background": "#ffffff",
+    "ratio": 7.45
+  }
+]

@@ -1,0 +1,73 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ServiceError from "../../components/astro/ServiceError.astro";
+import { api, type CourseMap } from "../../lib/api";
+let data: CourseMap | undefined;
+let error = Astro.locals.apiError;
+if (!error)
+  try {
+    data = await api<CourseMap>(
+      `/courses/${encodeURIComponent(Astro.params.courseId ?? "")}`,
+      {},
+      Astro.request.headers.get("cookie") ?? "",
+    );
+  } catch (e) {
+    error = e instanceof Error ? e.message : "No se pudo abrir el curso.";
+  }
+const labels = {
+  available: "Disponible",
+  in_progress: "En progreso",
+  completed: "Completado",
+};
+const types = { reading: "Lectura", code: "Laboratorio", h5p: "Actividad" };
+---
+
+<Layout title={data?.course.title ?? "Tu camino"}>
+  {error ? (
+    <ServiceError message={error} />
+  ) : (
+    data && (
+      <>
+        <a class="crumb" href="/courses">
+          ← Mis aventuras
+        </a>
+        <span class="eyebrow">Tu camino de aprendizaje</span>
+        <h1>{data.course.title}</h1>
+        <p>{data.course.description}</p>
+        {data.modules.map((module) => (
+          <section>
+            <h2>
+              {module.position}. {module.title}
+            </h2>
+            <div class="path">
+              {data.lessons
+                .filter((l) => l.moduleId === module.id)
+                .map((lesson) => (
+                  <a
+                    class:list={["lesson-link", lesson.status]}
+                    href={`/lessons/${lesson.id}`}
+                  >
+                    <span class="step" aria-hidden="true">
+                      {lesson.status === "completed" ? "✓" : lesson.position}
+                    </span>
+                    <div>
+                      <h3>{lesson.title}</h3>
+                      <p>
+                        {types[lesson.type]} · {labels[lesson.status]}
+                      </p>
+                    </div>
+                    <span class="arrow" aria-hidden="true">
+                      →
+                    </span>
+                  </a>
+                ))}
+            </div>
+          </section>
+        ))}
+        <p class="helper">
+          Puedes volver a cualquier lección. Aprender no gasta tus vidas.
+        </p>
+      </>
+    )
+  )}
+</Layout>

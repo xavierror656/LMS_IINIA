@@ -1,0 +1,118 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ServiceError from "../../components/astro/ServiceError.astro";
+import CodePlayground from "../../components/react/CodePlayground";
+import H5PPlayer from "../../components/react/H5PPlayer";
+import { api, type Lesson } from "../../lib/api";
+import type { DemoPlugin } from "../../lib/demoPlugins";
+let plugin: DemoPlugin | undefined;
+let lesson: Lesson | undefined;
+let error = Astro.locals.apiError;
+if (!error)
+  try {
+    lesson = await api<Lesson>(
+      `/lessons/${encodeURIComponent(Astro.params.lessonId ?? "")}`,
+      {},
+      Astro.request.headers.get("cookie") ?? "",
+    );
+    if (
+      import.meta.env.PUBLIC_DEMO_MODE === "true" &&
+      lesson.type !== "reading"
+    ) {
+      const result = await api<{ items: DemoPlugin[] }>(
+        "/plugins",
+        {},
+        Astro.request.headers.get("cookie") ?? "",
+      );
+      plugin = result.items.find((p) => p.id === lesson?.type);
+    }
+  } catch (e) {
+    error = e instanceof Error ? e.message : "No se pudo abrir la lección.";
+  }
+---
+
+<Layout title={lesson?.title ?? "Lección"}>
+  {error ? (
+    <ServiceError message={error} />
+  ) : (
+    lesson && (
+      <>
+        <a class="crumb" href="/courses">
+          ← Mis aventuras
+        </a>
+        <span class="eyebrow">Un nuevo descubrimiento</span>
+        <h1>{lesson.title}</h1>
+        <p>{lesson.description}</p>
+        {plugin && (
+          <aside class="plugin-intro">
+            <h2>{plugin.title}</h2>
+            <p>{plugin.instructions}</p>
+          </aside>
+        )}
+        {lesson.type === "reading" ? (
+          <article class="panel reading">
+            <span class="tag">Lee a tu ritmo</span>
+            <div class="reading-body">{lesson.config.body}</div>
+            <div style="margin-top:32px">
+              <button
+                id="complete-reading"
+                data-lesson={lesson.id}
+                disabled={lesson.status === "completed"}
+              >
+                {lesson.status === "completed"
+                  ? "✓ Lectura completada"
+                  : "¡Terminé de leer! ✦"}
+              </button>
+              <p
+                id="completion-status"
+                role="status"
+                class="helper"
+                style="margin-top:20px"
+              >
+                Completar esta lectura otorga 25 XP, 1 estrella y 2 gemas una
+                sola vez.
+              </p>
+            </div>
+          </article>
+        ) : lesson.type === "code" ? (
+          <CodePlayground
+            lessonId={lesson.id}
+            language={lesson.config.language ?? "javascript"}
+            starter={lesson.config.starter ?? ""}
+            client:load
+          />
+        ) : (
+          <H5PPlayer
+            lessonId={lesson.id}
+            activity={lesson.config.activity ?? "demo"}
+            client:only="react"
+          />
+        )}
+      </>
+    )
+  )}
+</Layout>
+<script>
+  import { completeReading } from "../../store/progress";
+  document.addEventListener("astro:page-load", () => {
+    document
+      .querySelector<HTMLButtonElement>("#complete-reading")
+      ?.addEventListener("click", async (event) => {
+        const button = event.currentTarget as HTMLButtonElement;
+        const status = document.querySelector("#completion-status")!;
+        button.disabled = true;
+        status.textContent = "Guardando tu descubrimiento…";
+        try {
+          await completeReading(Number(button.dataset.lesson));
+          button.textContent = "✓ Lectura completada";
+          status.textContent = "¡Un paso más! Tu progreso está guardado.";
+        } catch (e) {
+          button.disabled = false;
+          status.textContent =
+            e instanceof Error
+              ? e.message
+              : "No se pudo guardar. Vuelve a intentarlo.";
+        }
+      });
+  });
+</script>

@@ -1,0 +1,3 @@
+- [x] T14.1 Definir alcance, contrato y requisito LMS-014.
+- [x] T14.2 Implementar cuenta admin, autorización, panel y editor compartido.
+- [x] T14.3 Probar aislamiento de roles, sesión, configuración y navegador.
