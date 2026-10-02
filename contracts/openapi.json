@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AulaQuest API",
-    "version": "1.2.0"
+    "version": "1.3.0"
   },
   "servers": [
     {
@@ -2848,6 +2848,125 @@
           }
         }
       }
+    },
+    "/api/v1/teacher/activities/{activityId}/evaluation": {
+      "put": {
+        "operationId": "saveEvaluation",
+        "summary": "Save private rubric and relative weight; publication uses activity revision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activityId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Canonical persisted result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Activity"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or Origin denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Object not accessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale version or invalid state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 128 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationInput"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3075,6 +3194,16 @@
           "version": {
             "type": "integer",
             "minimum": 1
+          },
+          "rubric": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rubric"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -3373,6 +3502,21 @@
           "publishedVersion": {
             "type": "integer",
             "minimum": 0
+          },
+          "rubric": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rubric"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
           }
         },
         "required": [
@@ -3384,7 +3528,9 @@
           "body",
           "lessonId",
           "version",
-          "publishedVersion"
+          "publishedVersion",
+          "rubric",
+          "weight"
         ]
       },
       "ActivityEdit": {
@@ -3455,13 +3601,24 @@
               "draft",
               "published"
             ]
+          },
+          "assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RubricAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "score",
           "feedback",
           "version",
-          "status"
+          "status",
+          "assessment"
         ]
       },
       "GradeInput": {
@@ -3481,12 +3638,43 @@
           "version": {
             "type": "integer",
             "minimum": 0
+          },
+          "selections": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5
+            }
           }
         },
         "required": [
-          "score",
-          "feedback",
-          "version"
+          "version",
+          "feedback"
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "score"
+            ],
+            "not": {
+              "required": [
+                "selections"
+              ]
+            }
+          },
+          {
+            "required": [
+              "selections"
+            ],
+            "not": {
+              "required": [
+                "score"
+              ]
+            }
+          }
         ]
       },
       "Submission": {
@@ -3543,6 +3731,16 @@
                 "type": "null"
               }
             ]
+          },
+          "rubric": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rubric"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -3554,7 +3752,8 @@
           "version",
           "status",
           "submittedAt",
-          "grade"
+          "grade",
+          "rubric"
         ]
       },
       "SubmissionInput": {
@@ -3700,12 +3899,18 @@
           },
           "title": {
             "type": "string"
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
           }
         },
         "required": [
           "activityId",
           "lessonId",
-          "title"
+          "title",
+          "weight"
         ]
       },
       "GradebookCell": {
@@ -3780,6 +3985,22 @@
             "minimum": 0,
             "maximum": 10000,
             "description": "Mean of all published assignment grades, in hundredths, half-up rounded. Null without published grades; missing work is not zero."
+          },
+          "weightedAverageHundredths": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "publishedWeight": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalWeight": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
@@ -3788,7 +4009,10 @@
           "pendingReview",
           "pendingPublication",
           "published",
-          "averageHundredths"
+          "averageHundredths",
+          "weightedAverageHundredths",
+          "publishedWeight",
+          "totalWeight"
         ]
       },
       "GradebookRow": {
@@ -3873,6 +4097,116 @@
           "activityPage",
           "activityPageSize",
           "totalActivities"
+        ]
+      },
+      "RubricLevel": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "points": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "label",
+          "points"
+        ]
+      },
+      "RubricCriterion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "levels": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 6,
+            "items": {
+              "$ref": "#/components/schemas/RubricLevel"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "levels"
+        ]
+      },
+      "Rubric": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "criteria": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/RubricCriterion"
+            }
+          }
+        },
+        "required": [
+          "criteria"
+        ],
+        "description": "Per criterion, points strictly increase from zero. Last level defines maximum points."
+      },
+      "RubricAssessment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "selections": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5
+            }
+          }
+        },
+        "required": [
+          "selections"
+        ]
+      },
+      "EvaluationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "rubric": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rubric"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "weight",
+          "rubric"
         ]
       }
     }

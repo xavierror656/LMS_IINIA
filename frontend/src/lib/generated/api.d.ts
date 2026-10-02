@@ -398,6 +398,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/teacher/activities/{activityId}/evaluation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save private rubric and relative weight; publication uses activity revision */
+        put: operations["saveEvaluation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -456,6 +473,7 @@ export interface components {
             /** @enum {string} */
             activity?: "demo";
             version?: number;
+            rubric?: components["schemas"]["Rubric"] | null;
         };
         Lesson: {
             id: number;
@@ -524,6 +542,8 @@ export interface components {
             lessonId: number | null;
             version: number;
             publishedVersion: number;
+            rubric: components["schemas"]["Rubric"] | null;
+            weight: number;
         };
         ActivityEdit: {
             title: string;
@@ -540,12 +560,14 @@ export interface components {
             version: number;
             /** @enum {string} */
             status: "draft" | "published";
+            assessment: components["schemas"]["RubricAssessment"] | null;
         };
         GradeInput: {
-            score: number;
+            score?: number;
             feedback: string;
             version: number;
-        };
+            selections?: number[];
+        } & (unknown | unknown);
         Submission: {
             id: number;
             lessonId: number;
@@ -558,6 +580,7 @@ export interface components {
             /** Format: date-time */
             submittedAt: string | null;
             grade: components["schemas"]["Grade"] | null;
+            rubric: components["schemas"]["Rubric"] | null;
         };
         SubmissionInput: {
             body: string;
@@ -591,6 +614,7 @@ export interface components {
             activityId: number;
             lessonId: number;
             title: string;
+            weight: number;
         };
         GradebookCell: {
             activityId: number;
@@ -607,6 +631,9 @@ export interface components {
             published: number;
             /** @description Mean of all published assignment grades, in hundredths, half-up rounded. Null without published grades; missing work is not zero. */
             averageHundredths: number | null;
+            weightedAverageHundredths: number | null;
+            publishedWeight: number;
+            totalWeight: number;
         };
         GradebookRow: {
             studentId: number;
@@ -626,6 +653,26 @@ export interface components {
             /** @constant */
             activityPageSize: 10;
             totalActivities: number;
+        };
+        RubricLevel: {
+            label: string;
+            points: number;
+        };
+        RubricCriterion: {
+            title: string;
+            levels: components["schemas"]["RubricLevel"][];
+        };
+        /** @description Per criterion, points strictly increase from zero. Last level defines maximum points. */
+        Rubric: {
+            criteria: components["schemas"]["RubricCriterion"][];
+        };
+        RubricAssessment: {
+            selections: number[];
+        };
+        EvaluationInput: {
+            version: number;
+            weight: number;
+            rubric: components["schemas"]["Rubric"] | null;
         };
     };
     responses: never;
@@ -2938,6 +2985,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Gradebook"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Role or Origin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Object not accessible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Stale version or invalid state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Body exceeds 128 KiB */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Database unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    saveEvaluation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activityId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvaluationInput"];
+            };
+        };
+        responses: {
+            /** @description Canonical persisted result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
                 };
             };
             /** @description Invalid input */

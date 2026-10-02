@@ -70,3 +70,6 @@ export type Submission = components["schemas"]["Submission"];
 export type Grade = components["schemas"]["Grade"];
 
 export type Gradebook = components["schemas"]["Gradebook"];
+
+export type Rubric = components["schemas"]["Rubric"];
+export type RubricAssessment = components["schemas"]["RubricAssessment"];

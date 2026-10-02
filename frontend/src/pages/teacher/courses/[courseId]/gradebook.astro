@@ -19,7 +19,7 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
   {error ? <ServiceError message={error} /> : book && <>
     <h2>{book.course.title}</h2>
     <p>Consulta las tareas publicadas de tus estudiantes vinculados e inscritos en este curso.</p>
-    <p id="gradebook-help">El promedio incluye únicamente notas publicadas, con el mismo peso. Las tareas sin nota no cuentan como cero. Los resúmenes abarcan todas las páginas de actividades; no son una calificación final del curso.</p>
+    <p id="gradebook-help">El promedio ponderado incluye únicamente notas publicadas, según el peso de cada tarea. Un peso de 2 cuenta el doble que 1. Las tareas sin nota no cuentan como cero. Los resúmenes abarcan todas las páginas de actividades; no son una calificación final del curso.</p>
     {book.totalActivities === 0 && <p class="panel">Todavía no hay tareas publicadas. <a class="crumb" href={`/teacher/courses/${courseId}`}>Crear una tarea</a></p>}
     {book.totalStudents === 0 && <p class="panel">No tienes estudiantes vinculados e inscritos en este curso.</p>}
     {book.totalActivities > 0 && book.totalStudents > 0 && <>
@@ -27,7 +27,7 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
       <div class="gradebook-scroll" role="region" tabindex="0" aria-label="Tabla de calificaciones desplazable" aria-describedby="gradebook-help">
         <table>
           <caption>Calificaciones de {book.course.title} · escala de 0 a 100</caption>
-          <thead><tr><th scope="col">Estudiante</th>{book.activities.map((a) => <th scope="col">{a.title}</th>)}<th scope="col">Promedio de notas publicadas</th><th scope="col">Pendientes del curso</th></tr></thead>
+          <thead><tr><th scope="col">Estudiante</th>{book.activities.map((a) => <th scope="col">{a.title}<span class="gradebook-state">Peso: {a.weight}</span></th>)}<th scope="col">Promedio ponderado publicado</th><th scope="col">Pendientes del curso</th></tr></thead>
           <tbody>{book.rows.map((row) => <tr>
             <th scope="row">{row.alias}</th>
             {row.cells.map((cell) => <td>
@@ -35,7 +35,7 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
               {cell.score !== null && <strong>{cell.score} / 100</strong>}
               {cell.submissionId !== null && <a class="crumb" aria-label={`Revisar entrega de ${row.alias}: ${book!.activities.find((a) => a.activityId === cell.activityId)?.title}`} href={`/teacher/activities/${cell.activityId}?submissionId=${cell.submissionId}#submission-${cell.submissionId}`}>Revisar entrega →</a>}
             </td>)}
-            <td><strong>{row.summary.averageHundredths === null ? "Sin notas publicadas" : `${format.format(row.summary.averageHundredths / 100)} / 100`}</strong><span class="gradebook-state">{row.summary.published} de {row.summary.totalActivities} notas publicadas</span></td>
+            <td><strong>{row.summary.weightedAverageHundredths === null ? "Sin notas publicadas" : `${format.format(row.summary.weightedAverageHundredths / 100)} / 100`}</strong><span class="gradebook-state">{row.summary.published} de {row.summary.totalActivities} notas publicadas</span><span class="gradebook-state">Peso evaluado: {row.summary.publishedWeight} de {row.summary.totalWeight}</span></td>
             <td><span class="gradebook-state">{row.summary.notSubmitted} sin entregar</span><span class="gradebook-state">{row.summary.pendingReview} por calificar</span><span class="gradebook-state">{row.summary.pendingPublication} sin publicar</span></td>
           </tr>)}</tbody>
         </table>

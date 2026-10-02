@@ -1,0 +1,86 @@
+import { test, expect, type Page } from "@playwright/test";
+
+test("RB1–RB5 crear rúbrica, publicar peso y devolver criterios", async ({ page, browser }) => {
+  test.skip(process.env.E2E_ACADEMIC !== "1", "Requiere Go/PostgreSQL sintético");
+  test.setTimeout(120_000);
+  async function login(p: Page, user: string) {
+    await p.goto("/login");
+    await p.getByLabel("Tu usuario").fill(user);
+    await p.getByLabel("Tu contraseña").fill(user === "profe" ? process.env.E2E_TEACHER_PASSWORD! : process.env.E2E_STUDENT_PASSWORD!);
+    await p.getByRole("button", { name: "Entrar a mi aventura" }).click();
+    await expect(p).toHaveURL(user === "profe" ? /\/teacher$/ : /\/courses$/);
+  }
+  await login(page, "profe");
+  await page.goto("/teacher/courses");
+  await page.getByRole("link", { name: "Gestionar actividades" }).first().click();
+  await expect(page).toHaveURL(/\/teacher\/courses\/\d+$/);
+  const courseId = new URL(page.url()).pathname.split("/").at(-1);
+  const title = `Rúbrica ${Date.now()}`;
+  const creator = page.locator('academic-form[data-kind="create"]');
+  await creator.getByLabel("Tipo de actividad").selectOption("assignment");
+  await creator.getByLabel("Título", { exact: true }).fill(title);
+  await creator.getByLabel("Contenido o instrucciones").fill("Explica tu descubrimiento.");
+  await creator.getByRole("button", { name: "Guardar borrador" }).click();
+  await expect(page).toHaveURL(/\/teacher\/activities\/\d+$/);
+  const activityURL = page.url();
+  const activityId = activityURL.split("/").at(-1);
+  await page.getByRole("link", { name: "Configurar rúbrica y peso" }).click();
+  await page.getByLabel("Peso relativo de la tarea").fill("3");
+  await page.getByLabel("Evaluar con rúbrica").check();
+  let criteria = page.locator(".rubric-criterion");
+  await criteria.first().getByLabel("Nombre del criterio").fill("Comprensión");
+  await criteria.first().getByLabel("Puntos del nivel").nth(1).fill("3");
+  await page.getByRole("button", { name: "Agregar criterio" }).click();
+  await criteria.nth(1).getByLabel("Nombre del criterio").fill("Claridad");
+  await criteria.nth(1).getByLabel("Descripción del nivel").nth(0).fill("Por iniciar");
+  await criteria.nth(1).getByLabel("Descripción del nivel").nth(1).fill("Logrado");
+  await criteria.nth(1).getByLabel("Puntos del nivel").nth(1).fill("5");
+  const save = page.getByRole("button", { name: "Guardar borrador" });
+  // Actual rejected API request must retain the unsaved editor state.
+  await criteria.first().getByLabel("Puntos del nivel").nth(1).fill("0");
+  await save.click();
+  await expect(page.locator("academic-form [data-status]")).toContainText("Tu texto permanece");
+  await expect(criteria.first().getByLabel("Nombre del criterio")).toHaveValue("Comprensión");
+  await criteria.first().getByLabel("Puntos del nivel").nth(1).fill("3");
+  await save.click();
+  await expect(page.locator("academic-form")).toHaveAttribute("data-version", "2");
+  await page.reload();
+  await expect(page.getByLabel("Peso relativo de la tarea")).toHaveValue("3");
+  await expect(criteria).toHaveCount(2);
+  await page.screenshot({ path: "../docs/screenshots/rubric-editor-tablet.png", fullPage: true, animations: "disabled" });
+  await page.getByRole("link", { name: "Volver a la actividad" }).click();
+  await page.getByRole("button", { name: "Publicar actividad" }).click();
+  await expect(page.getByText("Última versión publicada: 2.", { exact: false })).toBeVisible();
+  const activity = await (await page.request.get(`/api/v1/teacher/activities/${activityId}`)).json();
+  const context = await browser.newContext({ viewport: { width: 768, height: 1024 }, reducedMotion: "reduce" });
+  const student = await context.newPage();
+  try {
+    await login(student, "luna");
+    await student.goto(`/lessons/${activity.lessonId}`);
+    await expect(student.getByRole("heading", { name: "Cómo se evaluará tu trabajo" })).toBeVisible();
+    await expect(student.getByRole("heading", { name: "Comprensión", exact: true })).toBeVisible();
+    await student.getByLabel("Escribe tu trabajo").fill("Mi descubrimiento explicado");
+    await student.getByRole("button", { name: "Guardar borrador" }).click();
+    await student.getByRole("button", { name: "Enviar al docente" }).click();
+    await expect(student.getByRole("heading", { name: "Tu trabajo está enviado" })).toBeVisible();
+    await page.goto(activityURL);
+    const grading = page.locator('academic-form[data-kind="grade"]');
+    await grading.getByLabel("Comprensión", { exact: true }).selectOption("0");
+    await grading.getByLabel("Claridad", { exact: true }).selectOption("1");
+    await grading.getByLabel("Comentario para Luna").fill("Tu explicación es clara.");
+    await grading.getByRole("button", { name: "Guardar calificación" }).click();
+    await expect(grading.locator("[data-status]")).toContainText("Borrador guardado");
+    await student.reload();
+    await expect(student.getByText("Tu explicación es clara.")).toHaveCount(0);
+    await grading.getByRole("button", { name: "Publicar devolución" }).click();
+    await expect(page.getByText("Devolución publicada", { exact: true })).toBeVisible();
+    await student.reload();
+    await expect(student.getByText("Calificación: 63 / 100", { exact: true })).toBeVisible();
+    await expect(student.getByRole("heading", { name: "Tus resultados por criterio" })).toBeVisible();
+    await expect(student.getByText("Resultado logrado:", { exact: true })).toHaveCount(2);
+    await student.screenshot({ path: "../docs/screenshots/rubric-feedback-tablet.png", fullPage: true, animations: "disabled" });
+    await page.goto(`/teacher/courses/${courseId}/gradebook`);
+    await expect(page.getByRole("columnheader", { name: "Promedio ponderado publicado" })).toBeVisible();
+    await expect(page.getByText(/Peso evaluado:/)).toBeVisible();
+  } finally { await context.close(); }
+});

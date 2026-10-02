@@ -21,6 +21,7 @@ if (!error) try {
   {error ? <ServiceError message={error} /> : activity && <>
     <span class="eyebrow">{activity.type === "reading" ? "Lectura" : "Tarea de texto"}</span><h1>{activity.title}</h1>
     <p>Versión guardada: {activity.version}. {activity.publishedVersion ? `Última versión publicada: ${activity.publishedVersion}.` : "Todavía no es visible para estudiantes."}</p>
+    {activity.type === "assignment" && <a class="button quiet" href={`/teacher/activities/${id}/evaluation`}>Configurar rúbrica y peso</a>}
     <section class="panel">
       <h2>Editar contenido</h2>
       <AcademicForm kind="activity" path={`/teacher/activities/${id}`} version={activity.version} canPublish={activity.version !== activity.publishedVersion}>
@@ -40,7 +41,13 @@ if (!error) try {
         <details><summary>Instrucciones de esta entrega</summary><p class="reading-body">{s.instructions}</p></details>
         <p class="reading-body">{s.body}</p>
         <AcademicForm kind="grade" path={`/teacher/submissions/${s.id}/grade`} version={s.grade?.version ?? 0} canPublish={s.grade?.status === "draft"}>
-          <label for={`score-${s.id}`}>Calificación de {s.alias} (0 a 100)</label><input id={`score-${s.id}`} type="number" name="score" min="0" max="100" step="1" required value={s.grade?.score} />
+          {s.rubric ? <fieldset><legend>Evaluación por criterios de esta entrega</legend>
+            {s.rubric.criteria.map((c,i) => <div><label for={`criterion-${s.id}-${i}`}>{c.title}</label><select id={`criterion-${s.id}-${i}`} name="selection" required>
+              <option value="" disabled selected={s.grade?.assessment == null}>Selecciona un nivel</option>
+              {c.levels.map((l,n) => <option value={n} selected={s.grade?.assessment?.selections[i] === n}>{l.label} — {l.points} puntos</option>)}
+            </select></div>)}
+            <p class="helper">El servidor calcula la nota con los niveles elegidos. {s.grade ? `Última nota guardada: ${s.grade.score} / 100.` : ""}</p>
+          </fieldset> : <><label for={`score-${s.id}`}>Calificación de {s.alias} (0 a 100)</label><input id={`score-${s.id}`} type="number" name="score" min="0" max="100" step="1" required value={s.grade?.score} /></>}
           <label for={`feedback-${s.id}`}>Comentario para {s.alias}</label><textarea id={`feedback-${s.id}`} name="feedback" rows="4" maxlength="4000">{s.grade?.feedback ?? ""}</textarea>
         </AcademicForm>
       </article>)}</div>

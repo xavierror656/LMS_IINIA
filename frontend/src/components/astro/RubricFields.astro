@@ -1,0 +1,87 @@
+---
+import type { Rubric } from "../../lib/api";
+interface Props { rubric: Rubric | null; weight: number; }
+const { rubric, weight } = Astro.props;
+const criteria = rubric?.criteria ?? [{title:"",levels:[{label:"Por iniciar",points:0},{label:"Logrado",points:1}]}];
+---
+<rubric-fields>
+  <label>Peso relativo de la tarea <input name="weight" type="number" min="1" max="1000" step="1" required value={weight} /></label>
+  <p class="helper">Un peso de 2 cuenta el doble que 1 en el promedio ponderado. Solo se aplica al publicar la actividad.</p>
+  <label><input name="useRubric" type="checkbox" checked={!!rubric} /> Evaluar con rúbrica</label>
+  <fieldset data-rubric disabled={!rubric} hidden={!rubric}>
+    <legend>Criterios y niveles</legend>
+    <p>Ordena los niveles de menor a mayor puntaje. El primero debe valer 0 y el último indica el máximo del criterio.</p>
+    <div data-criteria>{criteria.map((c) => <fieldset class="rubric-criterion panel">
+      <legend>Criterio</legend>
+      <label>Nombre del criterio <input name="criterionTitle" required maxlength="160" value={c.title} /></label>
+      <div data-levels>{c.levels.map((l) => <div class="rubric-level">
+        <label>Descripción del nivel <textarea name="levelLabel" required maxlength="500" rows="2">{l.label}</textarea></label>
+        <label>Puntos del nivel <input name="levelPoints" type="number" min="0" max="100" step="1" required value={l.points} /></label>
+        <button type="button" data-remove-level class="quiet">Quitar nivel</button>
+      </div>)}</div>
+      <div class="toolbar"><button type="button" data-add-level class="quiet">Agregar nivel</button><button type="button" data-remove-criterion class="quiet">Quitar criterio</button></div>
+    </fieldset>)}</div>
+    <button type="button" data-add-criterion class="quiet">Agregar criterio</button>
+  </fieldset>
+  <template data-level-template><div class="rubric-level">
+    <label>Descripción del nivel <textarea name="levelLabel" required maxlength="500" rows="2"></textarea></label>
+    <label>Puntos del nivel <input name="levelPoints" type="number" min="0" max="100" step="1" required value="0" /></label>
+    <button type="button" data-remove-level class="quiet">Quitar nivel</button>
+  </div></template>
+  <template data-criterion-template><fieldset class="rubric-criterion panel">
+    <legend>Criterio</legend>
+    <label>Nombre del criterio <input name="criterionTitle" required maxlength="160" /></label>
+    <div data-levels></div>
+    <div class="toolbar"><button type="button" data-add-level class="quiet">Agregar nivel</button><button type="button" data-remove-criterion class="quiet">Quitar criterio</button></div>
+  </fieldset></template>
+  <p data-rubric-status role="status" aria-live="polite"></p>
+</rubric-fields>
+<script>
+  class RubricFieldsElement extends HTMLElement {
+    private controller?: AbortController;
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const signal = this.controller.signal;
+      const root = this.querySelector<HTMLFieldSetElement>("[data-rubric]")!;
+      const enabled = this.querySelector<HTMLInputElement>('[name="useRubric"]')!;
+      const criteria = this.querySelector<HTMLElement>("[data-criteria]")!;
+      const status = this.querySelector<HTMLElement>("[data-rubric-status]")!;
+      enabled.addEventListener("change", () => { root.hidden = root.disabled = !enabled.checked; }, {signal});
+      const clone = (name: string) => this.querySelector<HTMLTemplateElement>(`[data-${name}-template]`)!.content.cloneNode(true) as DocumentFragment;
+      this.addEventListener("click", (event) => {
+        const button = (event.target as Element).closest<HTMLButtonElement>("button[type=button]");
+        if (!button || button.disabled) return;
+        const criterion = button.closest<HTMLElement>(".rubric-criterion");
+        const levels = criterion?.querySelector<HTMLElement>("[data-levels]");
+        let focus: HTMLElement | null = null;
+        if (button.hasAttribute("data-add-criterion")) {
+          if (criteria.children.length >= 10) { status.textContent="Puedes agregar hasta 10 criterios.";return; }
+          const fragment = clone("criterion");
+          const list = fragment.querySelector("[data-levels]")!;
+          for (let i=0;i<2;i++) { const level=clone("level");level.querySelector<HTMLInputElement>("input")!.value=String(i);list.append(level); }
+          criteria.append(fragment);focus=criteria.lastElementChild!.querySelector("input");
+        } else if (button.hasAttribute("data-remove-criterion")) {
+          if (criteria.children.length <= 1) { status.textContent="La rúbrica necesita al menos un criterio.";return; }
+          criterion!.remove();focus=this.querySelector("[data-add-criterion]");
+        } else if (button.hasAttribute("data-add-level")) {
+          if (levels!.children.length >= 6) { status.textContent="Cada criterio admite hasta 6 niveles.";return; }
+          levels!.append(clone("level"));focus=levels!.lastElementChild!.querySelector("textarea");
+        } else if (button.hasAttribute("data-remove-level")) {
+          if (levels!.children.length <= 2) { status.textContent="Cada criterio necesita al menos dos niveles.";return; }
+          button.closest(".rubric-level")!.remove();focus=criterion!.querySelector("[data-add-level]");
+        } else return;
+        this.dispatchEvent(new Event("input",{bubbles:true}));focus?.focus();status.textContent="Cambio pendiente de guardar.";
+      },{signal});
+    }
+    disconnectedCallback(){this.controller?.abort();this.controller=undefined;}
+  }
+  if (!customElements.get("rubric-fields")) customElements.define("rubric-fields",RubricFieldsElement);
+</script>
+<style>
+  rubric-fields { display:block; }
+  fieldset { min-width:0; border:1px solid var(--color-line); border-radius:1rem; padding:1rem; margin-block:1rem; }
+  label { display:block; margin-block:.75rem; }
+  input[type="checkbox"] { width:24px; height:24px; vertical-align:middle; margin:.65rem; }
+  .rubric-level { border-bottom:1px solid var(--color-line); padding-block:1rem; }
+</style>

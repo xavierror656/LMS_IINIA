@@ -1,0 +1,25 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import ServiceError from "../../../../components/astro/ServiceError.astro";
+import AcademicForm from "../../../../components/astro/AcademicForm.astro";
+import RubricFields from "../../../../components/astro/RubricFields.astro";
+import { api, type Activity } from "../../../../lib/api";
+let error = Astro.locals.apiError;
+let activity: Activity | undefined;
+const id = encodeURIComponent(Astro.params.activityId ?? "");
+if (!error) try {
+  activity=await api<Activity>(`/teacher/activities/${id}`,{},Astro.request.headers.get("cookie") ?? "");
+  if(activity.type!=="assignment") error="Solo las tareas pueden tener rúbrica y peso.";
+} catch(e){error=e instanceof Error?e.message:"No se pudo cargar la evaluación.";}
+---
+<Layout title="Rúbrica y peso">
+  <a class="crumb" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
+  <h1>Rúbrica y peso</h1>
+  {error ? <ServiceError message={error}/> : activity && <section class="panel">
+    <h2>{activity.title}</h2>
+    <p>Guarda la evaluación y vuelve a la actividad para publicar la versión completa. Las entregas anteriores conservan su propia rúbrica.</p>
+    <AcademicForm kind="evaluation" path={`/teacher/activities/${id}/evaluation`} version={activity.version}>
+      <RubricFields rubric={activity.rubric} weight={activity.weight}/>
+    </AcademicForm>
+  </section>}
+</Layout>

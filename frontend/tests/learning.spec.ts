@@ -33,15 +33,20 @@ test("LMS001/003/004/008/009 student flow, persistent HUD, refresh and logout", 
   await page.getByRole("link").filter({ hasText: "Lectura ·" }).first().click();
   const complete = page.locator("#complete-reading");
   await expect(complete).toBeVisible();
-  if (await complete.isEnabled()) {
+  const beforeResponse = await page.request.get("/api/v1/me/progress");
+  expect(beforeResponse.ok()).toBeTruthy();
+  const before = await beforeResponse.json();
+  const firstCompletion = await complete.isEnabled();
+  const expectedXP = before.xp + (firstCompletion ? 25 : 0);
+  if (firstCompletion) {
     await complete.click();
     await expect(page.locator("#completion-status")).toContainText(
       "Tu progreso está guardado",
     );
   }
-  await expect(page.getByLabel("Tu progreso")).toContainText("25 XP");
+  await expect(page.getByLabel("Tu progreso")).toContainText(`${expectedXP} XP`);
   await page.reload();
-  await expect(page.getByLabel("Tu progreso")).toContainText("25 XP");
+  await expect(page.getByLabel("Tu progreso")).toContainText(`${expectedXP} XP`);
   await expect(
     page.getByRole("button", { name: "Lectura completada" }),
   ).toBeDisabled();
