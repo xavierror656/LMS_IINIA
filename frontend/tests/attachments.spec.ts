@@ -1,0 +1,55 @@
+import { test, expect, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+
+test("FL5 adjuntos privados, descarga, borrado y entrega solo con archivo", async ({ page, browser }) => {
+  test.skip(process.env.E2E_ACADEMIC !== "1", "Requiere Go/PostgreSQL sintético");
+  test.setTimeout(120_000);
+  const origin=process.env.E2E_BASE_URL??"http://localhost:4321";
+  async function login(p:Page,user:string){
+    await p.goto("/login");await p.getByLabel("Tu usuario").fill(user);
+    await p.getByLabel("Tu contraseña").fill(user==="profe"?process.env.E2E_TEACHER_PASSWORD!:process.env.E2E_STUDENT_PASSWORD!);
+    await p.getByRole("button",{name:"Entrar a mi aventura"}).click();await expect(p).toHaveURL(user==="profe"?/\/teacher$/:/\/courses$/);
+  }
+  await login(page,"profe");
+  const course=(await (await page.request.get("/api/v1/teacher/courses")).json()).items[0];
+  const module=(await (await page.request.get(`/api/v1/teacher/courses/${course.id}/activities`)).json()).modules[0];
+  const created=await page.request.post(`/api/v1/teacher/courses/${course.id}/activities`,{headers:{Origin:origin},data:{moduleId:module.id,type:"assignment",title:`Mis archivos ${Date.now()}`,description:"Comparte tu trabajo",body:"Puedes entregar tu trabajo como texto o archivo."}});
+  expect(created.status()).toBe(201);let activity=await created.json();
+  const published=await page.request.post(`/api/v1/teacher/activities/${activity.id}/publish`,{headers:{Origin:origin},data:{version:1}});expect(published.ok()).toBeTruthy();activity=await published.json();
+  const context=await browser.newContext({viewport:{width:768,height:1024},reducedMotion:"reduce"});const student=await context.newPage();
+  try{
+    await login(student,"luna");await student.goto(`/lessons/${activity.lessonId}`);
+    await student.getByRole("link",{name:"Gestionar adjuntos"}).click();
+    const input=student.getByLabel("Archivo para adjuntar");
+    await input.setInputFiles({name:"fake.png",mimeType:"image/png",buffer:Buffer.from("not an image")});
+    await student.getByRole("button",{name:"Adjuntar archivo",exact:true}).click();
+    await expect(student.locator("[data-file-status]")).toContainText("Revisa");
+    expect(await input.evaluate((el:HTMLInputElement)=>el.files?.[0]?.name)).toBe("fake.png");
+    await input.setInputFiles({name:"mi-idea.txt",mimeType:"text/plain",buffer:Buffer.from("Mi idea de prueba con acentos: árbol")});
+    await student.getByRole("button",{name:"Adjuntar archivo",exact:true}).click();
+    const link=student.getByRole("link",{name:"Descargar mi-idea.txt",exact:true});await expect(link).toBeVisible();
+    const path=await link.getAttribute("href");
+    expect((await page.request.get(path!)).status()).toBe(404);
+    const waiting=student.waitForEvent("download");await link.click();const download=await waiting;
+    expect(download.suggestedFilename()).toBe("mi-idea.txt");expect((await readFile((await download.path())!)).toString()).toBe("Mi idea de prueba con acentos: árbol");
+    await student.reload();await expect(link).toBeVisible();
+    student.once("dialog",dialog=>dialog.accept());await student.getByRole("button",{name:"Quitar mi-idea.txt",exact:true}).click();
+    await expect(link).toHaveCount(0);
+    expect((await student.request.get(path!)).status()).toBe(404);
+    await input.setInputFiles({name:"entrega.txt",mimeType:"text/plain",buffer:Buffer.from("Esta es mi entrega sin texto adicional.")});
+    await student.getByRole("button",{name:"Adjuntar archivo",exact:true}).click();
+    await expect(student.getByRole("link",{name:"Descargar entrega.txt",exact:true})).toBeVisible();
+    await expect(student.getByLabel("Tu progreso")).toContainText("Luna");
+    await student.screenshot({path:"../docs/screenshots/attachments-student-tablet.png",fullPage:true,animations:"disabled"});
+    await student.getByRole("link",{name:"Volver a mi tarea"}).click();
+    await expect(student.getByLabel("Escribe tu trabajo")).toHaveValue("");
+    await student.getByRole("button",{name:"Enviar al docente"}).click();
+    await expect(student.getByRole("heading",{name:"Tu trabajo está enviado"})).toBeVisible();
+    const finalLink=student.getByRole("link",{name:"Descargar entrega.txt",exact:true});const finalPath=await finalLink.getAttribute("href");
+    await student.goto(`/lessons/${activity.lessonId}/files`);await expect(student.getByLabel("Archivo para adjuntar")).toHaveCount(0);
+    await page.goto(`/teacher/activities/${activity.id}`);
+    await expect(page.getByRole("link",{name:"Descargar entrega.txt",exact:true})).toBeVisible();
+    const allowed=await page.request.get(finalPath!);expect(allowed.status()).toBe(200);expect(await allowed.text()).toBe("Esta es mi entrega sin texto adicional.");
+    await page.screenshot({path:"../docs/screenshots/attachments-teacher-tablet.png",fullPage:true,animations:"disabled"});
+  }finally{await context.close();}
+});

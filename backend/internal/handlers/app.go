@@ -4,6 +4,7 @@ import (
 	"aulaquest/internal/config"
 	"aulaquest/internal/repositories"
 	"aulaquest/internal/runner"
+	"aulaquest/internal/services"
 	"aulaquest/internal/ws"
 	"errors"
 	"github.com/gofiber/fiber/v2"
@@ -13,17 +14,20 @@ import (
 	"gorm.io/gorm"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"time"
 )
 
+var attachmentUploadPath = regexp.MustCompile(`^/api/v1/lessons/[1-9][0-9]*/submission/attachments$`)
+
 func New(db *gorm.DB, cfg config.Config) (*fiber.App, *ws.Hub) {
-	app := fiber.New(fiber.Config{DisableStartupMessage: true, BodyLimit: 128 * 1024, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, ErrorHandler: func(c *fiber.Ctx, e error) error {
+	app := fiber.New(fiber.Config{DisableStartupMessage: true, BodyLimit: services.MaxAttachmentBytes + 64*1024, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, ErrorHandler: func(c *fiber.Ctx, e error) error {
 		status := 500
 		message := "No se pudo completar la solicitud"
 		var f *fiber.Error
 		if errors.As(e, &f) {
 			status = f.Code
-			message = map[int]string{400: "Revisa los datos enviados", 401: "Revisa tu acceso o vuelve a iniciar sesión", 403: "No tienes acceso a esta acción", 404: "Esta aventura no está disponible", 409: "Hay cambios más recientes o esta actividad ya no admite esa acción. Revisa la versión guardada antes de continuar", 429: "Hagamos una pausa. Inténtalo en un minuto", 503: "No podemos conectar. Vuelve a intentarlo"}[status]
+			message = map[int]string{400: "Revisa los datos enviados", 413: "El archivo o la solicitud supera el tamaño permitido", 401: "Revisa tu acceso o vuelve a iniciar sesión", 403: "No tienes acceso a esta acción", 404: "Esta aventura no está disponible", 409: "Hay cambios más recientes o esta actividad ya no admite esa acción. Revisa la versión guardada antes de continuar", 429: "Hagamos una pausa. Inténtalo en un minuto", 503: "No podemos conectar. Vuelve a intentarlo"}[status]
 			if message == "" {
 				message = "No se pudo completar la solicitud"
 			}
@@ -46,6 +50,12 @@ func New(db *gorm.DB, cfg config.Config) (*fiber.App, *ws.Hub) {
 		}
 		slog.Info("request", "requestId", c.GetRespHeader("X-Request-ID"), "method", c.Method(), "status", status, "duration_ms", time.Since(start).Milliseconds())
 		return e
+	})
+	app.Use(func(c *fiber.Ctx) error {
+		if len(c.Body()) > 128*1024 && !(c.Method() == "POST" && attachmentUploadPath.MatchString(c.Path())) {
+			return fiber.ErrRequestEntityTooLarge
+		}
+		return c.Next()
 	})
 	app.Use(limiter.New(limiter.Config{Max: 180, Expiration: time.Minute}))
 	repo := repositories.Repository{DB: db}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"gorm.io/gorm"
+	"strings"
 )
 
 var ErrAcademicConflict = errors.New("academic revision or state conflict")
@@ -103,7 +104,7 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 
 func (s AcademicService) SaveSubmission(user, lesson int64, body string, version, lessonVersion int) (models.Submission, error) {
 	var out models.Submission
-	if version < 0 || lessonVersion < 1 || !models.ValidText(body, 1, 12000) {
+	if version < 0 || lessonVersion < 1 || !models.ValidText(body, 0, 12000) {
 		return out, models.ErrAcademicInput
 	}
 	e := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
@@ -185,6 +186,15 @@ func (s AcademicService) Submit(user, lesson int64, version int) (models.Submiss
 			return ErrAcademicConflict
 		}
 		if sub.Status == "draft" {
+			if strings.TrimSpace(sub.Body) == "" {
+				var count int64
+				if e := tx.Raw(`SELECT count(*) FROM submission_attachments WHERE submission_id=?`, sub.ID).Scan(&count).Error; e != nil {
+					return e
+				}
+				if count == 0 {
+					return models.ErrAcademicInput
+				}
+			}
 			availability, e := assignmentAvailability(tx, user, lesson)
 			if e != nil {
 				return e

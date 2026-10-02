@@ -29,7 +29,7 @@ export async function api<T>(
       "http://127.0.0.1:8080"
     : "";
   const headers = new Headers(options.headers);
-  if (options.body) headers.set("Content-Type", "application/json");
+  if (options.body && !(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
   if (server && cookie) {
     const token = cookie
       .split(";")
@@ -77,3 +77,5 @@ export type RubricAssessment = components["schemas"]["RubricAssessment"];
 export type Schedule = components["schemas"]["Schedule"];
 export type Availability = components["schemas"]["Availability"];
 export type ExtensionList = components["schemas"]["ExtensionList"];
+
+export type Attachment = components["schemas"]["Attachment"];

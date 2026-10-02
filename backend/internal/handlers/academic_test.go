@@ -7,12 +7,15 @@ import (
 	"aulaquest/internal/models"
 	"aulaquest/internal/services"
 	"aulaquest/migrations"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -642,6 +645,218 @@ func TestAcademicIntegration(t *testing.T) {
 		if count != 2 {
 			t.Fatal("extension audit", count)
 		}
+	})
+	t.Run("FL1_FL4_private_attachments_and_atomic_versions", func(t *testing.T) {
+		// Independent transport instance isolates this feature's request budget;
+		// production limiters remain enabled with their normal configuration.
+		previousApp := app
+		fileApp, fileHub := New(db, config.Config{Origin: "http://localhost:4321"})
+		app = fileApp
+		defer func() { app = previousApp; fileHub.Close(); fileApp.Shutdown() }()
+		input.Title = "Tarea con archivos"
+		var a models.Activity
+		decode(call("POST", coursePath, input, "profe", 201), &a)
+		ap := fmt.Sprintf("/teacher/activities/%d", a.ID)
+		decode(call("POST", ap+"/publish", map[string]int{"version": 1}, "profe", 200), &a)
+		lp := fmt.Sprintf("/lessons/%d", *a.LessonID)
+		uploadRequest := func(version int, name string, data []byte, who string) *http.Request {
+			var body bytes.Buffer
+			writer := multipart.NewWriter(&body)
+			writer.WriteField("version", strconv.Itoa(version))
+			writer.WriteField("lessonVersion", "1")
+			part, e := writer.CreateFormFile("file", name)
+			if e != nil {
+				t.Fatal(e)
+			}
+			part.Write(data)
+			writer.Close()
+			r := httptestRequest("POST", "/api/v1"+lp+"/submission/attachments", body.String(), cookies[who], "http://localhost:4321")
+			r.Header.Set("Content-Type", writer.FormDataContentType())
+			return r
+		}
+		upload := func(version int, name string, data []byte, who string, status int) models.Submission {
+			t.Helper()
+			res, e := app.Test(uploadRequest(version, name, data, who), 10000)
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer res.Body.Close()
+			b, _ := io.ReadAll(res.Body)
+			if res.StatusCode != status {
+				t.Fatalf("upload expected %d got %d %s", status, res.StatusCode, b)
+			}
+			var out models.Submission
+			if status == 201 {
+				decode(b, &out)
+			}
+			return out
+		}
+		upload(0, "bad.svg", []byte("<svg/>"), "luna", 400)
+		upload(0, "../bad.txt", []byte("bad"), "luna", 400)
+		upload(0, "text.txt", []byte("hi"), "profe", 403)
+		upload(0, "big.txt", bytes.Repeat([]byte{'x'}, services.MaxAttachmentBytes+1), "luna", 413)
+		var sub models.Submission
+		decode(call("PUT", lp+"/submission", map[string]any{"version": 0, "lessonVersion": 1, "body": ""}, "luna", 200), &sub)
+		call("POST", lp+"/submission/submit", map[string]int{"version": 1}, "luna", 400)
+		sub = upload(1, "idea.txt", []byte("Mi idea privada"), "luna", 201)
+		if sub.Version != 2 || len(sub.Attachments) != 1 {
+			t.Fatal("attachment missing", sub)
+		}
+		id := sub.Attachments[0].ID
+		path := "/attachments/" + id
+		call("GET", path, nil, "profe", 404)
+		call("GET", path, nil, "sol", 404)
+		call("GET", path, nil, "other-teacher", 404)
+		call("GET", path, nil, "", 401)
+		if b := call("GET", ap+"/submissions", nil, "profe", 200); strings.Contains(string(b), "idea.txt") {
+			t.Fatal("draft filename leaked")
+		}
+		res, e := app.Test(httptestRequest("GET", "/api/v1"+path, "", cookies["luna"], ""))
+		if e != nil {
+			t.Fatal(e)
+		}
+		b, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		if res.StatusCode != 200 || string(b) != "Mi idea privada" || !strings.HasPrefix(res.Header.Get("Content-Disposition"), "attachment;") || res.Header.Get("Content-Type") != "application/octet-stream" || res.Header.Get("X-Content-Type-Options") != "nosniff" || !strings.Contains(res.Header.Get("Cache-Control"), "no-store") {
+			t.Fatal("unsafe download", res.Header)
+		}
+		// Two uploads at the same revision create one attachment, not two.
+		statuses := make(chan int, 2)
+		var wg sync.WaitGroup
+		for range 2 {
+			r := uploadRequest(2, "second.txt", []byte("two"), "luna")
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				res, e := app.Test(r, 10000)
+				if e != nil {
+					statuses <- 0
+					return
+				}
+				defer res.Body.Close()
+				io.Copy(io.Discard, res.Body)
+				statuses <- res.StatusCode
+			}()
+		}
+		wg.Wait()
+		close(statuses)
+		sum := 0
+		for status := range statuses {
+			sum += status
+		}
+		if sum != 610 {
+			t.Fatal("expected 201 and 409", sum)
+		}
+		var used int64
+		if e = db.Raw(`SELECT bytes_used FROM attachment_accounts WHERE user_id=(SELECT id FROM users WHERE username='luna')`).Scan(&used).Error; e != nil {
+			t.Fatal(e)
+		}
+		if used != int64(len("Mi idea privada")+3) {
+			t.Fatal("quota duplicate", used)
+		}
+		call("DELETE", lp+"/submission/attachments/"+id, map[string]int{"version": 3}, "sol", 404)
+		decode(call("DELETE", lp+"/submission/attachments/"+id, map[string]int{"version": 3}, "luna", 200), &sub)
+		if sub.Version != 4 || len(sub.Attachments) != 1 {
+			t.Fatal(sub)
+		}
+		call("GET", path, nil, "luna", 404)
+		// Quota rejection rolls back revision and content, with a synthetic near-full account.
+		if e = db.Exec(`UPDATE attachment_accounts SET bytes_used=? WHERE user_id=(SELECT id FROM users WHERE username='luna')`, services.MaxAttachmentAccountBytes-1).Error; e != nil {
+			t.Fatal(e)
+		}
+		upload(4, "quota.txt", []byte("no room"), "luna", 409)
+		if e = db.Exec(`UPDATE attachment_accounts SET bytes_used=3 WHERE user_id=(SELECT id FROM users WHERE username='luna')`).Error; e != nil {
+			t.Fatal(e)
+		}
+		for version := 4; version < 8; version++ {
+			sub = upload(version, fmt.Sprintf("%d.txt", version), []byte("file"), "luna", 201)
+		}
+		if len(sub.Attachments) != 5 || sub.Version != 8 {
+			t.Fatal("slots", sub)
+		}
+		upload(8, "sixth.txt", []byte("file"), "luna", 409)
+		decode(call("POST", lp+"/submission/submit", map[string]int{"version": 8}, "luna", 200), &sub)
+		if sub.Body != "" || sub.Status != "submitted" {
+			t.Fatal("file-only send")
+		}
+		path = "/attachments/" + sub.Attachments[0].ID
+		call("GET", path, nil, "profe", 200)
+		call("GET", path, nil, "other-teacher", 404)
+		call("GET", path, nil, "sol", 404)
+		if b := call("GET", ap+"/submissions", nil, "profe", 200); !strings.Contains(string(b), "second.txt") {
+			t.Fatal("teacher list omitted attachments")
+		}
+		upload(8, "after.txt", []byte("late edit"), "luna", 409)
+		call("DELETE", lp+"/submission/attachments/"+sub.Attachments[0].ID, map[string]int{"version": 8}, "luna", 409)
+		// Direct upload creates a new empty draft for Sol, still invisible to an unlinked teacher.
+		if e = db.Exec(`UPDATE lessons SET closes_at=now()-interval '1 minute' WHERE id=?`, *a.LessonID).Error; e != nil {
+			t.Fatal(e)
+		}
+		upload(0, "closed.txt", []byte("Sol"), "sol", 409)
+		if e = db.Exec(`UPDATE lessons SET closes_at=NULL WHERE id=?`, *a.LessonID).Error; e != nil {
+			t.Fatal(e)
+		}
+		other := upload(0, "sol.txt", []byte("Sol"), "sol", 201)
+		if other.Version != 1 || other.Body != "" {
+			t.Fatal(other)
+		}
+		call("POST", lp+"/submission/submit", map[string]int{"version": 1}, "sol", 200)
+		call("GET", "/attachments/"+other.Attachments[0].ID, nil, "profe", 404)
+		// Across two courses, enrollment locks differ; quota must still serialize.
+		var otherModule models.Module
+		if e = db.Where("course_id <> ?", module.CourseID).First(&otherModule).Error; e != nil {
+			t.Fatal(e)
+		}
+		raceLessons := []int64{}
+		for _, m := range []models.Module{module, otherModule} {
+			in := input
+			in.ModuleID = m.ID
+			var activity models.Activity
+			decode(call("POST", fmt.Sprintf("/teacher/courses/%d/activities", m.CourseID), in, "profe", 201), &activity)
+			decode(call("POST", fmt.Sprintf("/teacher/activities/%d/publish", activity.ID), map[string]int{"version": 1}, "profe", 200), &activity)
+			raceLessons = append(raceLessons, *activity.LessonID)
+		}
+		if e = db.Exec(`UPDATE attachment_accounts SET bytes_used=? WHERE user_id=(SELECT id FROM users WHERE username='luna')`, services.MaxAttachmentAccountBytes-4).Error; e != nil {
+			t.Fatal(e)
+		}
+		quotaResults := make(chan int, 2)
+		for _, lesson := range raceLessons {
+			r := uploadRequest(0, "race.txt", []byte("four"), "luna")
+			r.URL.Path = fmt.Sprintf("/api/v1/lessons/%d/submission/attachments", lesson)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				res, e := app.Test(r, 10000)
+				if e != nil {
+					quotaResults <- 0
+					return
+				}
+				defer res.Body.Close()
+				io.Copy(io.Discard, res.Body)
+				quotaResults <- res.StatusCode
+			}()
+		}
+		wg.Wait()
+		close(quotaResults)
+		sum = 0
+		for status := range quotaResults {
+			sum += status
+		}
+		if sum != 610 {
+			t.Fatal("cross-course quota race", sum)
+		}
+		var createdDrafts int64
+		if e = db.Raw(`SELECT count(*) FROM submissions WHERE lesson_id IN ?`, raceLessons).Scan(&createdDrafts).Error; e != nil {
+			t.Fatal(e)
+		}
+		if createdDrafts != 1 {
+			t.Fatal("failed upload left an empty draft", createdDrafts)
+		}
+		if e = db.Exec(`UPDATE attachment_accounts SET bytes_used=(SELECT COALESCE(sum(f.size),0) FROM submission_attachments f JOIN submissions s ON s.id=f.submission_id WHERE s.user_id=attachment_accounts.user_id) WHERE user_id=(SELECT id FROM users WHERE username='luna')`).Error; e != nil {
+			t.Fatal(e)
+		}
+		// The larger multipart cap must not enlarge normal JSON writes.
+		call("PUT", lp+"/submission", map[string]any{"version": 8, "lessonVersion": 1, "body": strings.Repeat("x", 129*1024)}, "luna", 413)
 	})
 	t.Run("I2_origin_and_revocation", func(t *testing.T) {
 		r := httptestRequest("POST", "/api/v1"+assignmentPath+"/publish", `{"version":2}`, cookies["profe"], "http://evil.example")

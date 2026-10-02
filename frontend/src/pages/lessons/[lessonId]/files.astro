@@ -1,0 +1,29 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import ServiceError from "../../../components/astro/ServiceError.astro";
+import AttachmentManager from "../../../components/astro/AttachmentManager.astro";
+import {api,type Lesson,type Submission,type Availability} from "../../../lib/api";
+const id=encodeURIComponent(Astro.params.lessonId??"");
+const cookie=Astro.request.headers.get("cookie")??"";
+let error=Astro.locals.apiError;
+let lesson:Lesson|undefined;
+let submission:Submission|null=null;
+let availability:Availability|undefined;
+if(!error)try{
+  lesson=await api<Lesson>(`/lessons/${id}`,{},cookie);
+  if(lesson.type!=="assignment")error="Solo las tareas admiten adjuntos de entrega.";
+  else{
+    const results=await Promise.all([api<{submission:Submission|null}>(`/lessons/${id}/submission`,{},cookie),api<Availability>(`/lessons/${id}/availability`,{},cookie)]);
+    submission=results[0].submission;availability=results[1];
+  }
+}catch(e){error=e instanceof Error?e.message:"No se pudieron cargar tus archivos.";}
+const editable=submission?.status!=="submitted"&&(availability?.state==="open"||availability?.state==="late");
+---
+<Layout title="Mis archivos de la tarea">
+  <a class="crumb" href={`/lessons/${id}`}>← Volver a mi tarea</a>
+  <h1>Mis archivos de la tarea</h1>
+  {error?<ServiceError message={error}/>:lesson&&<section class="panel">
+    <h2>{lesson.title}</h2>
+    <AttachmentManager lessonId={lesson.id} lessonVersion={lesson.config.version??1} submission={submission} editable={editable}/>
+  </section>}
+</Layout>

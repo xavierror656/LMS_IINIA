@@ -28,7 +28,7 @@ La igualdad solicitada continúa siendo exactamente 98 %, sin sustituirla por �
 | Sitio y organización | Categorías, configuración, marca, idioma, zona horaria, búsqueda y navegación | Marca centralizada y español; administración amplia pendiente | PL1 |
 | Cursos | Crear, editar, duplicar, ordenar secciones, visibilidad, formatos, carga masiva, reinicio y archivo | Catálogo y mapa de cursos existentes; autoría de lecturas/tareas disponible; gestión completa de cursos pendiente | PL2 |
 | Recursos | Página, libro, archivo, carpeta, URL, texto/multimedia, editor y repositorios | Lectura precargada; edición y biblioteca pendientes | PL2 |
-| Tareas | Texto/archivo, plazos, prórrogas, reenvíos, grupos y entrega definitiva | Entregas textuales, calendario UTC, prórrogas individuales e historial de puntualidad; archivos, grupos y reentregas pendientes | PL3 |
+| Tareas | Texto/archivo, plazos, prórrogas, reenvíos, grupos y entrega definitiva | Entregas de texto y TXT/PNG/JPEG privados, calendario UTC, prórrogas e historial; otros formatos, grupos y reentregas pendientes | PL3 |
 | Calificación | Notas, rúbricas, guías, anotaciones, anonimato, moderación, publicación y libro de calificaciones | Notas manuales y por rúbrica versionada; libro con media ponderada de tareas publicada; categorías y otros métodos pendientes | PL3 |
 | Cuestionarios | Tipos de preguntas, banco/versiones, importación/exportación, aleatoriedad, tiempo, intentos, revisión y recalificación | Pendiente | PL4 |
 | Actividades colaborativas | Glosario, base de datos y taller de evaluación por pares | Pendiente; definir controles adecuados para menores | PL5 |

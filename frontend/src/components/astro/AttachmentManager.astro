@@ -1,0 +1,69 @@
+---
+import AttachmentList from "./AttachmentList.astro";
+import type { Submission } from "../../lib/api";
+interface Props { lessonId:number; lessonVersion:number; submission:Submission|null; editable:boolean; }
+const {lessonId,lessonVersion,submission,editable}=Astro.props;
+const files=submission?.attachments??[];
+---
+<attachment-manager data-lesson={lessonId} data-version={submission?.version??0} data-lesson-version={lessonVersion}>
+  <p>Admite TXT en UTF-8, PNG y JPEG: hasta 2 MiB por archivo, 5 archivos por entrega y 50 MiB por estudiante. Las imágenes admiten hasta 4 millones de píxeles y se guardan sin metadatos.</p>
+  <p class="helper">PDF, documentos de oficina y archivos comprimidos todavía no están disponibles. Tu docente verá los adjuntos cuando envíes la tarea.</p>
+  <AttachmentList files={files}/>
+  {files.length===0&&<p>Todavía no hay archivos adjuntos.</p>}
+  {editable ? <>
+    {files.length<5&&<form class="academic-form">
+      <label for="attachment-file">Archivo para adjuntar</label><input id="attachment-file" name="file" type="file" accept=".txt,.png,.jpg,.jpeg" required/>
+      <button type="submit">Adjuntar archivo</button>
+    </form>}
+    {files.length===5&&<p>Ya tienes cinco archivos. Quita uno antes de adjuntar otro.</p>}
+    <div class="path">{files.map(file=><div><button type="button" class="quiet" data-remove-file={file.id}>Quitar {file.name}</button></div>)}</div>
+  </> : <p>Los adjuntos no se pueden cambiar después del envío ni fuera del plazo de entrega.</p>}
+  <p role="status" aria-live="polite" data-file-status></p>
+  <p class="helper">Después de adjuntar, vuelve a la tarea para enviar tu trabajo. Si una conexión falla, actualiza esta página para comprobar qué se guardó antes de repetir.</p>
+</attachment-manager>
+<script>
+  import { api, type Submission } from "../../lib/api";
+  class AttachmentManagerElement extends HTMLElement {
+    private controller?:AbortController;
+    private busy=false;
+    private dirty=false;
+    connectedCallback(){
+      if(this.controller)return;
+      this.controller=new AbortController();const signal=this.controller.signal;
+      const status=this.querySelector<HTMLElement>("[data-file-status]")!;
+      const input=this.querySelector<HTMLInputElement>('input[type="file"]');
+      input?.addEventListener("change",()=>{this.dirty=!!input.files?.length;},{signal});
+      window.addEventListener("beforeunload",event=>{if(this.busy||this.dirty)event.preventDefault();},{signal});
+      document.addEventListener("click",event=>{
+        const link=(event.target as Element)?.closest?.("a[href]:not([download])");
+        if(link&&(this.busy||this.dirty)&&!window.confirm("Hay un archivo sin guardar. ¿Quieres salir?")){event.preventDefault();event.stopImmediatePropagation();}
+      },{signal,capture:true});
+      const perform=async(method:"POST"|"DELETE",fileId?:string)=>{
+        if(this.busy)return;
+        const version=Number(this.dataset.version);
+        let body:FormData|string;
+        if(method==="POST"){
+          const file=input?.files?.[0];if(!file)return;
+          if(file.size>2*1024*1024){status.textContent="El archivo supera 2 MiB. Elige uno más pequeño.";return;}
+          body=new FormData();body.set("file",file);body.set("version",String(version));body.set("lessonVersion",this.dataset.lessonVersion!);
+        }else{
+          if(!window.confirm("¿Quieres quitar este archivo del borrador?"))return;
+          body=JSON.stringify({version});
+        }
+        this.busy=true;
+        const controls=this.querySelectorAll<HTMLInputElement|HTMLButtonElement>("button,input");controls.forEach(c=>c.disabled=true);
+        status.textContent=method==="POST"?"Guardando archivo…":"Quitando archivo…";
+        try{
+          await api<Submission>(`/lessons/${this.dataset.lesson}/submission/attachments${fileId?`/${encodeURIComponent(fileId)}`:""}`,{method,body,signal:AbortSignal.timeout(30000)});
+          this.dirty=false;this.busy=false;window.location.reload();
+        }catch(error){status.textContent=(error instanceof Error?error.message:"No se pudo guardar.")+" Revisa los formatos y límites. Tu selección se conserva; si cambió la versión, actualiza la página antes de repetir.";}
+        finally{this.busy=false;controls.forEach(c=>c.disabled=false);}
+      };
+      this.querySelector("form")?.addEventListener("submit",event=>{event.preventDefault();void perform("POST");},{signal});
+      this.addEventListener("click",event=>{const button=(event.target as Element).closest<HTMLButtonElement>("button[data-remove-file]");if(button)void perform("DELETE",button.dataset.removeFile);},{signal});
+    }
+    disconnectedCallback(){this.controller?.abort();this.controller=undefined;}
+  }
+  if(!customElements.get("attachment-manager"))customElements.define("attachment-manager",AttachmentManagerElement);
+</script>
+<style>attachment-manager{display:block;}button{overflow-wrap:anywhere;max-width:100%;}.path{margin-block:1rem;}</style>

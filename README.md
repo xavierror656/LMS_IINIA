@@ -191,7 +191,7 @@ La administración usa páginas Astro SSR y el servidor local de demostración. 
 
 ### Autoría, entregas y calificación (backend Go)
 
-El espacio **Mi grupo → Crear actividades y calificar** permite al docente gestionar los cursos que tiene asignados: crear lecturas y tareas de texto, guardar borradores, publicarlos, revisar entregas y guardar/publicar una devolución con nota entera de 0 a 100. Las notas no conceden XP. Las lecturas conservan su recompensa única existente.
+El espacio **Mi grupo → Crear actividades y calificar** permite al docente gestionar los cursos que tiene asignados: crear lecturas y tareas, guardar borradores, publicarlos, revisar entregas y guardar/publicar una devolución con nota entera de 0 a 100. Las notas no conceden XP. Las lecturas conservan su recompensa única existente.
 
 El enlace **Ver calificaciones** en cada curso abre el libro: estudiantes vinculados e inscritos, tareas publicadas, pendientes, notas y promedio ponderado de notas publicadas. Permite revisar una entrega concreta; las notas ocultas y tareas sin calificar no cuentan en el promedio. Hay paginación independiente de estudiantes y tareas. No es una nota final ponderada.
 
@@ -215,7 +215,7 @@ Flujo: docente crea actividad → guarda → publica. El estudiante inscrito la 
 
 Los borradores del docente no son visibles al estudiante; los borradores de respuestas no son visibles al docente. Los cambios publicados conservan snapshots; una entrega definitiva mantiene las instrucciones con las que fue guardada. La entrega no se puede editar tras enviarse en este incremento. Los conflictos de revisión devuelven 409 para evitar sobrescrituras; el formulario conserva el texto y pide revisar la versión antes de reintentar. Texto plano escapado, no HTML activo. Límite REST de 128 KiB; el límite WebSocket sigue siendo 24 KiB.
 
-Todavía faltan archivos, reentregas, cuestionarios, categorías y otras agregaciones de notas. Foros, wikis, gestor de extensiones, respaldos y panel de operación están excluidos del nuevo alcance por decisión del usuario. No se afirma paridad del 98 % con Moodle.
+Todavía faltan formatos adicionales de archivos, reentregas, cuestionarios, categorías y otras agregaciones de notas. Foros, wikis, gestor de extensiones, respaldos y panel de operación están excluidos del nuevo alcance por decisión del usuario. No se afirma paridad del 98 % con Moodle.
 
 Prueba E2E académica contra una base sintética separada y servidores Go/Astro activos:
 
@@ -237,3 +237,9 @@ El peso es relativo (2 cuenta el doble que 1). El libro solo incluye notas publi
 En cada tarea puedes **Configurar fechas** de apertura, entrega y cierre; guarda y publica la actividad. Vencer la fecha permite entregas tardías hasta el cierre. El alumno conserva acceso a instrucciones aunque no pueda enviar. **Gestionar prórrogas** amplía los plazos de un estudiante vinculado e inscrito, con motivo y revisión; vaciar ambas fechas revoca la excepción. El historial de la entrega no cambia al ajustar fechas.
 
 Los formularios usan **UTC explícito**, sin convertir silenciosamente la hora local. Aplica `go run ./cmd/migrate` desde backend para `004_assignment_schedule.sql`. Evidencia y límites: [docs/schedule-validation.md](docs/schedule-validation.md).
+
+### Adjuntos privados de entregas (Go/PostgreSQL)
+
+Desde una tarea, el estudiante abre **Gestionar adjuntos**, sube TXT/PNG/JPEG, vuelve y envía la tarea. Puede entregar texto, archivos o ambos. Hasta 5 archivos por entrega, 2 MiB por archivo, 4 millones de píxeles por imagen y 50 MiB por estudiante. Las imágenes se recodifican sin metadatos. El docente solo descarga archivos de entregas enviadas y autorizadas; los archivos enviados quedan congelados.
+
+Aplica `go run ./cmd/migrate` desde backend para `005_submission_attachments.sql`. Los archivos se almacenan en PostgreSQL, sin directorio público. JSON conserva 128 KiB; solo la ruta multipart admite 2 MiB + 64 KiB. PDF/ofimática y archivos de retroalimentación siguen pendientes. Evidencia y límites: [docs/attachments-validation.md](docs/attachments-validation.md).

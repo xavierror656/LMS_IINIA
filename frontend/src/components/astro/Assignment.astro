@@ -1,4 +1,5 @@
 ---
+import AttachmentList from "./AttachmentList.astro";
 import ScheduleView from "./ScheduleView.astro";
 import RubricView from "./RubricView.astro";
 import AcademicForm from "./AcademicForm.astro";
@@ -9,11 +10,13 @@ const formatDate = (s: string) => new Intl.DateTimeFormat("es-MX", {dateStyle:"m
 const unavailable = availability.state === "closed" || availability.state === "upcoming";
 ---
 <article class="panel reading">
-  <span class="tag">Tarea de texto</span>
+  <span class="tag">Tarea</span>
   <ScheduleView schedule={availability}/>
   {availability.extended && <p class="notice">Tienes una prórroga. Estas son tus fechas efectivas.</p>}
   {availability.state === "late" && submission?.status !== "submitted" && <p class="notice">La fecha de entrega pasó, pero todavía puedes enviar tu trabajo. Quedará registrado como entrega tardía.</p>}
   <div class="reading-body">{lesson.config.body}</div>
+  <AttachmentList files={submission?.attachments??[]}/>
+  {submission?.status!=="submitted" && !unavailable && <a class="button quiet" href={`/lessons/${lesson.id}/files`}>Gestionar adjuntos</a>}
   {(submission ? submission.rubric : lesson.config.rubric) && <RubricView rubric={submission ? submission.rubric! : lesson.config.rubric!} assessment={submission?.grade?.assessment} />}
   {submission?.status === "submitted" ? <section class="admin-section">
     <h2>Tu trabajo está enviado</h2>
@@ -30,8 +33,8 @@ const unavailable = availability.state === "closed" || availability.state === "u
       {submission && <><h3>Tu borrador guardado</h3><p class="reading-body">{submission.body}</p></>}
       <a class="button quiet" href={`/lessons/${lesson.id}`} data-astro-reload>Actualizar disponibilidad</a>
     </aside> : <AcademicForm kind="submission" path={`/lessons/${lesson.id}/submission`} version={submission?.version ?? 0} lessonVersion={lesson.config.version} canPublish={!!submission}>
-      <label for="assignment-answer">Escribe tu trabajo</label><textarea id="assignment-answer" name="body" rows="10" maxlength="12000" required>{submission?.body ?? ""}</textarea>
-      <p class="helper">Guarda un borrador para seguir después. Al enviarlo, tu docente podrá leerlo y ya no podrás cambiarlo.</p>
+      <label for="assignment-answer">Escribe tu trabajo</label><textarea id="assignment-answer" name="body" rows="10" maxlength="12000">{submission?.body ?? ""}</textarea>
+      <p class="helper">Puedes enviar texto, archivos o ambos. Guarda un borrador para seguir después. Al enviarlo, tu docente podrá leerlo y ya no podrás cambiarlo.</p>
     </AcademicForm>}
   </section>}
 </article>

@@ -10,6 +10,12 @@ import (
 )
 
 func academicError(e error) error {
+	if errors.Is(e, services.ErrAttachmentTooLarge) {
+		return fiber.ErrRequestEntityTooLarge
+	}
+	if errors.Is(e, services.ErrAttachmentBusy) {
+		return fiber.ErrServiceUnavailable
+	}
 	if errors.Is(e, services.ErrAssignmentUnavailable) {
 		return fiber.NewError(409, "Esta tarea todavía no abre o ya cerró. Tu texto no se ha enviado; revisa las fechas o consulta a tu docente.")
 	}
@@ -225,7 +231,26 @@ func (a API) staffSubmissions(c *fiber.Ctx) error {
 		for _, s := range items {
 			ids = append(ids, s.ID)
 		}
+		for i := range items {
+			items[i].Attachments = []models.Attachment{}
+		}
 		if len(ids) > 0 {
+			var files []struct {
+				SubmissionID int64
+				models.Attachment
+			}
+			if e = a.Repo.DB.Raw(`SELECT submission_id,id,name,content_type,size FROM submission_attachments WHERE submission_id IN ? ORDER BY submission_id,slot`, ids).Scan(&files).Error; e != nil {
+				return dbError(e)
+			}
+			bySubmission := map[int64][]models.Attachment{}
+			for _, file := range files {
+				bySubmission[file.SubmissionID] = append(bySubmission[file.SubmissionID], file.Attachment)
+			}
+			for i := range items {
+				if list, ok := bySubmission[items[i].ID]; ok {
+					items[i].Attachments = list
+				}
+			}
 			var grades []struct {
 				SubmissionID int64
 				models.Grade

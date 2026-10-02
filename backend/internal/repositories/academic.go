@@ -44,6 +44,10 @@ func (r Repository) Submission(id int64, teacher bool) (models.Submission, error
 	if out.ID == 0 {
 		return out, gorm.ErrRecordNotFound
 	}
+	out.Attachments = []models.Attachment{}
+	if e = r.DB.Raw(`SELECT id,name,content_type,size FROM submission_attachments WHERE submission_id=? ORDER BY slot`, id).Scan(&out.Attachments).Error; e != nil {
+		return out, e
+	}
 	var grade models.Grade
 	q := `SELECT score,feedback,version,status,assessment FROM submission_grades WHERE submission_id=?`
 	if !teacher {

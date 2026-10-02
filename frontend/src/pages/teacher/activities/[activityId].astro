@@ -1,6 +1,7 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
 import ServiceError from "../../../components/astro/ServiceError.astro";
+import AttachmentList from "../../../components/astro/AttachmentList.astro";
 import AcademicForm from "../../../components/astro/AcademicForm.astro";
 import { api, type Activity, type Submission } from "../../../lib/api";
 let error = Astro.locals.apiError;
@@ -19,7 +20,7 @@ if (!error) try {
 <Layout title={activity?.title ?? "Editar actividad"}>
   <a class="crumb" href="/teacher/courses">← Mis cursos</a>
   {error ? <ServiceError message={error} /> : activity && <>
-    <span class="eyebrow">{activity.type === "reading" ? "Lectura" : "Tarea de texto"}</span><h1>{activity.title}</h1>
+    <span class="eyebrow">{activity.type === "reading" ? "Lectura" : "Tarea"}</span><h1>{activity.title}</h1>
     <p>Versión guardada: {activity.version}. {activity.publishedVersion ? `Última versión publicada: ${activity.publishedVersion}.` : "Todavía no es visible para estudiantes."}</p>
     {activity.type === "assignment" && <a class="button quiet" href={`/teacher/activities/${id}/evaluation`}>Configurar rúbrica y peso</a>}
     {activity.type === "assignment" && <div class="toolbar"><a class="button quiet" href={`/teacher/activities/${id}/schedule`}>Configurar fechas</a>{activity.lessonId && <a class="button quiet" href={`/teacher/activities/${id}/extensions`}>Gestionar prórrogas</a>}</div>}
@@ -42,6 +43,7 @@ if (!error) try {
         <p>{s.effectiveDueAt ? s.late ? "Entrega tardía" : "Entrega a tiempo" : "Sin vencimiento registrado"}</p>
         <details><summary>Instrucciones de esta entrega</summary><p class="reading-body">{s.instructions}</p></details>
         <p class="reading-body">{s.body}</p>
+        <AttachmentList files={s.attachments}/>
         <AcademicForm kind="grade" path={`/teacher/submissions/${s.id}/grade`} version={s.grade?.version ?? 0} canPublish={s.grade?.status === "draft"}>
           {s.rubric ? <fieldset><legend>Evaluación por criterios de esta entrega</legend>
             {s.rubric.criteria.map((c,i) => <div><label for={`criterion-${s.id}-${i}`}>{c.title}</label><select id={`criterion-${s.id}-${i}`} name="selection" required>

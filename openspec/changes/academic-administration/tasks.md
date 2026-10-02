@@ -40,3 +40,6 @@ El usuario autorizó continuar con implementación. T1–T3 tienen código y pru
 - [x] T4d Validar migración, cálculo, aislamiento, snapshots, promedio ponderado e interfaz E2E (LMS-022).
 
 - [ ] TSEC1 Revisar límites por usuario y proxy para concurrencia real de aula; el límite global por IP produjo 429 al encadenar suites. No debilitar protección para pasar pruebas.
+
+- [ ] T4e Adjuntos privados de borradores/envíos, normalización, cuotas y descarga autorizada (FL1–FL5 / LMS-016/019/021).
+- [ ] T4f Validar archivos, límites HTTP/proxy, concurrencia, permisos y recorrido E2E (LMS-022).
