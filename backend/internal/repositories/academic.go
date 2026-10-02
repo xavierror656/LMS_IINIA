@@ -37,7 +37,7 @@ func (r Repository) Activities(user, course int64, page int) ([]models.Activity,
 }
 func (r Repository) Submission(id int64, teacher bool) (models.Submission, error) {
 	var out models.Submission
-	e := r.DB.Raw(`SELECT s.*,u.alias,p.body instructions FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id WHERE s.id=?`, id).Scan(&out).Error
+	e := r.DB.Raw(`SELECT s.*,u.alias,p.body instructions,p.rubric FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id WHERE s.id=?`, id).Scan(&out).Error
 	if e != nil {
 		return out, e
 	}
@@ -45,7 +45,7 @@ func (r Repository) Submission(id int64, teacher bool) (models.Submission, error
 		return out, gorm.ErrRecordNotFound
 	}
 	var grade models.Grade
-	q := `SELECT score,feedback,version,status FROM submission_grades WHERE submission_id=?`
+	q := `SELECT score,feedback,version,status,assessment FROM submission_grades WHERE submission_id=?`
 	if !teacher {
 		q += ` AND status='published'`
 	}

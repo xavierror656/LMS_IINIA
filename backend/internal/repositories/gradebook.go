@@ -9,12 +9,14 @@ import (
 // Aggregates include every published assignment in the course, not only the
 // current ten columns. Draft responses do not participate in these queries.
 type GradebookStudent struct {
-	ID           int64
-	Alias        string
-	Submitted    int64
-	Graded       int64
-	Published    int64
-	PublishedSum int64
+	PublishedWeight int64
+	WeightedSum     int64
+	ID              int64
+	Alias           string
+	Submitted       int64
+	Graded          int64
+	Published       int64
+	PublishedSum    int64
 }
 type GradebookEntry struct {
 	StudentID    int64
@@ -24,6 +26,7 @@ type GradebookEntry struct {
 	GradeStatus  *string
 }
 type GradebookData struct {
+	TotalWeight     int64
 	Course          models.Course
 	Activities      []models.GradebookActivity
 	Students        []GradebookStudent
@@ -45,11 +48,16 @@ func (r Repository) Gradebook(user, course int64, page, activityPage int) (Grade
     WHERE u.role='student' AND e.course_id=? AND ts.teacher_id=?`, course, user).Scan(&out.TotalStudents).Error; e != nil {
 			return e
 		}
-		if e = tx.Raw(`SELECT count(*) FROM authored_activities a JOIN lessons l ON l.id=a.lesson_id
-    JOIN modules m ON m.id=l.module_id WHERE m.course_id=? AND l.type='assignment'`, course).Scan(&out.TotalActivities).Error; e != nil {
+		var totals struct {
+			TotalActivities int64
+			TotalWeight     int64
+		}
+		if e = tx.Raw(`SELECT count(*) total_activities,COALESCE(sum(l.grade_weight),0) total_weight FROM authored_activities a JOIN lessons l ON l.id=a.lesson_id
+    JOIN modules m ON m.id=l.module_id WHERE m.course_id=? AND l.type='assignment'`, course).Scan(&totals).Error; e != nil {
 			return e
 		}
-		if e = tx.Raw(`SELECT a.id activity_id,l.id lesson_id,l.title FROM authored_activities a
+		out.TotalActivities, out.TotalWeight = totals.TotalActivities, totals.TotalWeight
+		if e = tx.Raw(`SELECT a.id activity_id,l.id lesson_id,l.title,l.grade_weight weight FROM authored_activities a
     JOIN lessons l ON l.id=a.lesson_id JOIN modules m ON m.id=l.module_id
     WHERE m.course_id=? AND l.type='assignment' ORDER BY m.position,l.position,l.id LIMIT 10 OFFSET ?`, course, (activityPage-1)*10).Scan(&out.Activities).Error; e != nil {
 			return e
@@ -59,13 +67,16 @@ func (r Repository) Gradebook(user, course int64, page, activityPage int) (Grade
     JOIN teacher_students ts ON ts.student_id=u.id
     WHERE u.role='student' AND e.course_id=? AND ts.teacher_id=? ORDER BY u.id LIMIT 20 OFFSET ?
   ), assignments AS (
-    SELECT l.id FROM authored_activities a JOIN lessons l ON l.id=a.lesson_id
+    SELECT l.id,l.grade_weight FROM authored_activities a JOIN lessons l ON l.id=a.lesson_id
     JOIN modules m ON m.id=l.module_id WHERE m.course_id=? AND l.type='assignment'
   ) SELECT r.id,r.alias,count(s.id) submitted,count(g.submission_id) graded,
     count(g.submission_id) FILTER(WHERE g.status='published') published,
-    COALESCE(sum(g.score) FILTER(WHERE g.status='published'),0) published_sum
+    COALESCE(sum(g.score) FILTER(WHERE g.status='published'),0) published_sum,
+    COALESCE(sum(g.score::bigint*aw.grade_weight) FILTER(WHERE g.status='published'),0) weighted_sum,
+    COALESCE(sum(aw.grade_weight) FILTER(WHERE g.status='published'),0) published_weight
     FROM roster r LEFT JOIN submissions s ON s.user_id=r.id AND s.status='submitted'
       AND s.lesson_id IN (SELECT id FROM assignments)
+    LEFT JOIN assignments aw ON aw.id=s.lesson_id
     LEFT JOIN submission_grades g ON g.submission_id=s.id GROUP BY r.id,r.alias ORDER BY r.id`, course, user, (page-1)*20, course).Scan(&out.Students).Error; e != nil {
 			return e
 		}

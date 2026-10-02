@@ -1,6 +1,7 @@
 package models
 
 type GradebookActivity struct {
+	Weight     int    `json:"weight"`
 	ActivityID int64  `json:"activityId"`
 	LessonID   int64  `json:"lessonId"`
 	Title      string `json:"title"`
@@ -12,12 +13,15 @@ type GradebookCell struct {
 	SubmissionID *int64 `json:"submissionId"`
 }
 type GradebookSummary struct {
-	TotalActivities    int64  `json:"totalActivities"`
-	NotSubmitted       int64  `json:"notSubmitted"`
-	PendingReview      int64  `json:"pendingReview"`
-	PendingPublication int64  `json:"pendingPublication"`
-	Published          int64  `json:"published"`
-	AverageHundredths  *int64 `json:"averageHundredths"`
+	WeightedAverageHundredths *int64 `json:"weightedAverageHundredths"`
+	PublishedWeight           int64  `json:"publishedWeight"`
+	TotalWeight               int64  `json:"totalWeight"`
+	TotalActivities           int64  `json:"totalActivities"`
+	NotSubmitted              int64  `json:"notSubmitted"`
+	PendingReview             int64  `json:"pendingReview"`
+	PendingPublication        int64  `json:"pendingPublication"`
+	Published                 int64  `json:"published"`
+	AverageHundredths         *int64 `json:"averageHundredths"`
 }
 type GradebookRow struct {
 	StudentID int64            `json:"studentId"`

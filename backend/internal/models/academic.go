@@ -28,23 +28,27 @@ func (a ActivityInput) Validate() error {
 }
 
 type Activity struct {
-	ID               int64  `json:"id"`
-	ModuleID         int64  `json:"moduleId"`
-	LessonID         *int64 `json:"lessonId"`
-	Title            string `json:"title"`
-	Description      string `json:"description"`
-	Type             string `json:"type"`
-	Body             string `json:"body"`
-	Version          int    `json:"version"`
-	PublishedVersion int    `json:"publishedVersion"`
+	Rubric           *Rubric `json:"rubric" gorm:"serializer:json"`
+	Weight           int     `json:"weight"`
+	ID               int64   `json:"id"`
+	ModuleID         int64   `json:"moduleId"`
+	LessonID         *int64  `json:"lessonId"`
+	Title            string  `json:"title"`
+	Description      string  `json:"description"`
+	Type             string  `json:"type"`
+	Body             string  `json:"body"`
+	Version          int     `json:"version"`
+	PublishedVersion int     `json:"publishedVersion"`
 }
 type Grade struct {
-	Score    int    `json:"score"`
-	Feedback string `json:"feedback"`
-	Version  int    `json:"version"`
-	Status   string `json:"status"`
+	Assessment *RubricAssessment `json:"assessment" gorm:"serializer:json"`
+	Score      int               `json:"score"`
+	Feedback   string            `json:"feedback"`
+	Version    int               `json:"version"`
+	Status     string            `json:"status"`
 }
 type Submission struct {
+	Rubric        *Rubric    `json:"rubric" gorm:"serializer:json"`
 	ID            int64      `json:"id"`
 	LessonID      int64      `json:"lessonId"`
 	UserID        int64      `json:"-"`

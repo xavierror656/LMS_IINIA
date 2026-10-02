@@ -65,7 +65,7 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			out = a
 			return nil
 		}
-		conf, _ := json.Marshal(map[string]any{"body": a.Body, "version": a.Version})
+		conf, _ := json.Marshal(map[string]any{"body": a.Body, "version": a.Version, "rubric": a.Rubric})
 		if a.LessonID == nil {
 			// Serialize append positions across different activities in the same module.
 			var module int64
@@ -82,7 +82,18 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 				return e
 			}
 		}
-		if e = tx.Exec(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by) VALUES (?,?,?,?,?,?)`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user).Error; e != nil {
+		var rubricJSON any
+		if a.Rubric != nil {
+			raw, e := json.Marshal(a.Rubric)
+			if e != nil {
+				return e
+			}
+			rubricJSON = string(raw)
+		}
+		if e = tx.Exec(`UPDATE lessons SET grade_weight=? WHERE id=?`, a.Weight, *a.LessonID).Error; e != nil {
+			return e
+		}
+		if e = tx.Exec(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by,rubric) VALUES (?,?,?,?,?,?,?::jsonb)`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user, rubricJSON).Error; e != nil {
 			return e
 		}
 		return tx.Raw(`UPDATE authored_activities SET lesson_id=?,published_version=version WHERE id=? RETURNING *`, *a.LessonID, a.ID).Scan(&out).Error
@@ -173,6 +184,9 @@ func (s AcademicService) Submit(user, lesson int64, version int) (models.Submiss
 	return out, e
 }
 func (s AcademicService) Grade(user, id int64, score int, feedback string, version int, publish bool) (models.Grade, error) {
+	return s.grade(user, id, score, feedback, version, publish, nil)
+}
+func (s AcademicService) grade(user, id int64, score int, feedback string, version int, publish bool, assessment *models.RubricAssessment) (models.Grade, error) {
 	var out models.Grade
 	if version < 0 || (!publish && (score < 0 || score > 100 || !models.ValidText(feedback, 0, 4000))) {
 		return out, models.ErrAcademicInput
@@ -184,6 +198,26 @@ func (s AcademicService) Grade(user, id int64, score int, feedback string, versi
 		}
 		if sub == 0 {
 			return gorm.ErrRecordNotFound
+		}
+		if !publish {
+			var snapshot struct {
+				Rubric *models.Rubric `gorm:"serializer:json"`
+			}
+			if e := tx.Raw(`SELECT p.rubric FROM submissions s JOIN activity_publications p ON p.id=s.publication_id WHERE s.id=?`, id).Scan(&snapshot).Error; e != nil {
+				return e
+			}
+			if snapshot.Rubric != nil {
+				if assessment == nil {
+					return models.ErrAcademicInput
+				}
+				var e error
+				score, e = snapshot.Rubric.Score(assessment.Selections)
+				if e != nil {
+					return e
+				}
+			} else if assessment != nil {
+				return models.ErrAcademicInput
+			}
 		}
 		if e := tx.Raw(`SELECT * FROM submission_grades WHERE submission_id=?`, id).Scan(&out).Error; e != nil {
 			return e
@@ -200,12 +234,20 @@ func (s AcademicService) Grade(user, id int64, score int, feedback string, versi
 			}
 			out.Status = "published"
 		} else {
-			out = models.Grade{Score: score, Feedback: feedback, Version: version + 1, Status: "draft"}
+			out = models.Grade{Assessment: assessment, Score: score, Feedback: feedback, Version: version + 1, Status: "draft"}
 		}
-		if e := tx.Exec(`INSERT INTO submission_grades(submission_id,score,feedback,version,status) VALUES (?,?,?,?,?) ON CONFLICT(submission_id) DO UPDATE SET score=excluded.score,feedback=excluded.feedback,version=excluded.version,status=excluded.status`, id, out.Score, out.Feedback, out.Version, out.Status).Error; e != nil {
+		var assessmentJSON any
+		if out.Assessment != nil {
+			b, e := json.Marshal(out.Assessment)
+			if e != nil {
+				return e
+			}
+			assessmentJSON = string(b)
+		}
+		if e := tx.Exec(`INSERT INTO submission_grades(submission_id,score,feedback,version,status,assessment) VALUES (?,?,?,?,?,?::jsonb) ON CONFLICT(submission_id) DO UPDATE SET score=excluded.score,feedback=excluded.feedback,version=excluded.version,status=excluded.status,assessment=excluded.assessment`, id, out.Score, out.Feedback, out.Version, out.Status, assessmentJSON).Error; e != nil {
 			return e
 		}
-		return tx.Exec(`INSERT INTO grade_revisions(submission_id,actor_id,score,feedback,version,status) VALUES (?,?,?,?,?,?)`, id, user, out.Score, out.Feedback, out.Version, out.Status).Error
+		return tx.Exec(`INSERT INTO grade_revisions(submission_id,actor_id,score,feedback,version,status,assessment) VALUES (?,?,?,?,?,?,?::jsonb)`, id, user, out.Score, out.Feedback, out.Version, out.Status, assessmentJSON).Error
 	})
 	return out, e
 }

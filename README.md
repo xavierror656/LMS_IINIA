@@ -193,6 +193,8 @@ La administración usa páginas Astro SSR y el servidor local de demostración. 
 
 El espacio **Mi grupo → Crear actividades y calificar** permite al docente gestionar los cursos que tiene asignados: crear lecturas y tareas de texto, guardar borradores, publicarlos, revisar entregas y guardar/publicar una devolución con nota entera de 0 a 100. Las notas no conceden XP. Las lecturas conservan su recompensa única existente.
 
+El enlace **Ver calificaciones** en cada curso abre el libro: estudiantes vinculados e inscritos, tareas publicadas, pendientes, notas y promedio de notas publicadas. Permite revisar una entrega concreta; las notas ocultas y tareas sin calificar no cuentan en el promedio. Hay paginación independiente de estudiantes y tareas. No es una nota final ponderada.
+
 Esta función usa Go/PostgreSQL; `npm run demo` conserva la demostración anterior y no incluye autoría ni calificaciones. Para usarla, inicia el modo A o Docker Compose descritos arriba y aplica las nuevas migraciones. En una base de desarrollo con las variables ya configuradas, desde `backend`:
 
 ```bash

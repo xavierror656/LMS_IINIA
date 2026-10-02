@@ -215,7 +215,7 @@ func (a API) staffSubmissions(c *fiber.Ctx) error {
 	}
 	items := []models.Submission{}
 	if activity.LessonID != nil {
-		if e = a.Repo.DB.Raw(`SELECT s.*,u.alias,p.body instructions FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id JOIN teacher_students ts ON ts.student_id=s.user_id WHERE ts.teacher_id=? AND s.lesson_id=? AND s.status='submitted' AND (?::bigint=0 OR s.id=?) ORDER BY s.id LIMIT 20 OFFSET ?`, middleware.User(c).ID, *activity.LessonID, submissionID, submissionID, (p-1)*20).Scan(&items).Error; e != nil {
+		if e = a.Repo.DB.Raw(`SELECT s.*,u.alias,p.body instructions,p.rubric FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id JOIN teacher_students ts ON ts.student_id=s.user_id WHERE ts.teacher_id=? AND s.lesson_id=? AND s.status='submitted' AND (?::bigint=0 OR s.id=?) ORDER BY s.id LIMIT 20 OFFSET ?`, middleware.User(c).ID, *activity.LessonID, submissionID, submissionID, (p-1)*20).Scan(&items).Error; e != nil {
 			return dbError(e)
 		}
 		ids := []int64{}
@@ -249,17 +249,23 @@ func (a API) saveGrade(c *fiber.Ctx) error {
 		return e
 	}
 	var b struct {
-		Score    *int   `json:"score"`
-		Feedback string `json:"feedback"`
-		Version  *int   `json:"version"`
+		Score      *int   `json:"score"`
+		Selections *[]int `json:"selections"`
+		Feedback   string `json:"feedback"`
+		Version    *int   `json:"version"`
 	}
 	if e = Decode(c, &b); e != nil {
 		return e
 	}
-	if b.Score == nil || b.Version == nil {
+	if b.Version == nil || (b.Score == nil) == (b.Selections == nil) {
 		return fiber.ErrBadRequest
 	}
-	out, e := a.academic().Grade(middleware.User(c).ID, id, *b.Score, b.Feedback, *b.Version, false)
+	var out models.Grade
+	if b.Selections != nil {
+		out, e = a.academic().GradeWithRubric(middleware.User(c).ID, id, *b.Selections, b.Feedback, *b.Version)
+	} else {
+		out, e = a.academic().Grade(middleware.User(c).ID, id, *b.Score, b.Feedback, *b.Version, false)
+	}
 	if e != nil {
 		return academicError(e)
 	}

@@ -99,6 +99,7 @@ func (a API) Register(app *fiber.App) {
 	teacher.Get("/courses/:courseId/gradebook", a.gradebook)
 	teacher.Post("/courses/:courseId/activities", a.createActivity)
 	teacher.Get("/activities/:activityId", a.staffActivity)
+	teacher.Put("/activities/:activityId/evaluation", a.saveEvaluation)
 	teacher.Put("/activities/:activityId", a.saveActivity)
 	teacher.Post("/activities/:activityId/publish", a.publishActivity)
 	teacher.Get("/activities/:activityId/submissions", a.staffSubmissions)

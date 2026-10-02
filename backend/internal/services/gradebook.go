@@ -30,6 +30,7 @@ func (s AcademicService) Gradebook(user, course int64, page, activityPage int) (
 	}
 	for _, student := range data.Students {
 		row := models.GradebookRow{StudentID: student.ID, Alias: student.Alias, Cells: []models.GradebookCell{}, Summary: models.GradebookSummary{
+			TotalWeight: data.TotalWeight, PublishedWeight: student.PublishedWeight, WeightedAverageHundredths: PublishedAverage(student.WeightedSum, student.PublishedWeight),
 			TotalActivities: data.TotalActivities, NotSubmitted: data.TotalActivities - student.Submitted,
 			PendingReview: student.Submitted - student.Graded, PendingPublication: student.Graded - student.Published,
 			Published: student.Published, AverageHundredths: PublishedAverage(student.PublishedSum, student.Published),
