@@ -415,6 +415,96 @@ func TestAcademicIntegration(t *testing.T) {
 		}
 		call("GET", assignmentPath+"/submissions?submissionId=-1", nil, "profe", 400)
 	})
+	t.Run("RB1_RB5_rubric_snapshots_grading_and_weights", func(t *testing.T) {
+		rubric := &models.Rubric{Criteria: []models.RubricCriterion{
+			{Title: "Comprensión", Levels: []models.RubricLevel{{Label: "Por iniciar", Points: 0}, {Label: "En camino", Points: 1}, {Label: "Logrado", Points: 3}}},
+			{Title: "Claridad", Levels: []models.RubricLevel{{Label: "Por iniciar", Points: 0}, {Label: "Logrado", Points: 5}}},
+		}}
+		input.Title = "Tarea con rúbrica"
+		var a models.Activity
+		decode(call("POST", coursePath, input, "profe", 201), &a)
+		ap := fmt.Sprintf("/teacher/activities/%d", a.ID)
+		eval := map[string]any{"version": 1, "weight": 3, "rubric": rubric}
+		call("PUT", ap+"/evaluation", eval, "luna", 403)
+		call("PUT", ap+"/evaluation", eval, "other-teacher", 404)
+		call("PUT", ap+"/evaluation", map[string]any{"version": 1, "weight": 0, "rubric": rubric}, "profe", 400)
+		call("PUT", activityPath+"/evaluation", eval, "profe", 400)
+		decode(call("PUT", ap+"/evaluation", eval, "profe", 200), &a)
+		if a.Rubric == nil || a.Weight != 3 || a.Version != 2 {
+			t.Fatalf("evaluation %+v", a)
+		}
+		call("PUT", ap+"/evaluation", eval, "profe", 409)
+		decode(call("POST", ap+"/publish", map[string]int{"version": 2}, "profe", 200), &a)
+		lp := fmt.Sprintf("/lessons/%d", *a.LessonID)
+		lesson := call("GET", lp, nil, "luna", 200)
+		if !strings.Contains(string(lesson), "Comprensión") {
+			t.Fatal("published rubric missing")
+		}
+		var sub models.Submission
+		decode(call("PUT", lp+"/submission", map[string]any{"version": 0, "lessonVersion": 2, "body": "Respuesta con rúbrica"}, "luna", 200), &sub)
+		if sub.Rubric == nil {
+			t.Fatal("submission rubric missing")
+		}
+		// A newer rubric cannot reinterpret an existing submission.
+		newRubric := &models.Rubric{Criteria: []models.RubricCriterion{{Title: "Nuevo criterio", Levels: []models.RubricLevel{{Label: "Inicio", Points: 0}, {Label: "Fin", Points: 100}}}}}
+		call("PUT", ap+"/evaluation", map[string]any{"version": 2, "weight": 9, "rubric": newRubric}, "profe", 200)
+		decode(call("POST", lp+"/submission/submit", map[string]int{"version": 1}, "luna", 200), &sub)
+		if sub.Rubric.Criteria[0].Title != "Comprensión" {
+			t.Fatal("snapshot replaced")
+		}
+		gp := fmt.Sprintf("/teacher/submissions/%d/grade", sub.ID)
+		call("PUT", gp, map[string]any{"version": 0, "score": 100, "feedback": ""}, "profe", 400)
+		call("PUT", gp, map[string]any{"version": 0, "selections": []int{1}, "feedback": ""}, "profe", 400)
+		call("PUT", gp, map[string]any{"version": 0, "selections": []int{100, 1}, "feedback": ""}, "profe", 400)
+		call("PUT", gp, map[string]any{"version": 0, "score": 100, "selections": []int{1, 1}, "feedback": ""}, "profe", 400)
+		call("PUT", gradePath, map[string]any{"version": 2, "selections": []int{1, 1}, "feedback": ""}, "profe", 400)
+		body := map[string]any{"version": 0, "selections": []int{1, 1}, "feedback": "Revisión con criterios"}
+		outcomes := concurrent(gp, "PUT", body)
+		if outcomes[0]+outcomes[1] != 609 {
+			t.Fatal("grade concurrency", outcomes)
+		}
+		var own struct {
+			Submission models.Submission `json:"submission"`
+		}
+		decode(call("GET", lp+"/submission", nil, "luna", 200), &own)
+		if own.Submission.Grade != nil {
+			t.Fatal("draft assessment leaked")
+		}
+		var grade models.Grade
+		decode(call("POST", gp+"/publish", map[string]int{"version": 1}, "profe", 200), &grade)
+		if grade.Score != 75 || grade.Assessment == nil || len(grade.Assessment.Selections) != 2 {
+			t.Fatalf("grade %+v", grade)
+		}
+		call("POST", gp+"/publish", map[string]int{"version": 1}, "profe", 200)
+		decode(call("GET", lp+"/submission", nil, "luna", 200), &own)
+		if own.Submission.Grade == nil || own.Submission.Grade.Assessment == nil || own.Submission.Grade.Score != 75 {
+			t.Fatal("published assessment missing")
+		}
+		var revisions int64
+		if e := db.Raw(`SELECT count(*) FROM grade_revisions WHERE submission_id=? AND assessment IS NOT NULL`, sub.ID).Scan(&revisions).Error; e != nil {
+			t.Fatal(e)
+		}
+		if revisions != 2 {
+			t.Fatal("audit", revisions)
+		}
+		bp := fmt.Sprintf("/teacher/courses/%d/gradebook?activityPage=2", module.CourseID)
+		var book models.Gradebook
+		decode(call("GET", bp, nil, "profe", 200), &book)
+		summary := book.Rows[0].Summary
+		if summary.WeightedAverageHundredths == nil || *summary.WeightedAverageHundredths != 5750 || summary.PublishedWeight != 6 || summary.TotalWeight != 15 {
+			t.Fatalf("draft weight affected book %+v", summary)
+		}
+		call("POST", ap+"/publish", map[string]int{"version": 3}, "profe", 200)
+		decode(call("GET", bp, nil, "profe", 200), &book)
+		// (90+0+30+75*9)/(1+1+1+9) = 66.25, historical rubric still 75.
+		if *book.Rows[0].Summary.WeightedAverageHundredths != 6625 || book.Rows[0].Summary.TotalWeight != 21 {
+			t.Fatalf("published weight %+v", book.Rows[0].Summary)
+		}
+		decode(call("GET", lp+"/submission", nil, "luna", 200), &own)
+		if own.Submission.Rubric.Criteria[0].Title != "Comprensión" || own.Submission.Grade.Score != 75 {
+			t.Fatal("published rubric rewrote history")
+		}
+	})
 	t.Run("I2_origin_and_revocation", func(t *testing.T) {
 		r := httptestRequest("POST", "/api/v1"+assignmentPath+"/publish", `{"version":2}`, cookies["profe"], "http://evil.example")
 		res, e := app.Test(r)
