@@ -136,6 +136,9 @@ func (s AcademicService) SaveSubmission(user, lesson int64, body string, version
 			}
 		}
 		var e error
+		if e := tx.Exec(`INSERT INTO lesson_progress(user_id,lesson_id,status) VALUES (?,?,'in_progress') ON CONFLICT DO NOTHING`, user, lesson).Error; e != nil {
+			return e
+		}
 		out, e = (repositories.Repository{DB: tx}).Submission(id, false)
 		return e
 	})
@@ -176,7 +179,7 @@ func (s AcademicService) Grade(user, id int64, score int, feedback string, versi
 	}
 	e := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
 		var sub int64
-		if e := tx.Raw(`SELECT s.id FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN course_staff cs ON cs.course_id=m.course_id WHERE s.id=? AND s.status='submitted' AND cs.user_id=? FOR UPDATE OF s FOR SHARE OF cs`, id, user).Scan(&sub).Error; e != nil {
+		if e := tx.Raw(`SELECT s.id FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN course_staff cs ON cs.course_id=m.course_id JOIN teacher_students ts ON ts.teacher_id=cs.user_id AND ts.student_id=s.user_id WHERE s.id=? AND s.status='submitted' AND cs.user_id=? FOR UPDATE OF s FOR SHARE OF cs,ts`, id, user).Scan(&sub).Error; e != nil {
 			return e
 		}
 		if sub == 0 {

@@ -187,3 +187,39 @@ Las entradas de tarjetas y las celebraciones de progreso son breves. Con movimie
 Ejecuta `npm run demo` desde la raíz con Node 22.12 o superior. En `http://localhost:4321/login`, entra como **admin**, contraseña **aulaquest-demo**. Se abrirá `/admin`: resumen de cuentas y roles, catálogo de cursos y acceso a **Editar plugins**. Estudiantes y docentes no pueden consultar este panel.
 
 La administración usa páginas Astro SSR y el servidor local de demostración. Los ajustes de plugins se guardan en `frontend/.demo/state.json`; las cuentas y cursos son sintéticos. Crear usuarios, cambiar roles, editar cursos y trasladar la administración a Go/PostgreSQL quedan pendientes. Contrato: `contracts/demo-admin.md`. Código y H5P conservan sus límites: ejecución simulada y actividad todavía sin paquete configurado.
+
+
+### Autoría, entregas y calificación (backend Go)
+
+El espacio **Mi grupo → Crear actividades y calificar** permite al docente gestionar los cursos que tiene asignados: crear lecturas y tareas de texto, guardar borradores, publicarlos, revisar entregas y guardar/publicar una devolución con nota entera de 0 a 100. Las notas no conceden XP. Las lecturas conservan su recompensa única existente.
+
+Esta función usa Go/PostgreSQL; `npm run demo` conserva la demostración anterior y no incluye autoría ni calificaciones. Para usarla, inicia el modo A o Docker Compose descritos arriba y aplica las nuevas migraciones. En una base de desarrollo con las variables ya configuradas, desde `backend`:
+
+```bash
+go run ./cmd/migrate
+go run ./cmd/seed
+go run ./cmd/api
+```
+
+En otra terminal, desde la raíz:
+
+```bash
+npm --prefix frontend run dev
+```
+
+Abre `http://localhost:4321/login`. El seed asigna `profe` a los dos cursos sintéticos y conserva cuentas/datos existentes. La contraseña es la configurada al crear esa cuenta (`change-this-teacher-password` en los ejemplos sin modificar); Luna usa `change-this-student-password` en esos mismos ejemplos. Las asignaciones de cursos reales se administrarán en otro incremento, no se infieren del vínculo de estudiantes. Para consultar o calificar entregas también se exige el vínculo teacher_students: asignar un curso no concede acceso a estudiantes ajenos.
+
+Flujo: docente crea actividad → guarda → publica. El estudiante inscrito la encuentra en el mapa, guarda su respuesta y la envía. El docente entra en esa actividad, guarda la nota/comentario y publica la devolución. El alumno la consulta al volver a abrir su entrega.
+
+Los borradores del docente no son visibles al estudiante; los borradores de respuestas no son visibles al docente. Los cambios publicados conservan snapshots; una entrega definitiva mantiene las instrucciones con las que fue guardada. La entrega no se puede editar tras enviarse en este incremento. Los conflictos de revisión devuelven 409 para evitar sobrescrituras; el formulario conserva el texto y pide revisar la versión antes de reintentar. Texto plano escapado, no HTML activo. Límite REST de 128 KiB; el límite WebSocket sigue siendo 24 KiB.
+
+Todavía faltan archivos, fechas/prórrogas, reentregas, rúbricas, cuestionarios y libro agregado de notas. Foros, wikis, gestor de extensiones, respaldos y panel de operación están excluidos del nuevo alcance por decisión del usuario. No se afirma paridad del 98 % con Moodle.
+
+Prueba E2E académica contra una base sintética separada y servidores Go/Astro activos:
+
+```bash
+cd frontend
+E2E_ACADEMIC=1 E2E_STUDENT_PASSWORD='change-this-student-password' E2E_TEACHER_PASSWORD='change-this-teacher-password' npm run test:e2e -- academic.spec.ts
+```
+
+La prueba crea una actividad y entrega nuevas; no borra datos. Referencias: `openspec/changes/academic-administration/increment-1.md`, `contracts/openapi.json`, `backend/migrations/002_academic_authoring.sql`.

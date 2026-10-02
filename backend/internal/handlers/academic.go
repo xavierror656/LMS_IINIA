@@ -6,6 +6,7 @@ import (
 	"aulaquest/internal/services"
 	"errors"
 	"github.com/gofiber/fiber/v2"
+	"strconv"
 )
 
 func academicError(e error) error {
@@ -200,13 +201,21 @@ func (a API) staffSubmissions(c *fiber.Ctx) error {
 	if e != nil {
 		return e
 	}
+	var submissionID int64
+	if c.Query("submissionId") != "" {
+		var err error
+		submissionID, err = strconv.ParseInt(c.Query("submissionId"), 10, 64)
+		if err != nil || submissionID < 1 {
+			return fiber.ErrBadRequest
+		}
+	}
 	activity, e := a.Repo.Activity(middleware.User(c).ID, id, false)
 	if e != nil {
 		return dbError(e)
 	}
 	items := []models.Submission{}
 	if activity.LessonID != nil {
-		if e = a.Repo.DB.Raw(`SELECT s.*,u.alias,p.body instructions FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id WHERE s.lesson_id=? AND s.status='submitted' ORDER BY s.id LIMIT 20 OFFSET ?`, *activity.LessonID, (p-1)*20).Scan(&items).Error; e != nil {
+		if e = a.Repo.DB.Raw(`SELECT s.*,u.alias,p.body instructions FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id JOIN teacher_students ts ON ts.student_id=s.user_id WHERE ts.teacher_id=? AND s.lesson_id=? AND s.status='submitted' AND (?::bigint=0 OR s.id=?) ORDER BY s.id LIMIT 20 OFFSET ?`, middleware.User(c).ID, *activity.LessonID, submissionID, submissionID, (p-1)*20).Scan(&items).Error; e != nil {
 			return dbError(e)
 		}
 		ids := []int64{}

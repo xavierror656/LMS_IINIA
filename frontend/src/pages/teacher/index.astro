@@ -27,6 +27,7 @@ if (!error)
       <span class="eyebrow">Espacio docente</span>
       <h1>Cada estudiante, su propio camino</h1>
       <p>Consulta los avances de los estudiantes vinculados a tu cuenta.</p>
+      {import.meta.env.PUBLIC_DEMO_MODE !== "true" && <p><a class="button" href="/teacher/courses">Crear actividades y calificar →</a></p>}
       {import.meta.env.PUBLIC_DEMO_MODE === "true" && (
         <p>
           <a class="button" href="/teacher/plugins">

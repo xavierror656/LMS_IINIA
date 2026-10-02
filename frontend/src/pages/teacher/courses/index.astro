@@ -1,0 +1,29 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import ServiceError from "../../../components/astro/ServiceError.astro";
+import { api, type Course } from "../../../lib/api";
+let error = Astro.locals.apiError;
+let courses: Course[] = [];
+const page = Math.max(1, Number(Astro.url.searchParams.get("page")) || 1);
+if (!error) try {
+  courses = (await api<{items: Course[]}>(`/teacher/courses?page=${page}`, {}, Astro.request.headers.get("cookie") ?? "")).items;
+} catch (e) { error = e instanceof Error ? e.message : "No se pudieron consultar tus cursos."; }
+---
+<Layout title="Mis cursos · Docente">
+  <a class="crumb" href="/teacher">← Mi grupo</a>
+  <span class="eyebrow">Contenido y evaluación</span>
+  <h1>Prepara el próximo descubrimiento</h1>
+  <p>Crea lecturas y tareas, revisa entregas y comparte una devolución con cada estudiante.</p>
+  {error ? <ServiceError message={error} /> : <>
+    <div class="grid">{courses.map((course) => <article class="panel">
+      <h2>{course.title}</h2><p>{course.description}</p>
+      <a class="button" href={`/teacher/courses/${course.id}`}>Gestionar actividades →</a>
+      <a class="crumb" href={`/teacher/courses/${course.id}/gradebook`}>Ver calificaciones →</a>
+    </article>)}</div>
+    {courses.length === 0 && <p class="panel">Todavía no tienes cursos asignados en esta página.</p>}
+    <nav class="toolbar" aria-label="Páginas de cursos">
+      {page > 1 && <a class="crumb" href={`?page=${page-1}`}>← Anterior</a>}
+      {courses.length === 20 && <a class="crumb" href={`?page=${page+1}`}>Siguiente →</a>}
+    </nav>
+  </>}
+</Layout>

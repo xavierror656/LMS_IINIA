@@ -641,6 +641,14 @@ footer {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  ::view-transition-old(*) {
+    display: none;
+  }
   *,
   *::before,
   *::after {
@@ -1037,3 +1045,17 @@ progress::-moz-progress-bar {
     animation-delay: 160ms;
   }
 }
+
+/* Academic authoring uses native forms; no React hydration is needed. */
+.academic-columns { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+academic-form { display: block; }
+.academic-form { display: grid; gap: 12px; }
+.academic-form label { font-weight: 500; }
+.academic-form input, .academic-form select, .academic-form textarea { width: 100%; min-height: 48px; padding: 12px; border: 2px solid var(--color-line); border-radius: 12px; background: var(--color-canvas); color: var(--color-ink); font: inherit; }
+.academic-form textarea { resize: vertical; }
+.academic-form .toolbar { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+.academic-form [role="status"] { min-height: 48px; margin: 8px 0 0; }
+.academic-columns .panel, .academic-form { min-width: 0; }
+.reading-body { overflow-wrap: anywhere; }
+summary { cursor: pointer; min-height: 44px; padding: 12px 0; }
+@media (max-width: 900px) { .academic-columns { grid-template-columns: 1fr; } }

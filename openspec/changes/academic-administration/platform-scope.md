@@ -1,6 +1,6 @@
 # Alcance confirmado: Moodle con exclusiones acordadas
 
-Estado: propuesta; no implementada. El usuario respondió «todo» a la elección explícita entre módulo académico y toda la plataforma. Posteriormente el usuario excluyó expresamente foros, wikis, extensiones/plugins, respaldos y el módulo de operación. Esta revisión prevalece sobre el alcance global anterior. No sustituye la necesidad de comprobar cada función ni autoriza despliegues.
+Estado: implementación incremental iniciada; primer flujo de autoría, entregas y notas en Go/PostgreSQL. Los demás dominios continúan como propuesta. El usuario respondió «todo» a la elección explícita entre módulo académico y toda la plataforma. Posteriormente el usuario excluyó expresamente foros, wikis, extensiones/plugins, respaldos y el módulo de operación. Esta revisión prevalece sobre el alcance global anterior. No sustituye la necesidad de comprobar cada función ni autoriza despliegues.
 
 ## Base de comparación
 
@@ -26,10 +26,10 @@ La igualdad solicitada continúa siendo exactamente 98 %, sin sustituirla por �
 | Roles y permisos | Capacidades por contexto de sitio, categoría, curso y actividad; delegación y auditoría | Roles limitados; admin solo demo | PL1 |
 | Matrículas | Matrícula manual, cohortes, grupos, sincronización, bajas, caducidad y métodos adicionales | Inscripciones de seed; administración pendiente | PL1 |
 | Sitio y organización | Categorías, configuración, marca, idioma, zona horaria, búsqueda y navegación | Marca centralizada y español; administración amplia pendiente | PL1 |
-| Cursos | Crear, editar, duplicar, ordenar secciones, visibilidad, formatos, carga masiva, reinicio y archivo | Catálogo y mapa de cursos existentes; autoría pendiente | PL2 |
+| Cursos | Crear, editar, duplicar, ordenar secciones, visibilidad, formatos, carga masiva, reinicio y archivo | Catálogo y mapa de cursos existentes; autoría de lecturas/tareas disponible; gestión completa de cursos pendiente | PL2 |
 | Recursos | Página, libro, archivo, carpeta, URL, texto/multimedia, editor y repositorios | Lectura precargada; edición y biblioteca pendientes | PL2 |
-| Tareas | Texto/archivo, plazos, prórrogas, reenvíos, grupos y entrega definitiva | Pendiente | PL3 |
-| Calificación | Notas, rúbricas, guías, anotaciones, anonimato, moderación, publicación y libro de calificaciones | Progreso no equivale a notas | PL3 |
+| Tareas | Texto/archivo, plazos, prórrogas, reenvíos, grupos y entrega definitiva | Entregas textuales y notas manuales del incremento 1; resto pendiente | PL3 |
+| Calificación | Notas, rúbricas, guías, anotaciones, anonimato, moderación, publicación y libro de calificaciones | Nota manual 0–100 y comentarios; rúbricas y libro agregado pendientes | PL3 |
 | Cuestionarios | Tipos de preguntas, banco/versiones, importación/exportación, aleatoriedad, tiempo, intentos, revisión y recalificación | Pendiente | PL4 |
 | Actividades colaborativas | Glosario, base de datos y taller de evaluación por pares | Pendiente; definir controles adecuados para menores | PL5 |
 | Otras actividades | Consulta, encuesta, feedback y lección ramificada | Pendiente; lectura lineal no acredita lección ramificada | PL5 |

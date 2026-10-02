@@ -1,0 +1,24 @@
+---
+import AcademicForm from "./AcademicForm.astro";
+import type { Lesson, Submission } from "../../lib/api";
+interface Props { lesson: Lesson; submission: Submission | null; }
+const { lesson, submission } = Astro.props;
+---
+<article class="panel reading">
+  <span class="tag">Tarea de texto</span>
+  <div class="reading-body">{lesson.config.body}</div>
+  {submission?.status === "submitted" ? <section class="admin-section">
+    <h2>Tu trabajo está enviado</h2>
+    <p class="helper">Tu docente ya puede revisarlo. La entrega conserva las instrucciones con las que guardaste tu trabajo.</p>
+    <details><summary>Ver instrucciones de mi entrega</summary><p class="reading-body">{submission.instructions}</p></details>
+    <p class="reading-body">{submission.body}</p>
+    {submission.grade ? <aside class="demo-access"><h3>Tu devolución</h3><p><strong>Calificación: {submission.grade.score} / 100</strong></p><p class="reading-body">{submission.grade.feedback || "Tu docente publicó la calificación."}</p></aside> : <p role="status">Aún no hay una devolución publicada. Puedes volver a consultarla más tarde.</p>}
+  </section> : <section class="admin-section">
+    <h2>Mi respuesta</h2>
+    {submission && submission.instructions !== lesson.config.body && <aside class="demo-access"><p>Las instrucciones cambiaron desde que guardaste tu borrador. Si lo envías ahora, conservará las instrucciones anteriores. Guarda de nuevo para usar las actuales.</p><details><summary>Instrucciones de mi borrador</summary><p class="reading-body">{submission.instructions}</p></details></aside>}
+    <AcademicForm kind="submission" path={`/lessons/${lesson.id}/submission`} version={submission?.version ?? 0} lessonVersion={lesson.config.version} canPublish={!!submission}>
+      <label for="assignment-answer">Escribe tu trabajo</label><textarea id="assignment-answer" name="body" rows="10" maxlength="12000" required>{submission?.body ?? ""}</textarea>
+      <p class="helper">Guarda un borrador para seguir después. Al enviarlo, tu docente podrá leerlo y ya no podrás cambiarlo.</p>
+    </AcademicForm>
+  </section>}
+</article>

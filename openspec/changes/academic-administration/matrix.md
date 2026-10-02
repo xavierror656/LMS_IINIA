@@ -5,10 +5,10 @@ Referencia: documentación Moodle 5.2 consultada el 2026-10-02. No se ha probado
 | Área | Referencia Moodle | AulaQuest observado | Propuesta y brecha |
 |---|---|---|---|
 | Recursos | [Resources](https://docs.moodle.org/502/en/Resources): páginas, archivos, carpetas, URL y libros | Lectura precargada | Editor de recursos, adjuntos y organización; libro multipágina por especificar |
-| Tareas | [Assignment](https://docs.moodle.org/502/en/Assignment_activity): entrega de texto/archivos, individual o grupal | No hay entregas | Entrega versionada, bandeja docente, grupos y permisos explícitos |
+| Tareas | [Assignment](https://docs.moodle.org/502/en/Assignment_activity): entrega de texto/archivos, individual o grupal | Entrega textual individual del incremento 1 | Entrega versionada, bandeja docente, grupos y permisos explícitos |
 | Disponibilidad | [Assignment settings](https://docs.moodle.org/502/en/Assignment_settings): apertura, vencimiento, cierre | Sin calendario de entregas | Fechas UTC, visualización local, extensiones y estado tardío |
 | Reentrega | [Assignment settings](https://docs.moodle.org/502/en/Assignment_settings): borradores, envío y nuevos intentos | No disponible | Borrador, envío inmutable y reapertura autorizada |
-| Corrección | [Assignment](https://docs.moodle.org/502/en/Assignment_activity): notas y comentarios | Progreso de lectura; no nota académica | Calificación manual, devolución y archivos de retroalimentación |
+| Corrección | [Assignment](https://docs.moodle.org/502/en/Assignment_activity): notas y comentarios | Nota manual 0–100 y comentarios publicados del incremento 1 | Calificación manual, devolución y archivos de retroalimentación |
 | Evaluación avanzada | [Grades](https://docs.moodle.org/502/en/Grades): rúbricas y guías | No disponible | Criterios y niveles versionados; guías de evaluación |
 | Flujo de corrección | [Assignment settings](https://docs.moodle.org/502/en/Assignment_settings): revisión y publicación | No disponible | Borrador de nota, revisión, publicación y auditoría; asignación de correctores por detallar |
 | Cuestionarios | [Quiz](https://docs.moodle.org/502/en/Quiz_activity): preguntas reutilizables y evaluación | No disponible | Cuestionarios con evaluación en servidor |
@@ -17,7 +17,7 @@ Referencia: documentación Moodle 5.2 consultada el 2026-10-02. No se ha probado
 | Libro de notas | [Grades](https://docs.moodle.org/502/en/Grades): ítems, escalas e historial | Resumen de lecciones completadas | Notas independientes de recompensas y estados visibles |
 | Agregación | [Grade categories](https://docs.moodle.org/502/en/Grade_categories) | No disponible | Categorías, ponderaciones, exclusiones y reglas de faltantes |
 | Intercambio de notas | [Grades](https://docs.moodle.org/502/en/Grades): importación/exportación | No disponible | CSV con prevalidación, simulación y auditoría; otros formatos por inventariar |
-| H5P | [Content bank](https://docs.moodle.org/502/en/Content_bank): creación y gestión de contenido | Reproductor sin paquete validado | Selección de paquetes revisados; constructor sigue excluido del MVP y es brecha de paridad |
+| H5P | [Content bank](https://docs.moodle.org/502/en/Content_bank): creación y gestión de contenido | Reproductor sin paquete validado | Selección de paquetes revisados; constructor incluido en la ampliación, todavía pendiente |
 
 ## Inventario pendiente para evitar una comparación sesgada
 Desglosar también anotación PDF, corrección anónima, varios correctores, calificación rápida, entregas grupales, extensiones individuales, notificaciones, resultados/competencias, cálculos de notas y tipos de preguntas. No tratarlos como implementados por tener una fila general parecida.
@@ -29,7 +29,7 @@ Por capacidad: ID estable, versión/página Moodle, comportamiento atómico, pes
 
 ## Inventario atómico candidato
 
-`capabilities.csv` desglosa inicialmente 43 capacidades académicas con fuente, criterio observable e identificador de prueba PAR. El alcance con exclusiones ya fue confirmado; los pesos quedan sin fijar hasta completar el inventario. Ninguna fila suma cobertura: todas están `unverified`, sin evidencia funcional. Estos casos son condiciones propuestas para AulaQuest, no resultados de una ejecución en Moodle. Los requisitos LMS agrupan la intención; para funciones avanzadas, ampliar los escenarios y contratos antes de implementar.
+`capabilities.csv` desglosa inicialmente 43 capacidades académicas con fuente, criterio observable e identificador de prueba PAR. El alcance con exclusiones ya fue confirmado; los pesos quedan sin fijar hasta completar el inventario. Ninguna fila suma cobertura certificada: cuatro capacidades tienen implementación comprobada internamente y estado `partial`; falta ejecutarlas contra la referencia Moodle. Las demás permanecen sin verificar. Estos casos son condiciones propuestas para AulaQuest, no resultados de una ejecución en Moodle. Los requisitos LMS agrupan la intención; para funciones avanzadas, ampliar los escenarios y contratos antes de implementar.
 
 El inventario sigue abierto: aún deben desglosarse tipos de preguntas, recursos, permisos avanzados y otras funciones del alcance acordado. No se eligieron 50 filas para hacer coincidir aritméticamente el 98 %. La ausencia de una capacidad en este archivo no equivale a una exclusión aprobada.
 

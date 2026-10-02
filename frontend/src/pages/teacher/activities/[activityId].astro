@@ -1,0 +1,50 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import ServiceError from "../../../components/astro/ServiceError.astro";
+import AcademicForm from "../../../components/astro/AcademicForm.astro";
+import { api, type Activity, type Submission } from "../../../lib/api";
+let error = Astro.locals.apiError;
+let activity: Activity | undefined;
+let submissions: Submission[] = [];
+const id = encodeURIComponent(Astro.params.activityId ?? "");
+const page = Math.max(1, Number(Astro.url.searchParams.get("page")) || 1);
+const submissionId = Astro.url.searchParams.get("submissionId");
+const filter = submissionId === null ? "" : `&submissionId=${encodeURIComponent(submissionId)}`;
+const cookie = Astro.request.headers.get("cookie") ?? "";
+if (!error) try {
+  activity = await api<Activity>(`/teacher/activities/${id}`, {}, cookie);
+  if (activity.type === "assignment") submissions = (await api<{items: Submission[]}>(`/teacher/activities/${id}/submissions?page=${page}${filter}`, {}, cookie)).items;
+} catch (e) { error = e instanceof Error ? e.message : "No se pudo abrir la actividad."; }
+---
+<Layout title={activity?.title ?? "Editar actividad"}>
+  <a class="crumb" href="/teacher/courses">← Mis cursos</a>
+  {error ? <ServiceError message={error} /> : activity && <>
+    <span class="eyebrow">{activity.type === "reading" ? "Lectura" : "Tarea de texto"}</span><h1>{activity.title}</h1>
+    <p>Versión guardada: {activity.version}. {activity.publishedVersion ? `Última versión publicada: ${activity.publishedVersion}.` : "Todavía no es visible para estudiantes."}</p>
+    <section class="panel">
+      <h2>Editar contenido</h2>
+      <AcademicForm kind="activity" path={`/teacher/activities/${id}`} version={activity.version} canPublish={activity.version !== activity.publishedVersion}>
+        <label for="edit-title">Título</label><input id="edit-title" name="title" required maxlength="160" value={activity.title} />
+        <label for="edit-description">Descripción breve</label><textarea id="edit-description" name="description" maxlength="1000" rows="2">{activity.description}</textarea>
+        <label for="edit-body">Contenido o instrucciones</label><textarea id="edit-body" name="body" required maxlength="12000" rows="9">{activity.body}</textarea>
+      </AcademicForm>
+    </section>
+    {activity.type === "assignment" && <section class="admin-section" aria-labelledby="submissions-title">
+      <h2 id="submissions-title">Entregas para revisar</h2>
+      <p>Solo aparecen los trabajos enviados. Guarda tu calificación y publica la devolución cuando esté lista.</p>
+      {submissions.length === 0 && <p class="panel">No hay entregas enviadas en esta página.</p>}
+      {submissionId !== null && <p>Mostrando una entrega. <a class="crumb" href={`/teacher/activities/${id}`}>Ver todas las entregas</a></p>}
+      <div class="path">{submissions.map((s) => <article class="panel" id={`submission-${s.id}`}>
+        <span class="tag">{s.grade?.status === "published" ? "Devolución publicada" : s.grade ? "Calificación en borrador" : "Por calificar"}</span>
+        <h3>Entrega de {s.alias}</h3>
+        <details><summary>Instrucciones de esta entrega</summary><p class="reading-body">{s.instructions}</p></details>
+        <p class="reading-body">{s.body}</p>
+        <AcademicForm kind="grade" path={`/teacher/submissions/${s.id}/grade`} version={s.grade?.version ?? 0} canPublish={s.grade?.status === "draft"}>
+          <label for={`score-${s.id}`}>Calificación de {s.alias} (0 a 100)</label><input id={`score-${s.id}`} type="number" name="score" min="0" max="100" step="1" required value={s.grade?.score} />
+          <label for={`feedback-${s.id}`}>Comentario para {s.alias}</label><textarea id={`feedback-${s.id}`} name="feedback" rows="4" maxlength="4000">{s.grade?.feedback ?? ""}</textarea>
+        </AcademicForm>
+      </article>)}</div>
+      {submissionId === null && <nav class="toolbar" aria-label="Páginas de entregas">{page > 1 && <a class="crumb" href={`?page=${page-1}`}>← Anterior</a>}{submissions.length === 20 && <a class="crumb" href={`?page=${page+1}`}>Siguiente →</a>}</nav>}
+    </section>}
+  </>}
+</Layout>

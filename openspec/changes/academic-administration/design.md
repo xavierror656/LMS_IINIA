@@ -12,27 +12,18 @@ Tablas propuestas: course_staff(course_id,user_id,capability), activity_versions
 
 FK obligatorias; UNIQUE(lesson_id,version), UNIQUE(lesson_id,user_id,attempt), UNIQUE(grade_item_id,user_id). Claves/validaciones compuestas impiden relacionar entregas, actividades y notas de cursos distintos. Índices de bandeja por curso/estado/fecha y usuario/actividad. La clave de respuestas nunca se serializa al estudiante. NUMERIC para notas; escala, precisión y redondeo explícitos, no float monetario ni total del cliente.
 
-Publicar fija una versión. Entregar fija contenido y versión de actividad. Reabrir genera otro intento y conserva el anterior. Guardar nota usa control optimista version/If-Match; edición obsoleta falla, no sobrescribe. Publicar nota y registrar historial ocurre en una transacción. Recalificar conserva autor, motivo y valor anterior. Nota ausente no es cero; distinguir pendiente, exento, calificado y publicado. Agregación propuesta: media ponderada normalizada de ítems incluidos; política de faltantes obligatoria por curso, validación de pesos y categorías sin ciclos. La equivalencia con cada agregación Moodle exige pruebas adicionales.
+Publicar fija una versión. Entregar fija contenido y versión de actividad. Reabrir genera otro intento y conserva el anterior. Guardar nota usa control optimista del campo version; edición obsoleta falla, no sobrescribe. Publicar nota y registrar historial ocurre en una transacción. Recalificar conserva autor, motivo y valor anterior. Nota ausente no es cero; distinguir pendiente, exento, calificado y publicado. Agregación propuesta: media ponderada normalizada de ítems incluidos; política de faltantes obligatoria por curso, validación de pesos y categorías sin ciclos. La equivalencia con cada agregación Moodle exige pruebas adicionales.
 
 Notas y XP siguen separados. Un cambio de nota no vuelve a premiar la lección. H5P client_reported no se convierte en evaluación verificada. MockRunner continúa sin ejecutar código.
 
-## REST propuesto, todavía no implementado
+## REST del primer incremento y extensiones previstas
 Prefijo /api/v1. Mantener contracts/openapi.json fiel a lo ejecutable; incorporar cada endpoint allí junto con su implementación y tipos.
 
-| Método/ruta | Entrada relevante | Resultado |
-|---|---|---|
-| POST /teacher/courses/{courseId}/activities | title,type,moduleId,config | 201 borrador |
-| PATCH /teacher/activities/{id} | campos editables + If-Match | 200 versión canónica |
-| POST /teacher/activities/{id}/publish | versión esperada | 200 versión publicada |
-| POST /lessons/{id}/submissions | texto/IDs de adjuntos propios + Idempotency-Key | 201 intento propio |
-| POST /submissions/{id}/submit | versión esperada | 200 envío confirmado |
-| GET /teacher/activities/{id}/submissions | cursor,limit (1–100),status | página autorizada |
-| PUT /teacher/submissions/{id}/grade | score,feedback,rubricSelections + If-Match | 200 nota borrador |
-| POST /teacher/grades/{id}/publish | versión esperada | 200 nota publicada |
-| GET /teacher/courses/{id}/gradebook | cursor,limit | página autorizada |
-| GET /me/grades | courseId,cursor,limit | solo notas propias publicadas |
+El contrato ejecutable del incremento está en `contracts/openapi.json` (1.1.0), con el detalle de campos/transiciones en `increment-1.md`. Utiliza PUT para reemplazar borradores, version en JSON para control optimista y 409 para revisiones obsoletas. Incluye cursos asignados, actividades, publicación, entrega propia, bandeja docente y guardado/publicación de notas por submissionId. Las listas usan page/pageSize=20, no cursor en este incremento.
 
-Errores estructurados existentes: 400 esquema, 401 sesión, 403 capacidad, 404 objeto no visible, 409 transición incompatible, 412 versión obsoleta, 413 límite, 422 nota/configuración inválida, 429 límite. Reintento idempotente idéntico devuelve resultado original; misma clave/cuerpo distinto da 409. Validar inscripción, curso, docente y propiedad de adjuntos en cada operación. REST futuro adicional para bancos, rúbricas, archivos e importación requiere OpenAPI antes de código.
+Quedan previstos, todavía sin implementar: banco de preguntas, rúbricas, archivos, plazos, reentregas, /me/grades y libro agregado de calificaciones. Sus endpoints requieren OpenAPI antes del código. No se conserva como contrato vigente el borrador previo con PATCH, If-Match o /teacher/grades/{id}.
+
+Todas las escrituras comprueban Origin, sesión, rol y objeto. 400 entrada inválida; 401 sesión; 403 rol/Origin; 404 objeto no accesible; 409 conflicto; 413 más de 128 KiB; 429 límite; 503 DB. Publicación y envío definitivos repetidos con la misma revisión son idempotentes mediante transacciones, locks y restricciones; no dependen de una clave arbitraria del navegador.
 
 ## WebSocket
 Sin cambio al contrato v1 de /ws/code. Autoría/calificaciones usan REST; no reutilizar eventos run.* para notas. No se necesita WebSocket para esta primera extensión.

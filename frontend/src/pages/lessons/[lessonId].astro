@@ -3,10 +3,12 @@ import Layout from "../../layouts/Layout.astro";
 import ServiceError from "../../components/astro/ServiceError.astro";
 import CodePlayground from "../../components/react/CodePlayground";
 import H5PPlayer from "../../components/react/H5PPlayer";
-import { api, type Lesson } from "../../lib/api";
+import Assignment from "../../components/astro/Assignment.astro";
+import { api, type Lesson, type Submission } from "../../lib/api";
 import type { DemoPlugin } from "../../lib/demoPlugins";
 let plugin: DemoPlugin | undefined;
 let lesson: Lesson | undefined;
+let submission: Submission | null = null;
 let error = Astro.locals.apiError;
 if (!error)
   try {
@@ -15,9 +17,12 @@ if (!error)
       {},
       Astro.request.headers.get("cookie") ?? "",
     );
+    if (lesson.type === "assignment") {
+      submission = (await api<{submission: Submission | null}>(`/lessons/${lesson.id}/submission`, {}, Astro.request.headers.get("cookie") ?? "")).submission;
+    }
     if (
       import.meta.env.PUBLIC_DEMO_MODE === "true" &&
-      lesson.type !== "reading"
+      (lesson.type === "code" || lesson.type === "h5p")
     ) {
       const result = await api<{ items: DemoPlugin[] }>(
         "/plugins",
@@ -74,6 +79,8 @@ if (!error)
               </p>
             </div>
           </article>
+        ) : lesson.type === "assignment" ? (
+          <Assignment lesson={lesson} submission={submission} />
         ) : lesson.type === "code" ? (
           <CodePlayground
             lessonId={lesson.id}

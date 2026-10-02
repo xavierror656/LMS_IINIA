@@ -1,0 +1,99 @@
+---
+interface Props {
+  path: string;
+  kind: "create" | "activity" | "submission" | "grade";
+  version?: number;
+  lessonVersion?: number;
+  canPublish?: boolean;
+}
+const { path, kind, version = 0, lessonVersion, canPublish = false } = Astro.props;
+---
+<academic-form data-path={path} data-kind={kind} data-version={version} data-lesson-version={lessonVersion}>
+  <form class="academic-form">
+    <slot />
+    <div class="toolbar">
+      <button type="submit" value="save">{kind === "grade" ? "Guardar calificación" : "Guardar borrador"}</button>
+      {kind !== "create" && <button type="submit" value="publish" class="quiet" disabled={!canPublish}>
+        {kind === "submission" ? "Enviar al docente" : kind === "grade" ? "Publicar devolución" : "Publicar actividad"}
+      </button>}
+    </div>
+    <p class="helper" data-status role="status" aria-live="polite">
+      {kind === "create" ? "El borrador será privado hasta que lo publiques." : "Guarda los cambios antes de publicar o enviar."}
+    </p>
+  </form>
+</academic-form>
+<script>
+  import { api, type Activity, type Submission, type Grade } from "../../lib/api";
+  class AcademicFormElement extends HTMLElement {
+    private dirty = false;
+    private busy = false;
+    private controller?: AbortController;
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const signal = this.controller.signal;
+      const form = this.querySelector("form")!;
+      const status = this.querySelector<HTMLElement>("[data-status]")!;
+      const publish = form.querySelector<HTMLButtonElement>('button[value="publish"]');
+      let canPublish = publish ? !publish.disabled : false;
+      const buttons = () => {
+        form.querySelectorAll<HTMLButtonElement>("button").forEach((b) => { b.disabled = this.busy || (b === publish && (!canPublish || this.dirty)); });
+      };
+      form.addEventListener("input", () => { this.dirty = true; buttons(); }, { signal });
+      window.addEventListener("beforeunload", (event) => {
+        if (this.dirty || this.busy) { event.preventDefault(); }
+      }, { signal });
+      document.addEventListener("click", (event) => {
+        const link = (event.target as Element)?.closest?.("a[href]");
+        if (!link || !(this.dirty || this.busy)) return;
+        if (!window.confirm("Hay cambios sin guardar. ¿Quieres salir de esta página?")) {
+          event.preventDefault(); event.stopImmediatePropagation();
+        } else { this.dirty = false; }
+      }, { capture: true, signal });
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (this.busy) return;
+        const publishing = (event.submitter as HTMLButtonElement | null)?.value === "publish";
+        if (publishing && (!canPublish || this.dirty)) return;
+        const kind = this.dataset.kind!;
+        const version = Number(this.dataset.version);
+        const data = new FormData(form);
+        let payload: Record<string, unknown> = { version };
+        if (!publishing) {
+          if (kind === "activity" || kind === "create") {
+            payload = { title: data.get("title"), description: data.get("description"), body: data.get("body") };
+            if (kind === "create") Object.assign(payload, { type: data.get("type"), moduleId: Number(data.get("moduleId")) });
+            else payload.version = version;
+          } else if (kind === "submission") {
+            Object.assign(payload, { body: data.get("body"), lessonVersion: Number(this.dataset.lessonVersion) });
+          } else Object.assign(payload, { score: Number(data.get("score")), feedback: data.get("feedback") });
+        }
+        this.busy = true; buttons();
+        // Freeze fields while saving so edits made during the request are not lost.
+        const fields = form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input,textarea,select");
+        fields.forEach((field) => { field.disabled = true; });
+        status.textContent = publishing ? "Confirmando…" : "Guardando…";
+        try {
+          const suffix = publishing ? (kind === "submission" ? "/submit" : "/publish") : "";
+          const result = await api<Activity | Submission | Grade>(this.dataset.path! + suffix, {
+            method: publishing || kind === "create" ? "POST" : "PUT",
+            body: JSON.stringify(payload),
+          });
+          this.dataset.version = String(result.version);
+          this.dirty = false;
+          canPublish = !publishing;
+          status.textContent = publishing ? "Confirmado y guardado en el servidor." : `Borrador guardado · versión ${result.version}.`;
+          this.busy = false;
+          if (kind === "create") window.location.assign(`/teacher/activities/${(result as Activity).id}`);
+          else if (publishing) window.location.reload();
+        } catch (error) {
+          status.textContent = (error instanceof Error ? error.message : "No se pudo guardar.") + " Tu texto permanece en el formulario. Si cambió la versión, copia tus cambios antes de recargar.";
+        } finally {
+          this.busy = false; fields.forEach((field) => { field.disabled = false; }); buttons();
+        }
+      }, { signal });
+    }
+    disconnectedCallback() { this.controller?.abort(); this.controller = undefined; }
+  }
+  if (!customElements.get("academic-form")) customElements.define("academic-form", AcademicFormElement);
+</script>

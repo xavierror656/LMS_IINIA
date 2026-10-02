@@ -1,6 +1,6 @@
 # Plataforma AulaQuest: propuesta de paridad funcional con Moodle
 
-Estado: propuesta en elaboración; no es funcionalidad implementada ni certificación de paridad.
+Estado: implementación incremental en curso; autoría, entregas textuales y notas manuales implementadas en Go/PostgreSQL. No es certificación de paridad.
 Fecha de investigación: 2026-10-02. Relacionada con bootstrap-kids-lms y demo-admin.
 
 ## Why
@@ -31,13 +31,16 @@ La igualdad exacta se evaluaría como suma_verificada × 100 = suma_total × 98.
 ## Límites que deben quedar visibles
 El MVP excluye SCORM, videoconferencia, chat entre menores, importación de respaldos y constructor H5P. Moodle posee capacidades fuera de este alcance: no se pueden descontar silenciosamente ni declarar que todas juntas representan solo el 2 %. Al comparar el alcance acordado, las funciones no excluidas entran en el análisis de brechas; los respaldos ya fueron excluidos expresamente. No se consideran automáticamente parte del 2 % permitido. La propuesta ampliada está en platform-scope.md. La inclusión en la comparación no habilita automáticamente pagos, chat entre menores ni subida de código activo en el producto.
 
-## Evidencia del estado actual
+## Evidencia de la inspección inicial (antes del incremento 1)
 - frontend/src/pages/admin/index.astro: panel condicionado a PUBLIC_DEMO_MODE; creación de usuarios/edición de cursos pendientes.
 - backend/internal/models/models.go: reading/code/h5p; sin modelos de entregas, rúbricas o calificaciones.
 - backend/internal/handlers/api.go y contracts/openapi.json: API de aprendizaje/progreso; no constituyen contrato de autoría y evaluación.
 - README.md: administración solo demo, MockRunner y H5P sin paquete validado.
 
-La inspección no equivale a ejecutar pruebas funcionales. OpenSpec no apareció en PATH ni en /tmp/aulaquest-tools/node_modules/.bin; validación CLI pendiente. Git no reconoció este directorio como repositorio utilizable; no se modificó .git.
+La inspección no equivale a ejecutar pruebas funcionales. OpenSpec no estaba instalado inicialmente; posteriormente se instaló 1.14.0 en /tmp y la validación estricta del cambio pasó. Git no reconoció este directorio como repositorio utilizable; no se modificó .git.
 
 ## Revisión de alcance solicitada por el usuario
 Foros, wikis, gestor de extensiones, respaldos y módulo de operación quedan fuera. Se conserva el resto de la propuesta. La meta es exactamente 98 % del alcance Moodle acordado, no del producto Moodle completo. No hay porcentaje verificado todavía.
+
+## Evidencia del incremento 1
+Implementación en `backend/internal/{models,repositories,services,handlers}/academic.go`, migración 002 y páginas `frontend/src/pages/teacher/{courses,activities}`. Entregas y notas tienen flujo Go/PostgreSQL y navegador; resultados y pendientes en `docs/academic-validation.md`.

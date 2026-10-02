@@ -63,3 +63,10 @@ export async function api<T>(
   }
   return response.json() as Promise<T>;
 }
+
+export type Activity = components["schemas"]["Activity"];
+export type ActivityList = components["schemas"]["ActivityList"];
+export type Submission = components["schemas"]["Submission"];
+export type Grade = components["schemas"]["Grade"];
+
+export type Gradebook = components["schemas"]["Gradebook"];

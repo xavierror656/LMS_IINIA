@@ -96,6 +96,7 @@ func (a API) Register(app *fiber.App) {
 	teacher := private.Group("/teacher", middleware.Teacher)
 	teacher.Get("/courses", a.staffCourses)
 	teacher.Get("/courses/:courseId/activities", a.staffActivities)
+	teacher.Get("/courses/:courseId/gradebook", a.gradebook)
 	teacher.Post("/courses/:courseId/activities", a.createActivity)
 	teacher.Get("/activities/:activityId", a.staffActivity)
 	teacher.Put("/activities/:activityId", a.saveActivity)
