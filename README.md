@@ -193,7 +193,7 @@ La administración usa páginas Astro SSR y el servidor local de demostración. 
 
 El espacio **Mi grupo → Crear actividades y calificar** permite al docente gestionar los cursos que tiene asignados: crear lecturas y tareas de texto, guardar borradores, publicarlos, revisar entregas y guardar/publicar una devolución con nota entera de 0 a 100. Las notas no conceden XP. Las lecturas conservan su recompensa única existente.
 
-El enlace **Ver calificaciones** en cada curso abre el libro: estudiantes vinculados e inscritos, tareas publicadas, pendientes, notas y promedio de notas publicadas. Permite revisar una entrega concreta; las notas ocultas y tareas sin calificar no cuentan en el promedio. Hay paginación independiente de estudiantes y tareas. No es una nota final ponderada.
+El enlace **Ver calificaciones** en cada curso abre el libro: estudiantes vinculados e inscritos, tareas publicadas, pendientes, notas y promedio ponderado de notas publicadas. Permite revisar una entrega concreta; las notas ocultas y tareas sin calificar no cuentan en el promedio. Hay paginación independiente de estudiantes y tareas. No es una nota final ponderada.
 
 Esta función usa Go/PostgreSQL; `npm run demo` conserva la demostración anterior y no incluye autoría ni calificaciones. Para usarla, inicia el modo A o Docker Compose descritos arriba y aplica las nuevas migraciones. En una base de desarrollo con las variables ya configuradas, desde `backend`:
 
@@ -215,7 +215,7 @@ Flujo: docente crea actividad → guarda → publica. El estudiante inscrito la 
 
 Los borradores del docente no son visibles al estudiante; los borradores de respuestas no son visibles al docente. Los cambios publicados conservan snapshots; una entrega definitiva mantiene las instrucciones con las que fue guardada. La entrega no se puede editar tras enviarse en este incremento. Los conflictos de revisión devuelven 409 para evitar sobrescrituras; el formulario conserva el texto y pide revisar la versión antes de reintentar. Texto plano escapado, no HTML activo. Límite REST de 128 KiB; el límite WebSocket sigue siendo 24 KiB.
 
-Todavía faltan archivos, fechas/prórrogas, reentregas, rúbricas, cuestionarios y libro agregado de notas. Foros, wikis, gestor de extensiones, respaldos y panel de operación están excluidos del nuevo alcance por decisión del usuario. No se afirma paridad del 98 % con Moodle.
+Todavía faltan archivos, reentregas, cuestionarios, categorías y otras agregaciones de notas. Foros, wikis, gestor de extensiones, respaldos y panel de operación están excluidos del nuevo alcance por decisión del usuario. No se afirma paridad del 98 % con Moodle.
 
 Prueba E2E académica contra una base sintética separada y servidores Go/Astro activos:
 
@@ -225,3 +225,15 @@ E2E_ACADEMIC=1 E2E_STUDENT_PASSWORD='change-this-student-password' E2E_TEACHER_P
 ```
 
 La prueba crea una actividad y entrega nuevas; no borra datos. Referencias: `openspec/changes/academic-administration/increment-1.md`, `contracts/openapi.json`, `backend/migrations/002_academic_authoring.sql`.
+
+### Rúbricas y pesos de tareas (Go/PostgreSQL)
+
+En el editor de una tarea, abre **Configurar rúbrica y peso**. Define criterios y niveles, guarda el borrador y vuelve a publicar la actividad. Las entregas conservan su rúbrica histórica. El docente selecciona niveles y el servidor calcula la nota; el alumno ve los resultados al publicarse la devolución.
+
+El peso es relativo (2 cuenta el doble que 1). El libro solo incluye notas publicadas y muestra la cobertura de pesos; no convierte ausencias en cero. Aplica `go run ./cmd/migrate` desde backend para instalar `003_rubrics_weights.sql` antes de iniciar la API actualizada. Evidencia, comandos E2E y límites: [docs/rubric-validation.md](docs/rubric-validation.md).
+
+### Fechas y prórrogas (Go/PostgreSQL)
+
+En cada tarea puedes **Configurar fechas** de apertura, entrega y cierre; guarda y publica la actividad. Vencer la fecha permite entregas tardías hasta el cierre. El alumno conserva acceso a instrucciones aunque no pueda enviar. **Gestionar prórrogas** amplía los plazos de un estudiante vinculado e inscrito, con motivo y revisión; vaciar ambas fechas revoca la excepción. El historial de la entrega no cambia al ajustar fechas.
+
+Los formularios usan **UTC explícito**, sin convertir silenciosamente la hora local. Aplica `go run ./cmd/migrate` desde backend para `004_assignment_schedule.sql`. Evidencia y límites: [docs/schedule-validation.md](docs/schedule-validation.md).

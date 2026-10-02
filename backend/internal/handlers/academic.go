@@ -10,6 +10,9 @@ import (
 )
 
 func academicError(e error) error {
+	if errors.Is(e, services.ErrAssignmentUnavailable) {
+		return fiber.NewError(409, "Esta tarea todavía no abre o ya cerró. Tu texto no se ha enviado; revisa las fechas o consulta a tu docente.")
+	}
 	if errors.Is(e, models.ErrAcademicInput) {
 		return fiber.ErrBadRequest
 	}

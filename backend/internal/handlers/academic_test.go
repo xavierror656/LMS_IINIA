@@ -505,6 +505,144 @@ func TestAcademicIntegration(t *testing.T) {
 			t.Fatal("published rubric rewrote history")
 		}
 	})
+	t.Run("DT1_DT4_schedule_extensions_and_history", func(t *testing.T) {
+		var now time.Time
+		if e := db.Raw(`SELECT clock_timestamp()`).Scan(&now).Error; e != nil {
+			t.Fatal(e)
+		}
+		past := now.Add(-2 * time.Hour)
+		due := now.Add(-time.Hour)
+		closed := now.Add(-time.Minute)
+		future := now.Add(time.Hour)
+		later := now.Add(2 * time.Hour)
+		input.Title = "Tarea con fechas"
+		var a models.Activity
+		decode(call("POST", coursePath, input, "profe", 201), &a)
+		ap := fmt.Sprintf("/teacher/activities/%d", a.ID)
+		call("PUT", ap+"/schedule", map[string]any{"version": 1, "opensAt": future, "dueAt": due}, "profe", 400)
+		call("PUT", ap+"/schedule", map[string]any{"version": 1, "opensAt": "2026-10-02T12:00:00"}, "profe", 400)
+		call("PUT", ap+"/schedule", map[string]any{"version": 1, "opensAt": future}, "luna", 403)
+		call("PUT", ap+"/schedule", map[string]any{"version": 1, "opensAt": future}, "other-teacher", 404)
+		call("PUT", ap+"/schedule", map[string]any{"version": 1, "opensAt": future}, "profe", 200)
+		call("PUT", ap+"/schedule", map[string]any{"version": 1, "opensAt": future}, "profe", 409)
+		decode(call("POST", ap+"/publish", map[string]int{"version": 2}, "profe", 200), &a)
+		lp := fmt.Sprintf("/lessons/%d", *a.LessonID)
+		call("GET", lp, nil, "luna", 200)
+		var availability models.Availability
+		decode(call("GET", lp+"/availability", nil, "luna", 200), &availability)
+		if availability.State != "upcoming" {
+			t.Fatal(availability)
+		}
+		call("PUT", lp+"/submission", map[string]any{"version": 0, "lessonVersion": 2, "body": "Antes de abrir"}, "luna", 409)
+		call("PUT", ap+"/schedule", map[string]any{"version": 2, "opensAt": past, "dueAt": due, "closesAt": future}, "profe", 200)
+		decode(call("GET", lp+"/availability", nil, "luna", 200), &availability)
+		if availability.State != "upcoming" {
+			t.Fatal("draft calendar leaked")
+		}
+		call("POST", ap+"/publish", map[string]int{"version": 3}, "profe", 200)
+		decode(call("GET", lp+"/availability", nil, "luna", 200), &availability)
+		if availability.State != "late" {
+			t.Fatal(availability)
+		}
+		for _, who := range []string{"luna", "sol"} {
+			call("PUT", lp+"/submission", map[string]any{"version": 0, "lessonVersion": 3, "body": "Mi entrega"}, who, 200)
+		}
+		var sent models.Submission
+		decode(call("POST", lp+"/submission/submit", map[string]int{"version": 1}, "sol", 200), &sent)
+		if !sent.Late || sent.EffectiveDueAt == nil || !sent.EffectiveDueAt.Before(now) {
+			t.Fatal("late evidence missing", sent)
+		}
+		// A closing transaction holds the lesson lock while a send is attempted.
+		closing := db.Begin()
+		if closing.Error != nil {
+			t.Fatal(closing.Error)
+		}
+		defer closing.Rollback()
+		if e := closing.Exec(`UPDATE lessons SET closes_at=? WHERE id=?`, closed, *a.LessonID).Error; e != nil {
+			t.Fatal(e)
+		}
+		statuses := make(chan int, 1)
+		started := make(chan struct{})
+		go func() {
+			close(started)
+			res, e := app.Test(httptestRequest("POST", "/api/v1"+lp+"/submission/submit", `{"version":1}`, cookies["luna"], "http://localhost:4321"), 10000)
+			if e != nil {
+				statuses <- 0
+				return
+			}
+			defer res.Body.Close()
+			io.Copy(io.Discard, res.Body)
+			statuses <- res.StatusCode
+		}()
+		<-started
+		select {
+		case status := <-statuses:
+			t.Fatalf("send bypassed locked closing schedule: %d", status)
+		case <-time.After(50 * time.Millisecond):
+		}
+		if e := closing.Commit().Error; e != nil {
+			t.Fatal(e)
+		}
+		select {
+		case status := <-statuses:
+			if status != 409 {
+				t.Fatal("send did not observe committed close", status)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatal("send remained blocked")
+		}
+		call("PUT", ap+"/schedule", map[string]any{"version": 3, "opensAt": past, "dueAt": due, "closesAt": closed}, "profe", 200)
+		call("POST", ap+"/publish", map[string]int{"version": 4}, "profe", 200)
+		call("POST", lp+"/submission/submit", map[string]int{"version": 1}, "luna", 409)
+		call("PUT", lp+"/submission", map[string]any{"version": 1, "lessonVersion": 4, "body": "Intento cerrado"}, "luna", 409)
+		call("GET", lp, nil, "luna", 200)
+		var luna, sol int64
+		db.Raw(`SELECT id FROM users WHERE username='luna'`).Scan(&luna)
+		db.Raw(`SELECT id FROM users WHERE username='sol'`).Scan(&sol)
+		ep := ap + fmt.Sprintf("/extensions/%d", luna)
+		body := map[string]any{"version": 0, "dueAt": future, "closesAt": later, "reason": "Tiempo adicional"}
+		call("PUT", ep, body, "luna", 403)
+		call("PUT", ep, body, "other-teacher", 404)
+		call("PUT", ap+fmt.Sprintf("/extensions/%d", sol), body, "profe", 404)
+		call("PUT", ep, map[string]any{"version": 0, "dueAt": past, "reason": "Acortar"}, "profe", 400)
+		call("PUT", ep, map[string]any{"version": 0, "dueAt": future, "reason": "Falta ampliar cierre"}, "profe", 400)
+		outcomes := concurrent(ep, "PUT", body)
+		if outcomes[0]+outcomes[1] != 609 {
+			t.Fatal("extension concurrency", outcomes)
+		}
+		decode(call("GET", lp+"/availability", nil, "luna", 200), &availability)
+		if availability.State != "open" || !availability.Extended {
+			t.Fatal(availability)
+		}
+		decode(call("GET", lp+"/availability", nil, "sol", 200), &availability)
+		if availability.State != "closed" || availability.Extended {
+			t.Fatal("extension leaked to another student")
+		}
+		list := call("GET", ap+"/extensions", nil, "profe", 200)
+		if strings.Contains(string(list), `"alias":"Sol"`) {
+			t.Fatal("unlinked extension roster")
+		}
+		decode(call("POST", lp+"/submission/submit", map[string]int{"version": 1}, "luna", 200), &sent)
+		if sent.Late || sent.EffectiveDueAt == nil || !sent.EffectiveDueAt.After(now) {
+			t.Fatal("extension not snapshotted")
+		}
+		call("PUT", ep, map[string]any{"version": 1, "dueAt": nil, "closesAt": nil, "reason": "Prórroga terminada"}, "profe", 200)
+		decode(call("POST", lp+"/submission/submit", map[string]int{"version": 1}, "luna", 200), &sent)
+		if sent.Late || !sent.EffectiveDueAt.After(now) {
+			t.Fatal("resend changed history")
+		}
+		decode(call("POST", lp+"/submission/submit", map[string]int{"version": 1}, "sol", 200), &sent)
+		if !sent.Late {
+			t.Fatal("late history changed")
+		}
+		var count int64
+		if e := db.Raw(`SELECT count(*) FROM extension_revisions WHERE lesson_id=? AND user_id=?`, *a.LessonID, luna).Scan(&count).Error; e != nil {
+			t.Fatal(e)
+		}
+		if count != 2 {
+			t.Fatal("extension audit", count)
+		}
+	})
 	t.Run("I2_origin_and_revocation", func(t *testing.T) {
 		r := httptestRequest("POST", "/api/v1"+assignmentPath+"/publish", `{"version":2}`, cookies["profe"], "http://evil.example")
 		res, e := app.Test(r)

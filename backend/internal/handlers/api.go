@@ -81,6 +81,7 @@ func (a API) Register(app *fiber.App) {
 	student.Get("/courses", middleware.Student, a.courses)
 	student.Get("/courses/:courseId", middleware.Student, a.course)
 	student.Get("/lessons/:lessonId", middleware.Student, a.lesson)
+	student.Get("/lessons/:lessonId/availability", middleware.Student, a.availability)
 	student.Get("/me/progress", middleware.Student, func(c *fiber.Ctx) error {
 		p, e := a.Repo.Progress(middleware.User(c).ID)
 		if e != nil {
@@ -100,6 +101,9 @@ func (a API) Register(app *fiber.App) {
 	teacher.Post("/courses/:courseId/activities", a.createActivity)
 	teacher.Get("/activities/:activityId", a.staffActivity)
 	teacher.Put("/activities/:activityId/evaluation", a.saveEvaluation)
+	teacher.Put("/activities/:activityId/schedule", a.saveSchedule)
+	teacher.Get("/activities/:activityId/extensions", a.extensions)
+	teacher.Put("/activities/:activityId/extensions/:studentId", a.saveExtension)
 	teacher.Put("/activities/:activityId", a.saveActivity)
 	teacher.Post("/activities/:activityId/publish", a.publishActivity)
 	teacher.Get("/activities/:activityId/submissions", a.staffSubmissions)

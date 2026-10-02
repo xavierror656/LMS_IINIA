@@ -28,6 +28,7 @@ func (a ActivityInput) Validate() error {
 }
 
 type Activity struct {
+	Schedule
 	Rubric           *Rubric `json:"rubric" gorm:"serializer:json"`
 	Weight           int     `json:"weight"`
 	ID               int64   `json:"id"`
@@ -48,16 +49,18 @@ type Grade struct {
 	Status     string            `json:"status"`
 }
 type Submission struct {
-	Rubric        *Rubric    `json:"rubric" gorm:"serializer:json"`
-	ID            int64      `json:"id"`
-	LessonID      int64      `json:"lessonId"`
-	UserID        int64      `json:"-"`
-	Alias         string     `json:"alias"`
-	PublicationID int64      `json:"-"`
-	Instructions  string     `json:"instructions"`
-	Body          string     `json:"body"`
-	Version       int        `json:"version"`
-	Status        string     `json:"status"`
-	SubmittedAt   *time.Time `json:"submittedAt"`
-	Grade         *Grade     `json:"grade" gorm:"-"`
+	EffectiveDueAt *time.Time `json:"effectiveDueAt"`
+	Late           bool       `json:"late"`
+	Rubric         *Rubric    `json:"rubric" gorm:"serializer:json"`
+	ID             int64      `json:"id"`
+	LessonID       int64      `json:"lessonId"`
+	UserID         int64      `json:"-"`
+	Alias          string     `json:"alias"`
+	PublicationID  int64      `json:"-"`
+	Instructions   string     `json:"instructions"`
+	Body           string     `json:"body"`
+	Version        int        `json:"version"`
+	Status         string     `json:"status"`
+	SubmittedAt    *time.Time `json:"submittedAt"`
+	Grade          *Grade     `json:"grade" gorm:"-"`
 }

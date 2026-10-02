@@ -90,7 +90,7 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			}
 			rubricJSON = string(raw)
 		}
-		if e = tx.Exec(`UPDATE lessons SET grade_weight=? WHERE id=?`, a.Weight, *a.LessonID).Error; e != nil {
+		if e = tx.Exec(`UPDATE lessons SET grade_weight=?,opens_at=?,due_at=?,closes_at=? WHERE id=?`, a.Weight, a.OpensAt, a.DueAt, a.ClosesAt, *a.LessonID).Error; e != nil {
 			return e
 		}
 		if e = tx.Exec(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by,rubric) VALUES (?,?,?,?,?,?,?::jsonb)`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user, rubricJSON).Error; e != nil {
@@ -107,6 +107,9 @@ func (s AcademicService) SaveSubmission(user, lesson int64, body string, version
 		return out, models.ErrAcademicInput
 	}
 	e := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
+		if e := lockAssignment(tx, user, lesson); e != nil {
+			return e
+		}
 		// Enrollment row serializes first inserts and prevents concurrent unenrollment.
 		var enrolled int64
 		if e := tx.Raw(`SELECT e.user_id FROM enrollments e JOIN modules m ON m.course_id=e.course_id JOIN lessons l ON l.module_id=m.id WHERE e.user_id=? AND l.id=? AND l.type='assignment' FOR UPDATE OF e FOR SHARE OF l`, user, lesson).Scan(&enrolled).Error; e != nil {
@@ -114,6 +117,13 @@ func (s AcademicService) SaveSubmission(user, lesson int64, body string, version
 		}
 		if enrolled == 0 {
 			return gorm.ErrRecordNotFound
+		}
+		availability, scheduleError := assignmentAvailability(tx, user, lesson)
+		if scheduleError != nil {
+			return scheduleError
+		}
+		if availability.State == "closed" || availability.State == "upcoming" {
+			return ErrAssignmentUnavailable
 		}
 		var pub struct {
 			ID      int64
@@ -161,6 +171,9 @@ func (s AcademicService) Submit(user, lesson int64, version int) (models.Submiss
 		return out, models.ErrAcademicInput
 	}
 	e := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
+		if e := lockAssignment(tx, user, lesson); e != nil {
+			return e
+		}
 		var sub models.Submission
 		if e := tx.Raw(`SELECT s.* FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN enrollments e ON e.course_id=m.course_id AND e.user_id=s.user_id WHERE s.lesson_id=? AND s.user_id=? FOR UPDATE OF s FOR SHARE OF e`, lesson, user).Scan(&sub).Error; e != nil {
 			return e
@@ -172,8 +185,15 @@ func (s AcademicService) Submit(user, lesson int64, version int) (models.Submiss
 			return ErrAcademicConflict
 		}
 		if sub.Status == "draft" {
+			availability, e := assignmentAvailability(tx, user, lesson)
+			if e != nil {
+				return e
+			}
+			if availability.State == "closed" || availability.State == "upcoming" {
+				return ErrAssignmentUnavailable
+			}
 			// Sending freezes the saved snapshot, even if the teacher publishes a newer one.
-			if e := tx.Exec(`UPDATE submissions SET status='submitted',submitted_at=now() WHERE id=?`, sub.ID).Error; e != nil {
+			if e := tx.Exec(`UPDATE submissions SET status='submitted',submitted_at=?,effective_due_at=?,late=? WHERE id=?`, availability.ServerNow, availability.DueAt, availability.State == "late", sub.ID).Error; e != nil {
 				return e
 			}
 		}

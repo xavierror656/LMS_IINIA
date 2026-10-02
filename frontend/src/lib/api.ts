@@ -73,3 +73,7 @@ export type Gradebook = components["schemas"]["Gradebook"];
 
 export type Rubric = components["schemas"]["Rubric"];
 export type RubricAssessment = components["schemas"]["RubricAssessment"];
+
+export type Schedule = components["schemas"]["Schedule"];
+export type Availability = components["schemas"]["Availability"];
+export type ExtensionList = components["schemas"]["ExtensionList"];

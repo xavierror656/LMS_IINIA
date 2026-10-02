@@ -1,0 +1,71 @@
+import { test, expect, type Page } from "@playwright/test";
+
+test("DT5 calendario cerrado, prórroga, entrega tardía e historial", async ({ page, browser }) => {
+  test.skip(process.env.E2E_ACADEMIC !== "1", "Requiere Go/PostgreSQL sintético");
+  test.setTimeout(120_000);
+  const origin = process.env.E2E_BASE_URL ?? "http://localhost:4321";
+  async function login(p: Page, user: string) {
+    await p.goto("/login");
+    await p.getByLabel("Tu usuario").fill(user);
+    await p.getByLabel("Tu contraseña").fill(user === "profe" ? process.env.E2E_TEACHER_PASSWORD! : process.env.E2E_STUDENT_PASSWORD!);
+    await p.getByRole("button", { name: "Entrar a mi aventura" }).click();
+    await expect(p).toHaveURL(user === "profe" ? /\/teacher$/ : /\/courses$/);
+  }
+  await login(page, "profe");
+  const course = (await (await page.request.get("/api/v1/teacher/courses")).json()).items[0];
+  const module = (await (await page.request.get(`/api/v1/teacher/courses/${course.id}/activities`)).json()).modules[0];
+  const created = await page.request.post(`/api/v1/teacher/courses/${course.id}/activities`, { headers: { Origin: origin }, data: { moduleId: module.id, type: "assignment", title: `Calendario ${Date.now()}`, description: "Prueba de fechas", body: "Estas instrucciones siguen disponibles." } });
+  expect(created.status()).toBe(201);
+  let activity = await created.json();
+  const ap = `/teacher/activities/${activity.id}`;
+  const date = (offset: number) => new Date(Date.now() + offset * 60_000).toISOString().slice(0,19);
+  await page.goto(ap);
+  await page.getByRole("link", { name: "Configurar fechas" }).click();
+  await page.getByLabel("Apertura (UTC)", { exact: true }).fill(date(-120));
+  await page.getByLabel("Fecha de entrega (UTC)", { exact: true }).fill(date(-60));
+  await page.getByLabel("Cierre (UTC)", { exact: true }).fill(date(-30));
+  await page.getByRole("button", { name: "Guardar borrador" }).click();
+  await expect(page.locator("academic-form")).toHaveAttribute("data-version", "2");
+  await page.getByRole("link", { name: "Volver a la actividad" }).click();
+  await page.getByRole("button", { name: "Publicar actividad" }).click();
+  await expect(page.getByRole("link", { name: "Gestionar prórrogas" })).toBeVisible();
+  activity = await (await page.request.get(`/api/v1${ap}`)).json();
+  const context = await browser.newContext({ viewport: { width: 768, height: 1024 }, reducedMotion: "reduce" });
+  const student = await context.newPage();
+  try {
+    await login(student, "luna");
+    await student.goto(`/lessons/${activity.lessonId}`);
+    await expect(student.getByText("Estas instrucciones siguen disponibles.", { exact: true })).toBeVisible();
+    await expect(student.getByText(/La entrega está cerrada/)).toBeVisible();
+    await expect(student.getByLabel("Escribe tu trabajo")).toHaveCount(0);
+    const denied = await student.request.put(`/api/v1/lessons/${activity.lessonId}/submission`, { headers: { Origin: origin }, data: { version: 0, lessonVersion: 2, body: "Manipular la interfaz no abre el plazo" } });
+    expect(denied.status()).toBe(409);
+    await page.getByRole("link", { name: "Gestionar prórrogas" }).click();
+    await expect(page.getByRole("heading", { name: "Luna", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sol", exact: true })).toHaveCount(0);
+    await page.getByLabel("Nueva fecha de entrega (UTC)", { exact: true }).fill(date(-10));
+    await page.getByLabel("Nuevo cierre (UTC)", { exact: true }).fill(date(60));
+    await page.getByLabel("Motivo de la prórroga o revocación").fill("Tiempo adicional para terminar");
+    await page.getByRole("button", { name: "Guardar prórroga" }).click();
+    await expect(page.locator('academic-form[data-kind="extension"]')).toHaveAttribute("data-version", "1");
+    await page.screenshot({ path: "../docs/screenshots/extensions-tablet.png", fullPage: true, animations: "disabled" });
+    await student.getByRole("link", { name: "Actualizar disponibilidad" }).click();
+    await expect(student.getByText(/Tienes una prórroga/)).toBeVisible();
+    await expect(student.getByText(/Quedará registrado como entrega tardía/)).toBeVisible();
+    await student.getByLabel("Escribe tu trabajo").fill("Trabajo enviado dentro de mi prórroga de cierre");
+    await student.getByRole("button", { name: "Guardar borrador" }).click();
+    await student.getByRole("button", { name: "Enviar al docente" }).click();
+    await expect(student.getByRole("heading", { name: "Tu trabajo está enviado" })).toBeVisible();
+    await expect(student.getByText("Entrega tardía", { exact: true })).toBeVisible();
+    await student.screenshot({ path: "../docs/screenshots/schedule-student-tablet.png", fullPage: true, animations: "disabled" });
+    await page.getByLabel("Nueva fecha de entrega (UTC)", { exact: true }).fill("");
+    await page.getByLabel("Nuevo cierre (UTC)", { exact: true }).fill("");
+    await page.getByLabel("Motivo de la prórroga o revocación").fill("Prórroga terminada");
+    await page.getByRole("button", { name: "Guardar prórroga" }).click();
+    await expect(page.locator('academic-form[data-kind="extension"]')).toHaveAttribute("data-version", "2");
+    await student.reload();
+    await expect(student.getByText("Entrega tardía", { exact: true })).toBeVisible();
+    await page.goto(ap);
+    await expect(page.getByText("Entrega tardía", { exact: true })).toBeVisible();
+  } finally { await context.close(); }
+});

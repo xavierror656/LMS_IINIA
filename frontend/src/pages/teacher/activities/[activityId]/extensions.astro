@@ -1,0 +1,34 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import ServiceError from "../../../../components/astro/ServiceError.astro";
+import AcademicForm from "../../../../components/astro/AcademicForm.astro";
+import ScheduleView from "../../../../components/astro/ScheduleView.astro";
+import { api, type ExtensionList } from "../../../../lib/api";
+let error=Astro.locals.apiError;
+let result:ExtensionList|undefined;
+const id=encodeURIComponent(Astro.params.activityId??"");
+const page=Astro.url.searchParams.get("page")??"1";
+if(!error)try{result=await api<ExtensionList>(`/teacher/activities/${id}/extensions?page=${encodeURIComponent(page)}`,{},Astro.request.headers.get("cookie")??"");}catch(e){error=e instanceof Error?e.message:"No se pudieron cargar las prórrogas.";}
+const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0,19):"";
+---
+<Layout title="Prórrogas de entrega">
+  <a class="crumb" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
+  <h1>Prórrogas de entrega</h1>
+  {error ? <ServiceError message={error}/> : result && <>
+    <section class="panel"><h2>Calendario general publicado</h2><ScheduleView schedule={result.schedule}/></section>
+    <p>Las prórrogas se aplican al guardarlas. Solo amplían límites existentes. Para revocar una prórroga, vacía ambas fechas y explica el motivo. Fechas en UTC, no en la hora local del dispositivo.</p>
+    {result.items.length===0 && <p class="panel">No hay estudiantes vinculados e inscritos en esta página.</p>}
+    <div class="path">{result.items.map((student)=><section class="panel">
+      <h2>{student.alias}</h2>
+      <AcademicForm kind="extension" path={`/teacher/activities/${id}/extensions/${student.studentId}`} version={student.version}>
+        <label for={`due-${student.studentId}`}>Nueva fecha de entrega (UTC)</label><input id={`due-${student.studentId}`} name="dueAt" type="datetime-local" step="1" value={inputDate(student.dueAt)}/>
+        <label for={`close-${student.studentId}`}>Nuevo cierre (UTC)</label><input id={`close-${student.studentId}`} name="closesAt" type="datetime-local" step="1" value={inputDate(student.closesAt)}/>
+        <label for={`reason-${student.studentId}`}>Motivo de la prórroga o revocación</label><textarea id={`reason-${student.studentId}`} name="reason" required maxlength="1000" rows="3">{student.reason}</textarea>
+      </AcademicForm>
+    </section>)}</div>
+    <nav class="toolbar" aria-label="Páginas de prórrogas">
+      {result.page>1&&<a class="button quiet" href={`?page=${result.page-1}`}>← Anterior</a>}
+      {result.items.length===20&&<a class="button quiet" href={`?page=${result.page+1}`}>Siguiente →</a>}
+    </nav>
+  </>}
+</Layout>

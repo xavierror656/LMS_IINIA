@@ -1,7 +1,7 @@
 ---
 interface Props {
   path: string;
-  kind: "create" | "activity" | "submission" | "grade" | "evaluation";
+  kind: "create" | "activity" | "submission" | "grade" | "evaluation" | "schedule" | "extension";
   version?: number;
   lessonVersion?: number;
   canPublish?: boolean;
@@ -12,13 +12,13 @@ const { path, kind, version = 0, lessonVersion, canPublish = false } = Astro.pro
   <form class="academic-form">
     <slot />
     <div class="toolbar">
-      <button type="submit" value="save">{kind === "grade" ? "Guardar calificación" : "Guardar borrador"}</button>
-      {kind !== "create" && kind !== "evaluation" && <button type="submit" value="publish" class="quiet" disabled={!canPublish}>
+      <button type="submit" value="save">{kind === "grade" ? "Guardar calificación" : kind === "extension" ? "Guardar prórroga" : "Guardar borrador"}</button>
+      {kind !== "create" && kind !== "evaluation" && kind !== "schedule" && kind !== "extension" && <button type="submit" value="publish" class="quiet" disabled={!canPublish}>
         {kind === "submission" ? "Enviar al docente" : kind === "grade" ? "Publicar devolución" : "Publicar actividad"}
       </button>}
     </div>
     <p class="helper" data-status role="status" aria-live="polite">
-      {kind === "create" ? "El borrador será privado hasta que lo publiques." : "Guarda los cambios antes de publicar o enviar."}
+      {kind === "create" ? "El borrador será privado hasta que lo publiques." : kind === "extension" ? "La prórroga entra en vigor al guardar." : "Guarda los cambios antes de publicar o enviar."}
     </p>
   </form>
 </academic-form>
@@ -66,6 +66,10 @@ const { path, kind, version = 0, lessonVersion, canPublish = false } = Astro.pro
             else payload.version = version;
           } else if (kind === "submission") {
             Object.assign(payload, { body: data.get("body"), lessonVersion: Number(this.dataset.lessonVersion) });
+          } else if (kind === "schedule" || kind === "extension") {
+            const fields = kind === "schedule" ? ["opensAt","dueAt","closesAt"] : ["dueAt","closesAt"];
+            for (const field of fields) {const value=data.get(field);payload[field]=value ? new Date(`${value}Z`).toISOString() : null;}
+            if(kind==="extension") payload.reason=data.get("reason");
           } else if (kind === "evaluation") {
             const rubric = data.has("useRubric") ? { criteria: Array.from(form.querySelectorAll(".rubric-criterion"), (criterion) => ({
               title: criterion.querySelector<HTMLInputElement>('[name="criterionTitle"]')!.value,
@@ -95,7 +99,7 @@ const { path, kind, version = 0, lessonVersion, canPublish = false } = Astro.pro
           status.textContent = publishing ? "Confirmado y guardado en el servidor." : `Borrador guardado · versión ${result.version}.`;
           this.busy = false;
           if (kind === "create") window.location.assign(`/teacher/activities/${(result as Activity).id}`);
-          else if (publishing || kind === "evaluation") window.location.reload();
+          else if (publishing || kind === "evaluation" || kind === "schedule" || kind === "extension") window.location.reload();
         } catch (error) {
           status.textContent = (error instanceof Error ? error.message : "No se pudo guardar.") + " Tu texto permanece en el formulario. Si cambió la versión, copia tus cambios antes de recargar.";
         } finally {

@@ -1,0 +1,12 @@
+---
+import type { Schedule } from "../../lib/api";
+interface Props { schedule: Schedule; }
+const { schedule } = Astro.props;
+const fmt = (s: string) => new Intl.DateTimeFormat("es-MX",{dateStyle:"medium",timeStyle:"short",timeZone:"UTC"}).format(new Date(s));
+---
+<dl class="schedule-view" aria-label="Fechas de la tarea en UTC">
+  <div><dt>Apertura</dt><dd>{schedule.opensAt ? <time datetime={schedule.opensAt}>{fmt(schedule.opensAt)} UTC</time> : "Sin restricción de apertura"}</dd></div>
+  <div><dt>Fecha de entrega</dt><dd>{schedule.dueAt ? <time datetime={schedule.dueAt}>{fmt(schedule.dueAt)} UTC</time> : "Sin vencimiento"}</dd></div>
+  <div><dt>Cierre</dt><dd>{schedule.closesAt ? <time datetime={schedule.closesAt}>{fmt(schedule.closesAt)} UTC</time> : "Sin cierre"}</dd></div>
+</dl>
+<style>.schedule-view {display:grid;gap:.75rem;margin-block:1rem;} dt{font-weight:700;}dd{margin:0;}</style>

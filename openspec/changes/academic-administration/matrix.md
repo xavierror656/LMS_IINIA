@@ -1,15 +1,15 @@
 # Comparación candidata con Moodle
 
-Referencia: documentación Moodle 5.2 consultada el 2026-10-02. No se ha probado una instalación Moodle ni afirmado equivalencia detallada de todos sus ajustes. Cada grupo requiere descomposición en casos atómicos antes de fijar pesos. Estado de AulaQuest basado en inspección, no en pruebas nuevas.
+Referencia: documentación Moodle 5.2 consultada el 2026-10-02. No se ha probado una instalación Moodle ni afirmado equivalencia detallada de todos sus ajustes. Cada grupo requiere descomposición en casos atómicos antes de fijar pesos. Estado actualizado con evidencia interna en docs/academic-validation.md y docs/rubric-validation.md; comparación con Moodle pendiente.
 
 | Área | Referencia Moodle | AulaQuest observado | Propuesta y brecha |
 |---|---|---|---|
 | Recursos | [Resources](https://docs.moodle.org/502/en/Resources): páginas, archivos, carpetas, URL y libros | Lectura precargada | Editor de recursos, adjuntos y organización; libro multipágina por especificar |
 | Tareas | [Assignment](https://docs.moodle.org/502/en/Assignment_activity): entrega de texto/archivos, individual o grupal | Entrega textual individual del incremento 1 | Entrega versionada, bandeja docente, grupos y permisos explícitos |
-| Disponibilidad | [Assignment settings](https://docs.moodle.org/502/en/Assignment_settings): apertura, vencimiento, cierre | Sin calendario de entregas | Fechas UTC, visualización local, extensiones y estado tardío |
+| Disponibilidad | [Assignment settings](https://docs.moodle.org/502/en/Assignment_settings): apertura, vencimiento, cierre | Calendario UTC y prórrogas individuales; DT1–DT5 verificados internamente | Selector de zona local y comparación Moodle pendientes |
 | Reentrega | [Assignment settings](https://docs.moodle.org/502/en/Assignment_settings): borradores, envío y nuevos intentos | No disponible | Borrador, envío inmutable y reapertura autorizada |
 | Corrección | [Assignment](https://docs.moodle.org/502/en/Assignment_activity): notas y comentarios | Nota manual 0–100 y comentarios publicados del incremento 1 | Calificación manual, devolución y archivos de retroalimentación |
-| Evaluación avanzada | [Grades](https://docs.moodle.org/502/en/Grades): rúbricas y guías | No disponible | Criterios y niveles versionados; guías de evaluación |
+| Evaluación avanzada | [Grades](https://docs.moodle.org/502/en/Grades): rúbricas y guías | Rúbricas versionadas con devolución por niveles; evidencia RB1–RB5 | Guías de evaluación y plantillas compartidas pendientes |
 | Flujo de corrección | [Assignment settings](https://docs.moodle.org/502/en/Assignment_settings): revisión y publicación | No disponible | Borrador de nota, revisión, publicación y auditoría; asignación de correctores por detallar |
 | Cuestionarios | [Quiz](https://docs.moodle.org/502/en/Quiz_activity): preguntas reutilizables y evaluación | No disponible | Cuestionarios con evaluación en servidor |
 | Configuración de examen | [Quiz settings](https://docs.moodle.org/502/en/Quiz_settings) | No disponible | Fechas, tiempo, intentos, orden aleatorio y política de revisión |

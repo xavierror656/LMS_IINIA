@@ -26,7 +26,7 @@ El usuario autorizó continuar con implementación. T1–T3 tienen código y pru
 - [x] I1 Validar academic-administration con OpenSpec 1.14.0 --strict --no-interactive.
 - [x] I2 Completar validación E2E, registrar resultados finales y capturas de T1–T3.
 
-- [ ] T2a Añadir apertura, vencimiento, cierre y prórrogas (MDL-003..005).
+- [x] T2a Añadir apertura, vencimiento, cierre y prórrogas (MDL-003..005); DT1–DT5 verificados internamente, comparación Moodle pendiente.
 - [ ] T2b Añadir reapertura y límite configurable de intentos (MDL-009..010).
 - [ ] T2c Añadir entregas grupales y notas individuales de grupo (MDL-011..012).
 - [ ] T3a Añadir anotación, anonimato y corrección por varios evaluadores (MDL-017..022).
@@ -36,5 +36,7 @@ El usuario autorizó continuar con implementación. T1–T3 tienen código y pru
 - [x] T4a Libro de calificaciones: contrato, consulta coherente y acotada, matriz SSR y enlaces a entrega exacta (GB1..GB5 / LMS-018/021/022).
 - [x] T4b Validar libro con PostgreSQL, cálculo unitario, navegador y registrar evidencia; no marcar T4 completo por este subconjunto.
 
-- [ ] T4c Implementar rúbricas versionadas, corrección por niveles y pesos publicados (RB1..RB5 / LMS-018/019/021).
-- [ ] T4d Validar migración, cálculo, aislamiento, snapshots, promedio ponderado e interfaz E2E (LMS-022).
+- [x] T4c Implementar rúbricas versionadas, corrección por niveles y pesos publicados (RB1..RB5 / LMS-018/019/021).
+- [x] T4d Validar migración, cálculo, aislamiento, snapshots, promedio ponderado e interfaz E2E (LMS-022).
+
+- [ ] TSEC1 Revisar límites por usuario y proxy para concurrencia real de aula; el límite global por IP produjo 429 al encadenar suites. No debilitar protección para pasar pruebas.
