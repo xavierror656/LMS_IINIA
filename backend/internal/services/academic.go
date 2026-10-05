@@ -265,47 +265,10 @@ func (s AcademicService) grade(user, id, student int64, score int, feedback stri
 		return out, models.ErrAcademicInput
 	}
 	e := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
-		var target struct {
-			LessonID int64
-			UserID   int64
-			GroupID  *int64
-		}
-		if e := tx.Raw(`SELECT lesson_id,user_id,group_id FROM submissions WHERE id=? AND status='submitted'`, id).Scan(&target).Error; e != nil {
+		// One rule for grading and for feedback files: who may act on which member.
+		owner, e := gradableMember(tx, user, id, student)
+		if e != nil {
 			return e
-		}
-		if target.LessonID == 0 {
-			return gorm.ErrRecordNotFound
-		}
-		// A group delivery is graded member by member; an individual one has only its
-		// author, so asking for anybody else is simply not found.
-		owner := target.UserID
-		if target.GroupID != nil {
-			if student == 0 {
-				return ErrGradePerMember
-			}
-			var member int64
-			if e := tx.Raw(`SELECT count(*) FROM group_members WHERE group_id=? AND user_id=?`, *target.GroupID, student).Scan(&member).Error; e != nil {
-				return e
-			}
-			if member == 0 {
-				return gorm.ErrRecordNotFound
-			}
-			owner = student
-		} else if student != 0 && student != owner {
-			return gorm.ErrRecordNotFound
-		}
-		// Match student writes and reopen: lesson, enrollment, then submission.
-		if e := lockAssignment(tx, owner, target.LessonID); e != nil {
-			return e
-		}
-		// The teacher must be staff of the course and linked and enrolled with the
-		// member being graded, so nobody grades a student they do not teach.
-		var sub int64
-		if e := tx.Raw(`SELECT s.id FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN course_staff cs ON cs.course_id=m.course_id WHERE s.id=? AND s.status='submitted' AND cs.user_id=? AND EXISTS(SELECT 1 FROM teacher_students ts JOIN enrollments en ON en.user_id=ts.student_id AND en.course_id=m.course_id WHERE ts.teacher_id=? AND ts.student_id=?) FOR UPDATE OF s FOR SHARE OF cs`, id, user, user, owner).Scan(&sub).Error; e != nil {
-			return e
-		}
-		if sub == 0 {
-			return gorm.ErrRecordNotFound
 		}
 		if !publish {
 			var snapshot struct {

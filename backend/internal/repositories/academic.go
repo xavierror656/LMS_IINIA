@@ -68,6 +68,10 @@ func (r Repository) Submission(id, viewer int64, teacher bool) (models.Submissio
 	}
 	e = r.DB.Raw(q, id, owner).Scan(&grade).Error
 	if grade.Version > 0 {
+		grade.Files = []models.Attachment{}
+		if e = r.DB.Raw(`SELECT id,name,content_type,size,uploaded_by FROM grade_attachments WHERE submission_id=? AND student_id=? ORDER BY slot`, id, owner).Scan(&grade.Files).Error; e != nil {
+			return out, e
+		}
 		out.Grade = &grade
 	}
 	if out.GroupID != nil && teacher {
@@ -87,7 +91,10 @@ func (r Repository) Submission(id, viewer int64, teacher bool) (models.Submissio
 		for _, row := range rows {
 			member := models.MemberGrade{StudentID: row.StudentID, Alias: row.Alias}
 			if row.Version != nil {
-				member.Grade = &models.Grade{Assessment: row.Assessment, Score: *row.Score, Feedback: *row.Feedback, Version: *row.Version, Status: *row.Status}
+				member.Grade = &models.Grade{Assessment: row.Assessment, Score: *row.Score, Feedback: *row.Feedback, Version: *row.Version, Status: *row.Status, Files: []models.Attachment{}}
+				if e = r.DB.Raw(`SELECT id,name,content_type,size,uploaded_by FROM grade_attachments WHERE submission_id=? AND student_id=? ORDER BY slot`, id, row.StudentID).Scan(&member.Grade.Files).Error; e != nil {
+					return out, e
+				}
 			}
 			out.Members = append(out.Members, member)
 		}

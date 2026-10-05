@@ -80,6 +80,19 @@ test('GS7 docente activa la entrega grupal y el alumno la comparte con su grupo'
  await student.goto(`/lessons/${lessonId}`);
  await expect(student.getByText('Calificación: 70 / 100')).toBeVisible();
  await expect(student.getByText('Buen trabajo en equipo, Luna.')).toBeVisible();
+ // FD1/FD3: el docente adjunta un archivo a la devolución y solo su dueña lo descarga.
+ await page.goto(`/teacher/activities/${created.id}?submissionId=${sent.id}`);
+ await page.locator(`#feedback-file-${sent.id}-${lunaId}`).setInputFiles({name:"devolucion.txt",mimeType:"text/plain",buffer:Buffer.from("Muy bien, Luna.")});
+ await page.getByRole('button',{name:'Subir devolución'}).click();
+ await expect(page.getByText('devolucion.txt')).toBeVisible();
+ await student.goto(`/lessons/${lessonId}`);
+ const feedbackLink=student.getByRole('link',{name:'Descargar devolucion.txt',exact:true});
+ await expect(feedbackLink).toBeVisible();
+ const feedbackDownload=await student.request.get((await feedbackLink.getAttribute('href'))!);
+ expect(feedbackDownload.status()).toBe(200);
+ expect(await feedbackDownload.text()).toBe('Muy bien, Luna.');
+ const otherStudent=await page.request.get(`/api/v1/lessons/${lessonId}/feedback/${(await feedbackLink.getAttribute('href'))!.split('/').pop()}`);
+ expect([403,404]).toContain(otherStudent.status());
  // GI5: el historial de notas registra al miembro calificado.
  const revisions=await(await page.request.get(`/api/v1/teacher/activities/${created.id}/submissions?page=1&submissionId=${sent.id}`)).json();
  expect(revisions.items[0].members[0].grade.status).toBe('published');

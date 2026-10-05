@@ -96,6 +96,7 @@ func (a API) Register(app *fiber.App) {
 	student.Get("/lessons/:lessonId/submission/history", middleware.Student, a.submissionHistory)
 	student.Get("/lessons/:lessonId/instructions", middleware.Student, a.lessonInstructionAttachments)
 	student.Get("/lessons/:lessonId/instructions/:attachmentId", middleware.Student, a.downloadInstructionAttachment)
+	student.Get("/lessons/:lessonId/feedback/:attachmentId", middleware.Student, a.downloadGradeAttachment)
 	student.Get("/lessons/:lessonId/quiz", middleware.Student, a.ownQuiz)
 	student.Post("/lessons/:lessonId/quiz/start", middleware.Student, a.startQuiz)
 	student.Put("/lessons/:lessonId/quiz/attempts/:attemptId", middleware.Student, a.saveQuizAnswers)
@@ -149,6 +150,14 @@ func (a API) Register(app *fiber.App) {
 	teacher.Post("/submissions/:submissionId/grade/publish", a.publishGrade)
 	teacher.Put("/submissions/:submissionId/grades/:studentId", a.saveGrade)
 	teacher.Post("/submissions/:submissionId/grades/:studentId/publish", a.publishGrade)
+	// Feedback files follow the same shape on both routes: the individual one has no
+	// member and the service resolves the author.
+	teacher.Get("/submissions/:submissionId/grade-attachments", a.gradeAttachments)
+	teacher.Post("/submissions/:submissionId/grade-attachments", a.uploadGradeAttachment)
+	teacher.Delete("/submissions/:submissionId/grade-attachments/:attachmentId", a.deleteGradeAttachment)
+	teacher.Get("/submissions/:submissionId/grades/:studentId/attachments", a.gradeAttachments)
+	teacher.Post("/submissions/:submissionId/grades/:studentId/attachments", a.uploadGradeAttachment)
+	teacher.Delete("/submissions/:submissionId/grades/:studentId/attachments/:attachmentId", a.deleteGradeAttachment)
 	teacher.Get("/students", a.students)
 	teacher.Get("/students/:studentId/progress", a.studentProgress)
 }

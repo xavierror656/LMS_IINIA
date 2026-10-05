@@ -52,6 +52,8 @@ type Grade struct {
 	Feedback   string            `json:"feedback"`
 	Version    int               `json:"version"`
 	Status     string            `json:"status"`
+	// Files are the teacher's feedback attachments for this member's grade.
+	Files []Attachment `json:"files" gorm:"-"`
 }
 
 // SubmissionAttemptSummary is one row of the student's own attempt history.

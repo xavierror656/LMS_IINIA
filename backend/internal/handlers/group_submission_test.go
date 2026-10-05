@@ -8,10 +8,12 @@ import (
 	"aulaquest/internal/repositories"
 	"aulaquest/internal/services"
 	"aulaquest/migrations"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/url"
 	"os"
 	"strings"
@@ -65,7 +67,11 @@ func TestGroupSubmissionIntegration(t *testing.T) {
 		t.Fatal(e)
 	}
 	cookies := map[string]string{}
-	for i, name := range []string{"profe", "luna", "sol"} {
+	// A teacher of another course, to prove feedback files are not shared.
+	if e = db.Exec(`INSERT INTO users(username,alias,role,password_hash) VALUES ('other-teacher','Otro docente','teacher','unused')`).Error; e != nil {
+		t.Fatal(e)
+	}
+	for i, name := range []string{"profe", "luna", "sol", "other-teacher"} {
 		token := fmt.Sprintf("%064d", i+1)
 		if e = db.Exec(`INSERT INTO sessions(token_hash,user_id,expires_at) SELECT ?,id,now()+interval '1 hour' FROM users WHERE username=?`, middleware.Hash(token), name).Error; e != nil {
 			t.Fatal(e)
@@ -98,6 +104,31 @@ func TestGroupSubmissionIntegration(t *testing.T) {
 		if e := json.Unmarshal(b, v); e != nil {
 			t.Fatal(e)
 		}
+	}
+	// FD1: feedback files belong to one member's grade and follow the same upload
+	// shape as every other attachment.
+	feedback := func(path, name string, data []byte, who string, status int) []byte {
+		t.Helper()
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		part, e := writer.CreateFormFile("file", name)
+		if e != nil {
+			t.Fatal(e)
+		}
+		part.Write(data)
+		writer.Close()
+		r := httptestRequest("POST", "/api/v1"+path, body.String(), cookies[who], "http://localhost:4321")
+		r.Header.Set("Content-Type", writer.FormDataContentType())
+		res, e := app.Test(r, 10000)
+		if e != nil {
+			t.Fatal(e)
+		}
+		defer res.Body.Close()
+		b, _ := io.ReadAll(res.Body)
+		if res.StatusCode != status {
+			t.Fatalf("POST %s as %s: expected %d got %d %s", path, who, status, res.StatusCode, b)
+		}
+		return b
 	}
 	var course models.Course
 	if e = db.Order("id").First(&course).Error; e != nil {
@@ -267,6 +298,13 @@ func TestGroupSubmissionIntegration(t *testing.T) {
 			t.Fatalf("the graded member lost her grade in the inbox: %+v", member)
 		}
 	}
+	// FD2: without a grade there is nowhere to attach feedback, so nothing is stored.
+	feedback(fmt.Sprintf("%s/%d/attachments", members, sol), "pronto.txt", []byte("sin nota"), "profe", 409)
+	var orphan int64
+	db.Raw(`SELECT count(*) FROM grade_attachments`).Scan(&orphan)
+	if orphan != 0 {
+		t.Fatalf("a feedback file was stored without a grade: %d", orphan)
+	}
 	call("PUT", fmt.Sprintf("%s/%d", members, sol), map[string]any{"version": 0, "score": 60, "feedback": "Gracias, Sol"}, "profe", 200)
 	call("POST", fmt.Sprintf("%s/%d/publish", members, sol), map[string]any{"version": 1}, "profe", 200)
 	scores := map[int64]int{}
@@ -279,7 +317,22 @@ func TestGroupSubmissionIntegration(t *testing.T) {
 	if scores[luna] != 75 || scores[sol] != 60 {
 		t.Fatalf("grades are not independent: %+v", scores)
 	}
-	// GI5: the audit trail records who was graded.
+	// FD1/FD3/FD4: each member's return carries its own files, the student sees only
+	// their own and only once published, and a foreign teacher reaches nothing.
+	feedback(fmt.Sprintf("%s/%d/attachments", members, luna), "devolucion.txt", []byte("Muy bien, Luna."), "profe", 201)
+	var files struct {
+		Items []models.Attachment `json:"items"`
+	}
+	decode(call("GET", fmt.Sprintf("%s/%d/attachments", members, luna), nil, "profe", 200), &files)
+	if len(files.Items) != 1 || files.Items[0].UploadedBy != teacher {
+		t.Fatalf("feedback file not stored for the member: %+v", files.Items)
+	}
+	feedbackID := files.Items[0].ID
+	feedback(fmt.Sprintf("%s/%d/attachments", members, luna), "ajeno.txt", []byte("x"), "other-teacher", 404)
+	feedback(fmt.Sprintf("%s/%d/attachments", members, luna), "alumno.txt", []byte("x"), "luna", 403)
+	// A teammate never reaches another member's return.
+	call("GET", fmt.Sprintf("/lessons/%d/feedback/%s", lesson, feedbackID), nil, "sol", 404)
+	call("GET", fmt.Sprintf("/lessons/%d/feedback/%s", lesson, feedbackID), nil, "luna", 200) // GI5: the audit trail records who was graded.
 	var revisions int64
 	db.Raw(`SELECT count(*) FROM grade_revisions WHERE submission_id=?`, current.ID).Scan(&revisions)
 	if revisions != 4 {

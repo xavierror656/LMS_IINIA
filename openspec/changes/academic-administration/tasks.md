@@ -7,7 +7,7 @@
 - [x] T1 Especificar OpenAPI del primer incremento; migraciones course_staff y versiones; autorización Go y autoría SSR. LMS-015/021 / A1/A7.
 - [x] T2 Entregas textuales, transiciones, idempotencia y persistencia Go/PostgreSQL. Depende T1. LMS-016 / A2.
 - [x] T3 Notas, devolución y auditoría transaccional con concurrencia. Depende T2. LMS-017 / A3/A7.
-- [ ] T4 Categorías, agregación, rúbricas y archivos privados seguros; contratos adicionales. Depende T3. LMS-018/019 / A4/A5/A7.
+- [ ] T4 Categorías, agregación, rúbricas y archivos privados seguros; contratos adicionales. Depende T3. LMS-018/019 / A4/A5/A7. T4a–T4g están cerrados; **faltan las categorías de calificación y la agregación por categoría**, que el libro hoy no tiene.
 - [ ] T5 Banco versionado, tipos de preguntas acordados, cuestionarios y evaluación en servidor. Depende T1/T3. LMS-020 / A6.
 - [x] T5a Banco privado versionado y evaluación docente en Go para selección única/múltiple, verdadero-falso y respuesta corta. QB1–QB6 internos; no acredita cuestionarios del alumno ni paridad Moodle.
 - [x] T5b Cuestionarios publicados con versiones de preguntas fijas, resolución e intentos del alumno, evaluación canónica, revisión por intento y cuatro políticas de nota en libro. QT1–QT6 verificados internamente; equivalencia Moodle pendiente.
@@ -50,4 +50,4 @@ El usuario autorizó continuar con implementación. T1–T3 tienen código y pru
 - [x] T4f Validar archivos, límites HTTP/proxy, concurrencia, permisos y recorrido E2E (LMS-022).
 
 - [x] T4g-1 PDF con análisis estructural real, archivos de instrucciones congelados por publicación y retención con informe previo (FA1–FA3, FI1–FI3, FR1–FR3). Verificado con PostgreSQL real y navegador; Nginx y Docker no pudieron ejecutarse en este entorno.
-- [ ] T4g-2 Adjuntos de devolución por estudiante (archivos del docente junto a la nota). Parte pendiente de T4g.
+- [x] T4g-2 Adjuntos de devolución por estudiante, colgados de la nota y visibles solo al publicarla (FD1–FD5). Verificado con PostgreSQL real y navegador.

@@ -22,6 +22,9 @@ func academicError(e error) error {
 	if errors.Is(e, services.ErrQuizUnavailable) {
 		return fiber.NewError(409, "Este cuestionario todavía no abre, ya cerró o se agotó tu tiempo. Tus respuestas no se enviaron; revisa las fechas o consulta a tu docente.")
 	}
+	if errors.Is(e, services.ErrGradeRequired) {
+		return fiber.NewError(409, "Guarda primero la calificación de este estudiante: los archivos de devolución van con su nota.")
+	}
 	if errors.Is(e, services.ErrGradePerMember) {
 		return fiber.NewError(409, "Esta entrega es de un equipo: califica a cada miembro por separado.")
 	}
@@ -312,13 +315,39 @@ func (a API) staffSubmissions(c *fiber.Ctx) error {
 			for _, row := range memberRows {
 				member := models.MemberGrade{StudentID: row.StudentID, Alias: row.Alias}
 				if row.Version != nil {
-					member.Grade = &models.Grade{Assessment: row.Assessment, Score: *row.Score, Feedback: *row.Feedback, Version: *row.Version, Status: *row.Status}
+					member.Grade = &models.Grade{Assessment: row.Assessment, Score: *row.Score, Feedback: *row.Feedback, Version: *row.Version, Status: *row.Status, Files: []models.Attachment{}}
 				}
 				membersBySubmission[row.SubmissionID] = append(membersBySubmission[row.SubmissionID], member)
+			}
+			// Each member's grade carries its own feedback files.
+			var fileRows []struct {
+				SubmissionID int64
+				StudentID    int64
+				ID           string
+				Name         string
+				ContentType  string
+				Size         int
+				UploadedBy   int64
+			}
+			if e = a.Repo.DB.Raw(`SELECT submission_id,student_id,id,name,content_type,size,uploaded_by FROM grade_attachments WHERE submission_id IN ? ORDER BY submission_id,student_id,slot`, ids).Scan(&fileRows).Error; e != nil {
+				return dbError(e)
+			}
+			filesByMember := map[[2]int64][]models.Attachment{}
+			for _, row := range fileRows {
+				key := [2]int64{row.SubmissionID, row.StudentID}
+				filesByMember[key] = append(filesByMember[key], models.Attachment{ID: row.ID, Name: row.Name, ContentType: row.ContentType, Size: row.Size, UploadedBy: row.UploadedBy})
 			}
 			for i := range items {
 				if list, ok := membersBySubmission[items[i].ID]; ok {
 					items[i].Members = list
+				}
+				for j := range items[i].Members {
+					member := &items[i].Members[j]
+					if member.Grade != nil {
+						if files, ok := filesByMember[[2]int64{items[i].ID, member.StudentID}]; ok {
+							member.Grade.Files = files
+						}
+					}
 				}
 			}
 		}

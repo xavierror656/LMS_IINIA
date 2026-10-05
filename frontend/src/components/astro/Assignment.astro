@@ -32,7 +32,13 @@ const unavailable = availability.state === "closed" || availability.state === "u
     <p class="helper">Tu docente ya puede revisarlo. La entrega conserva las instrucciones con las que guardaste tu trabajo.</p>
     <details><summary>Ver instrucciones de mi entrega</summary><p class="reading-body">{submission.instructions}</p></details>
     <p class="reading-body">{submission.body}</p>
-    {submission.grade ? <aside class="demo-access"><h3>Tu devolución</h3><p><strong>Calificación: {submission.grade.score} / 100</strong></p><p class="reading-body">{submission.grade.feedback || "Tu docente publicó la calificación."}</p></aside> : <p role="status">Aún no hay una devolución publicada. Puedes volver a consultarla más tarde.</p>}
+    {submission.grade ? <aside class="demo-access"><h3>Tu devolución</h3><p><strong>Calificación: {submission.grade.score} / 100</strong></p><p class="reading-body">{submission.grade.feedback || "Tu docente publicó la calificación."}</p>
+      {(submission.grade.files ?? []).length > 0 && <ul>{(submission.grade.files ?? []).map((file) => <li>
+        <a class="crumb" href={`/api/v1/lessons/${lesson.id}/feedback/${file.id}`} download data-astro-reload>Descargar {file.name}</a>
+        <span class="helper">({Math.ceil(file.size / 1024)} KiB)</span>
+      </li>)}</ul>}
+      <p class="helper">Los archivos de tu devolución se descargan; nunca se abren dentro de la página.</p>
+    </aside> : <p role="status">Aún no hay una devolución publicada. Puedes volver a consultarla más tarde.</p>}
   </section> : <section class="admin-section">
     <h2>Mi respuesta</h2>
     {submission && (submission.instructions !== lesson.config.body || JSON.stringify(submission.rubric) !== JSON.stringify(lesson.config.rubric ?? null)) && <aside class="demo-access"><p>Las instrucciones o los criterios de evaluación cambiaron desde que guardaste tu borrador. Si lo envías ahora, conservará las instrucciones anteriores. Guarda de nuevo para usar las actuales.</p><details><summary>Instrucciones de mi borrador</summary><p class="reading-body">{submission.instructions}</p></details></aside>}

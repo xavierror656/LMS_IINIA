@@ -19,8 +19,8 @@ if (!error) try {
 // A group delivery is graded member by member, each with their own revision; an
 // individual one keeps a single form on the author.
 const graders = (s: Submission) => (s.members?.length ?? 0) > 0
-  ? s.members!.map((m) => ({ key: `${s.id}-${m.studentId}`, path: `/teacher/submissions/${s.id}/grades/${m.studentId}`, alias: m.alias, grade: m.grade ?? null }))
-  : [{ key: `${s.id}`, path: `/teacher/submissions/${s.id}/grade`, alias: s.alias, grade: s.grade ?? null }];
+  ? s.members!.map((m) => ({ key: `${s.id}-${m.studentId}`, path: `/teacher/submissions/${s.id}/grades/${m.studentId}`, filesPath: `/teacher/submissions/${s.id}/grades/${m.studentId}/attachments`, alias: m.alias, grade: m.grade ?? null }))
+  : [{ key: `${s.id}`, path: `/teacher/submissions/${s.id}/grade`, filesPath: `/teacher/submissions/${s.id}/grade-attachments`, alias: s.alias, grade: s.grade ?? null }];
 const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ? "Devolución publicada" : grade ? "Calificación en borrador" : "Por calificar";
 ---
 <Layout title={activity?.title ?? "Editar actividad"}>
@@ -33,7 +33,7 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
     {activity.type === "assignment" && <div class="toolbar"><a class="button quiet" href={`/teacher/activities/${id}/schedule`}>Configurar fechas</a>{activity.lessonId && <a class="button quiet" href={`/teacher/activities/${id}/extensions`}>Gestionar prórrogas</a>}</div>}
     {(activity.type === "assignment" || activity.type === "reading") && <section class="panel">
       <h2>Archivos de instrucciones</h2>
-      <instruction-files data-id={activity.id}>
+      <attachment-files data-path={`/teacher/activities/${activity.id}/attachments`}>
         <form data-upload>
           <label for="instruction-file">Añadir un archivo (texto, imagen o PDF; hasta 2 MiB)</label>
           <input id="instruction-file" type="file" name="file" accept=".txt,.png,.jpg,.jpeg,.pdf" required />
@@ -44,10 +44,11 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
           {file.name} <span class="helper">({Math.ceil(file.size / 1024)} KiB)</span>
           <button type="button" class="quiet" data-delete data-file={file.id} data-name={file.name}>Quitar</button>
         </li>)}</ul>
-      </instruction-files>
+      </attachment-files>
     </section>}
     {activity.type === "assignment" && <section class="panel">
-      <h2>Trabajo en equipo</h2>      <group-mode data-id={activity.id} data-version={activity.version}>
+      <h2>Trabajo en equipo</h2>
+      <group-mode data-id={activity.id} data-version={activity.version}>
         <form>
           <label class="quiz-choice"><input type="checkbox" name="groupSubmission" checked={activity.groupSubmission} /> Entrega grupal compartida</label>
           <p class="helper">Con la entrega grupal activada, cualquier miembro del grupo guarda, adjunta y envía el mismo trabajo, y el libro muestra esa entrega a todo el equipo. Los intentos y las reaperturas cuentan por grupo. Entra en vigor al publicar la actividad. Los grupos se crean y se asignan desde <strong>Grupos del curso</strong>, en la página del curso.</p>
@@ -91,6 +92,18 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
             </fieldset> : <><label for={`score-${g.key}`}>Calificación de {g.alias} (0 a 100)</label><input id={`score-${g.key}`} type="number" name="score" min="0" max="100" step="1" required value={g.grade?.score} /></>}
             <label for={`feedback-${g.key}`}>Comentario para {g.alias}</label><textarea id={`feedback-${g.key}`} name="feedback" rows="4" maxlength="4000">{g.grade?.feedback ?? ""}</textarea>
           </AcademicForm>
+          <attachment-files data-path={g.filesPath}>
+            <form data-upload>
+              <label for={`feedback-file-${g.key}`}>Adjuntar un archivo a esta devolución (texto, imagen o PDF; hasta 2 MiB)</label>
+              <input id={`feedback-file-${g.key}`} type="file" name="file" accept=".txt,.png,.jpg,.jpeg,.pdf" required />
+              <div class="toolbar"><button type="submit">Subir devolución</button></div>
+              <p class="helper" data-status role="status" aria-live="polite">Guarda antes la calificación: los archivos van con su nota. El alumno los verá al publicarla.</p>
+            </form>
+            <ul data-list>{(g.grade?.files ?? []).map((file) => <li>
+              {file.name} <span class="helper">({Math.ceil(file.size / 1024)} KiB)</span>
+              <button type="button" class="quiet" data-delete data-file={file.id} data-name={file.name}>Quitar</button>
+            </li>)}</ul>
+          </attachment-files>
         </div>)}
         <details><summary>Autorizar otro intento para {s.alias}</summary>
           <p>El límite publicado debe permitirlo. El nuevo intento no cambia las fechas y conserva este trabajo y su devolución en el historial. Repetir la autorización de esta entrega no crea intentos adicionales.</p>
@@ -131,7 +144,7 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
     disconnectedCallback() { this.controller?.abort(); this.controller = undefined; }
   }
   if (!customElements.get("group-mode")) customElements.define("group-mode", GroupModeElement);
-  class InstructionFilesElement extends HTMLElement {
+  class AttachmentFilesElement extends HTMLElement {
     private controller?: AbortController;
     private busy = false;
     connectedCallback() {
@@ -139,7 +152,7 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
       this.controller = new AbortController();
       const form = this.querySelector("form")!;
       const status = this.querySelector<HTMLElement>("[data-status]")!;
-      const base = `/teacher/activities/${this.dataset.id}/attachments`;
+      const base = this.dataset.path!;
       const send = async (path: string, label: string, init: RequestInit, advice: string) => {
         if (this.busy) return;
         this.busy = true;
@@ -165,5 +178,5 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
     }
     disconnectedCallback() { this.controller?.abort(); this.controller = undefined; }
   }
-  if (!customElements.get("instruction-files")) customElements.define("instruction-files", InstructionFilesElement);
+  if (!customElements.get("attachment-files")) customElements.define("attachment-files", AttachmentFilesElement);
 </script>
