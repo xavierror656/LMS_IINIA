@@ -3,7 +3,11 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": [".astro/types.d.ts", "src/**/*", "*.ts"],
   "exclude": ["dist", "node_modules", "public"]

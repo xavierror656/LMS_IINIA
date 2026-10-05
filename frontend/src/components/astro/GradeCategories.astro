@@ -41,6 +41,7 @@ const { courseId, categories, missingPolicy } = Astro.props;
 </grade-categories>
 <script>
   import { api } from "../../lib/api";
+  import { confirmAction } from "../../lib/confirm";
   class GradeCategoriesElement extends HTMLElement {
     private controller?: AbortController;
     private busy = false;
@@ -75,13 +76,14 @@ const { courseId, categories, missingPolicy } = Astro.props;
           void run(() => api(`/teacher/courses/${course}/grade-settings`, { method: "PUT", body: JSON.stringify({ missingPolicy: data.get("missingPolicy") }) }), "No se pudo guardar la política.");
         }
       }, { signal });
-      this.addEventListener("click", (event) => {
+      this.addEventListener("click", async (event) => {
         const button = (event.target as Element).closest<HTMLButtonElement>("button");
         if (!button || button.disabled) return;
         if (button.hasAttribute("data-delete")) {
           const item = button.closest<HTMLElement>("[data-category]")!;
           const name = item.querySelector<HTMLInputElement>('[name="name"]')!.value;
-          if (!window.confirm(`¿Eliminar la categoría «${name}»? Solo se puede si no tiene actividades.`)) return;
+          const ok = await confirmAction({ title: "Eliminar categoría", description: `¿Eliminar la categoría «${name}»? Solo se puede si no tiene actividades.`, confirmLabel: "Eliminar", destructive: true });
+          if (!ok) return;
           void run(() => api(`/teacher/courses/${course}/grade-categories/${item.dataset.id}`, { method: "DELETE" }), "No se pudo eliminar la categoría.");
         } else if (button.dataset.move) {
           const list = this.querySelector<HTMLElement>("[data-list]")!;

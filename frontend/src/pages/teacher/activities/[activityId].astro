@@ -118,6 +118,7 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
 </Layout>
 <script>
   import { api } from "../../../lib/api";
+  import { confirmAction } from "../../../lib/confirm";
   class GroupModeElement extends HTMLElement {
     private controller?: AbortController;
     private busy = false;
@@ -169,10 +170,11 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
         body.append("file", chosen);
         void send(base, "Subiendo el archivo…", { method: "POST", body }, "Revisa el formato (texto, imagen o PDF) y el tamaño (2 MiB).");
       }, { signal: this.controller.signal });
-      this.addEventListener("click", (event) => {
+      this.addEventListener("click", async (event) => {
         const button = (event.target as Element | null)?.closest?.("[data-delete]") as HTMLElement | null;
         if (!button || this.busy) return;
-        if (!window.confirm(`¿Quitar «${button.dataset.name}» del borrador? Las versiones ya publicadas conservan su copia.`)) return;
+        const ok = await confirmAction({ title: "Quitar adjunto", description: `¿Quitar «${button.dataset.name}» del borrador? Las versiones publicadas conservan su copia.`, confirmLabel: "Quitar", destructive: true });
+        if (!ok) return;
         void send(`${base}/${button.dataset.file}`, "Quitando el archivo…", { method: "DELETE" }, "Vuelve a intentarlo.");
       }, { signal: this.controller.signal });
     }

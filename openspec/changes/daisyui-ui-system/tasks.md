@@ -10,9 +10,9 @@
 - [x] F3a Validar E2E de libro, rúbrica, categorías, grupos y cuestionarios; check/build y AC1. Depende F3.
 - [x] F4 Migrar pantallas de alumno y públicas: inicio, login, catálogo, mapa del curso, lecciones (lectura, código, H5P, tarea, cuestionario) y admin de demostración. Dueño: fixer + designer. Compuerta: oracle (auto-revisión).
 - [x] F4a Validar E2E de aprendizaje, consola, H5P ausente y intentos; check/build y AC1. Depende F4.
-- [ ] F5 Retirar CSS y clases heredadas sin referencias; medir CSS emitido y comparar con la base. Dueño: orquestador. Compuerta: oracle final.
-- [ ] F5a Correr la batería completa (Go, E2E con ventanas, AC1, contraste, build), actualizar capturas, README, `docs/versions.md` y registro de validación. Depende F5.
-- [ ] F5b Verificar que no queda doble sistema: búsqueda de clases heredadas en `frontend/src` sin resultados y `global.css` limitado a tema, fuentes y layout. Depende F5.
+- [x] F5 Retirar CSS y clases heredadas sin referencias; medir CSS emitido y comparar con la base. Dueño: orquestador. Compuerta: oracle final.
+- [x] F5a Correr la batería completa (Go, E2E con ventanas, AC1, contraste, build), actualizar capturas, README, `docs/versions.md` y registro de validación. Depende F5.
+- [x] F5b Verificar que no queda doble sistema: búsqueda de clases heredadas en `frontend/src` sin resultados y `global.css` limitado a tema, fuentes y layout. Depende F5.
 
 Sin despliegues, sin commits automáticos y sin debilitar límites de seguridad para
 las pruebas. Cada fase conserva la API y el backend intactos.

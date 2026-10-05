@@ -2,6 +2,7 @@
 import { ClientRouter } from "astro:transitions";
 import { roleHome } from "../lib/api";
 import HUD from "../components/react/HUD";
+import ConfirmHost from "../components/react/ConfirmHost";
 import { brand } from "../config/brand";
 import "../styles/global.css";
 interface Props {
@@ -75,6 +76,7 @@ const demo = import.meta.env.PUBLIC_DEMO_MODE === "true";
           transition:persist={`hud-${user.id}`}
         />
       )}
+      {user && <ConfirmHost client:load />}
       <main id="main" tabindex="-1">
         <slot />
       </main>

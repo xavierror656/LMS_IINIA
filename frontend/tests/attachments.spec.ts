@@ -39,7 +39,8 @@ test("FL5 adjuntos privados, descarga, borrado y entrega solo con archivo", asyn
     const waiting=student.waitForEvent("download");await link.click();const download=await waiting;
     expect(download.suggestedFilename()).toBe("mi-idea.txt");expect((await readFile((await download.path())!)).toString()).toBe("Mi idea de prueba con acentos: árbol");
     await student.reload();await expect(link).toBeVisible();
-    student.once("dialog",dialog=>dialog.accept());await student.getByRole("button",{name:"Quitar mi-idea.txt",exact:true}).click();
+    await student.getByRole("button",{name:"Quitar mi-idea.txt",exact:true}).click();
+    await student.getByRole("alertdialog").getByRole("button",{name:"Quitar",exact:true}).click();
     await expect(link).toHaveCount(0);
     expect((await student.request.get(path!)).status()).toBe(404);
     await input.setInputFiles({name:"entrega.txt",mimeType:"text/plain",buffer:Buffer.from("Esta es mi entrega sin texto adicional.")});
@@ -65,8 +66,8 @@ test("FL5 adjuntos privados, descarga, borrado y entrega solo con archivo", asyn
     expect(guideDownload.status()).toBe(200);
     expect(guideDownload.headers()["content-type"]).toBe("application/octet-stream");
     await page.goto(`/teacher/activities/${activity.id}`);
-    page.once("dialog",(dialog)=>dialog.accept());
     await page.getByRole("button",{name:"Quitar",exact:true}).click();
+    await page.getByRole("alertdialog").getByRole("button",{name:"Quitar",exact:true}).click();
     await expect(page.getByText("guia.pdf")).toHaveCount(0);
     await student.reload();
     await expect(student.getByRole("link",{name:"Descargar guia.pdf",exact:true})).toBeVisible();

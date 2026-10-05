@@ -65,6 +65,7 @@ const groupName = (groupId: number) => data?.items.find((g) => g.id === groupId)
 </Layout>
 <script>
   import { api } from "../../../../lib/api";
+  import { confirmAction } from "../../../../lib/confirm";
   class GroupAdminElement extends HTMLElement {
     private controller?: AbortController;
     private busy = false;
@@ -107,10 +108,11 @@ const groupName = (groupId: number) => data?.items.find((g) => g.id === groupId)
         if (!group) { status.textContent = "Elige un grupo para ese estudiante."; return; }
         void run("Añadiendo al grupo…", () => api(`/teacher/courses/${course}/groups/${group}/members/${student}`, { method: "PUT" }));
       }, { signal });
-      this.addEventListener("click", (event) => {
+      this.addEventListener("click", async (event) => {
         const button = (event.target as Element | null)?.closest?.("[data-delete]") as HTMLElement | null;
         if (!button || this.busy) return;
-        if (!window.confirm(`¿Eliminar el grupo «${button.dataset.name}»? Sus estudiantes quedarán sin grupo.`)) return;
+        const ok = await confirmAction({ title: "Eliminar grupo", description: `¿Eliminar el grupo «${button.dataset.name}»? Sus estudiantes quedarán sin grupo.`, confirmLabel: "Eliminar", destructive: true });
+        if (!ok) return;
         void run("Eliminando el grupo…", () => api(`/teacher/courses/${course}/groups/${button.dataset.id}`, { method: "DELETE" }));
       }, { signal });
     }

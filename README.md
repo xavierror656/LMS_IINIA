@@ -298,6 +298,10 @@ T4g queda cerrado con este incremento (formatos, instrucciones, retención y dev
 
 En el libro de calificaciones, **Descargar CSV** entrega el libro completo con los **mismos números** que la tabla: la exportación reutiliza la misma consulta y el mismo ensamblado, solo cambia la ventana. Solo viajan las notas **publicadas**; los pendientes aparecen como contadores. Un archivo que no quepa (más de 500 estudiantes o 100 actividades) se **rechaza con 409** en lugar de truncarse, y un alias que parezca una fórmula se neutraliza. Rendimiento medido con 40 estudiantes, 12 actividades y 480 entregas: el libro pasó de **549 ms a 46 ms** al dejar de reevaluar la vista del libro 9.600 veces, y una prueba fija en **6 sentencias** el número de consultas para impedir N+1. Método, entorno y límites: [docs/gradebook-export-validation.md](docs/gradebook-export-validation.md).
 
+### Sistema de interfaz daisyUI
+
+La interfaz completa usa **daisyUI 5.7.47** sobre Tailwind 4 con un tema propio `aulaquest` (colores y radios de AulaQuest, contraste AA verificado). Se integra en CSS-first con `@plugin` en `global.css`, sin `tailwind.config.mjs` y sin JavaScript de cliente; botones, campos, tarjetas, alertas, insignias, tablas y portadas usan los componentes de la librería. La migración retiró el CSS propio duplicado y midió el resultado: el CSS de la app pasó de 27.7 KB a 91.2 KB sin comprimir (+8.9 KB gzip) con el sistema completo. Evidencia, hallazgos y límites: [docs/daisyui-validation.md](docs/daisyui-validation.md).
+
 La **accesibilidad (AC1)** de T6 quedó auditada con criterios comprobables (etiquetas, encabezados, foco visible, objetivos táctiles, contraste y movimiento reducido): dos correcciones de tamaño táctil y cero hallazgos en diez páginas ([docs/accessibility-validation.md](docs/accessibility-validation.md)). Queda PL1 (administración real con capacidades por contexto) en el catálogo pendiente.
 
 ### Categorías de calificación y total del curso (Go/PostgreSQL)

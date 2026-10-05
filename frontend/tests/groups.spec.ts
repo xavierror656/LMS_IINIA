@@ -2,9 +2,8 @@ import{test,expect,type Page}from'@playwright/test';
 test('CG7 docente crea grupos, asigna estudiantes y respeta un grupo por curso',async({page})=>{
  test.skip(process.env.E2E_ACADEMIC!=='1','Requiere Go/PostgreSQL sintético');test.setTimeout(120_000);const origin=process.env.E2E_BASE_URL??'http://localhost:4321';
  async function login(p:Page,user:string){await p.goto('/login');await p.getByLabel('Tu usuario').fill(user);await p.getByLabel('Tu contraseña').fill(user==='profe'?process.env.E2E_TEACHER_PASSWORD!:process.env.E2E_STUDENT_PASSWORD!);await p.getByRole('button',{name:'Entrar a mi aventura'}).click();await expect(p).toHaveURL(user==='profe'?/\/teacher$/:/\/courses$/);}
- // El guardián de borrado pide confirmación; Playwright la descarta por defecto.
- page.on('dialog',(dialog)=>dialog.accept());
- await login(page,'profe');
+ // El borrado pide confirmación en el AlertDialog de shadcn.
+await login(page,'profe');
  const course=(await(await page.request.get('/api/v1/teacher/courses')).json()).items[0];
  const stamp=Date.now();const first=`Equipo Azul ${stamp}`;const second=`Equipo Verde ${stamp}`;
  const groupsPath=`/api/v1/teacher/courses/${course.id}/groups`;
@@ -43,9 +42,9 @@ test('CG7 docente crea grupos, asigna estudiantes y respeta un grupo por curso',
  expect(listed.roster.find((row:{studentId:number})=>row.studentId===lunaId).groupId).toBe(0);
  // CG4: eliminar grupos deja el curso sin grupos y sin tocar el trabajo del alumno.
  const cardFor=(name:string)=>page.locator('article.panel').filter({has:page.getByRole('heading',{name,exact:true})});
- await cardFor(second).getByRole('button',{name:'Eliminar grupo'}).click();
+ await cardFor(second).getByRole('button',{name:'Eliminar grupo'}).click();await page.getByRole('alertdialog').getByRole('button',{name:'Eliminar',exact:true}).click();
  await expect(page.getByRole('heading',{name:second,exact:true})).toHaveCount(0);
- await cardFor(`${first} renombrado`).getByRole('button',{name:'Eliminar grupo'}).click();
+ await cardFor(`${first} renombrado`).getByRole('button',{name:'Eliminar grupo'}).click();await page.getByRole('alertdialog').getByRole('button',{name:'Eliminar',exact:true}).click();
  await expect(page.getByRole('heading',{name:`${first} renombrado`,exact:true})).toHaveCount(0);
  // Los grupos creados por esta prueba desaparecen; el curso puede tener otros.
  listed=await(await page.request.get(groupsPath)).json();

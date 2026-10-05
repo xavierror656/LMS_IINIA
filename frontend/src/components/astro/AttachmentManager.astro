@@ -23,6 +23,7 @@ const files=submission?.attachments??[];
 </attachment-manager>
 <script>
   import { api, type Submission } from "../../lib/api";
+  import { confirmAction } from "../../lib/confirm";
   class AttachmentManagerElement extends HTMLElement {
     private controller?:AbortController;
     private busy=false;
@@ -47,7 +48,7 @@ const files=submission?.attachments??[];
           if(file.size>2*1024*1024){status.textContent="El archivo supera 2 MiB. Elige uno más pequeño.";return;}
           body=new FormData();body.set("file",file);body.set("version",String(version));body.set("lessonVersion",this.dataset.lessonVersion!);
         }else{
-          if(!window.confirm("¿Quieres quitar este archivo del borrador?"))return;
+          if(!(await confirmAction({title:"Quitar archivo",description:"¿Quieres quitar este archivo del borrador?",confirmLabel:"Quitar",destructive:true})))return;
           body=JSON.stringify({version});
         }
         this.busy=true;
