@@ -36,35 +36,51 @@ const hasPublished = grades?.courseTotalHundredths !== null && grades?.courseTot
   ) : (
     data && (
       <>
-        <a class="crumb" href="/courses">
+        <a
+          class="link link-primary font-medium min-h-11 inline-flex items-center mb-2"
+          href="/courses"
+        >
           ← Mis aventuras
         </a>
-        <span class="eyebrow">Tu camino de aprendizaje</span>
+        <span class="badge badge-primary badge-soft mb-3 block">
+          Tu camino de aprendizaje
+        </span>
         <h1>{data.course.title}</h1>
         <p>{data.course.description}</p>
         {data.modules.map((module) => (
-          <section>
+          <section class="mt-8">
             <h2>
               {module.position}. {module.title}
             </h2>
-            <div class="path">
+            <div class="flex flex-col gap-4 my-6">
               {data.lessons
                 .filter((l) => l.moduleId === module.id)
                 .map((lesson) => (
                   <a
-                    class:list={["lesson-link", lesson.status]}
+                    class:list={[
+                      "card card-border bg-base-100 p-5 flex flex-row items-center gap-5 hover:shadow-md transition-shadow",
+                      lesson.status,
+                    ]}
                     href={`/lessons/${lesson.id}`}
                   >
-                    <span class="step" aria-hidden="true">
+                    <span
+                      class:list={[
+                        "w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold shrink-0",
+                        lesson.status === "completed"
+                          ? "bg-success text-success-content"
+                          : "bg-primary/10 text-primary",
+                      ]}
+                      aria-hidden="true"
+                    >
                       {lesson.status === "completed" ? "✓" : lesson.position}
                     </span>
-                    <div>
-                      <h3>{lesson.title}</h3>
-                      <p>
+                    <div class="min-w-0">
+                      <h3 class="m-0 mb-1">{lesson.title}</h3>
+                      <p class="text-sm m-0">
                         {types[lesson.type]} · {labels[lesson.status]}
                       </p>
                     </div>
-                    <span class="arrow" aria-hidden="true">
+                    <span class="arrow ml-auto" aria-hidden="true">
                       →
                     </span>
                   </a>
@@ -72,10 +88,10 @@ const hasPublished = grades?.courseTotalHundredths !== null && grades?.courseTot
             </div>
           </section>
         ))}
-        <p class="helper">
+        <p class="text-sm text-muted">
           Puedes volver a cualquier lección. Aprender no gasta tus vidas.
         </p>
-        <section class="panel">
+        <section class="card card-border bg-base-100 p-6 mt-8">
           <h2>Mis notas</h2>
           {gradesError ? (
             <p>{gradesError} Recarga la página para volver a intentarlo.</p>
@@ -99,7 +115,7 @@ const hasPublished = grades?.courseTotalHundredths !== null && grades?.courseTot
                   </li>
                 ))}
               </ul>
-              <p class="helper">
+              <p class="text-sm text-muted">
                 Solo aparecen las notas que tu docente publicó. Es un cálculo interno para acompañar tu
                 aprendizaje, no un boletín oficial.
               </p>

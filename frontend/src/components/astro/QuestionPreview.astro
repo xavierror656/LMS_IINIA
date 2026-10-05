@@ -7,11 +7,11 @@ const {question}=Astro.props;const q=question.content;
  <form class="academic-form panel">
   <h2>Probar evaluación</h2><p class="notice">Prueba del docente · no guarda calificaciones</p><p>Versión {question.version}. La evaluación se calcula en el servidor.</p>
   <p class="reading-body">{q.prompt}</p>
-  {q.type==='short_answer'?<><label for="preview-text">Tu respuesta de prueba</label><input id="preview-text" name="text" maxlength="200"/></>:<fieldset><legend>Elige tu respuesta de prueba</legend>
-   {q.options.map((option,i)=><label class="preview-choice"><input type={q.type==='multiple_choice'?'checkbox':'radio'} name="choice" value={i}/>{option}</label>)}
+  {q.type==='short_answer'?<><label for="preview-text">Tu respuesta de prueba</label><input class="input" id="preview-text" name="text" maxlength="200"/></>:<fieldset><legend>Elige tu respuesta de prueba</legend>
+   {q.options.map((option,i)=><label class="preview-choice"><input class={q.type==='multiple_choice'?'checkbox':'radio'} type={q.type==='multiple_choice'?'checkbox':'radio'} name="choice" value={i}/>{option}</label>)}
   </fieldset>}
-  <p class="helper">Las respuestas vacías puntúan 0. Selección múltiple requiere todas las correctas y ninguna incorrecta.</p>
-  <button type="submit">Evaluar respuesta de prueba</button><p role="status" aria-live="polite" data-result></p>
+  <p class="text-sm opacity-70">Las respuestas vacías puntúan 0. Selección múltiple requiere todas las correctas y ninguna incorrecta.</p>
+  <button class="btn btn-primary" type="submit">Evaluar respuesta de prueba</button><p role="status" aria-live="polite" data-result></p>
  </form>
 </question-preview>
 <style>.preview-choice{display:flex;align-items:center;gap:.75rem;min-height:44px}.preview-choice input{width:24px;height:24px;flex:none}</style>

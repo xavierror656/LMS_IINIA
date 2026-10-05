@@ -12,7 +12,7 @@ const title=quiz?"Fechas del cuestionario":"Fechas de la tarea";
 const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0,19):"";
 ---
 <Layout title={title}>
-  <a class="crumb" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
+  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
   <h1>{title}</h1>
   {error ? <ServiceError message={error}/> : activity && <section class="panel">
     <h2>{activity.title}</h2>
@@ -21,9 +21,9 @@ const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0
       ? <p>El cuestionario solo se puede comenzar dentro del calendario. Después del vencimiento un intento en curso todavía se puede resolver y enviar hasta el cierre. Guarda el borrador y vuelve a la actividad para publicar el calendario.</p>
       : <p>Después del vencimiento se permiten entregas tardías hasta el cierre. Guarda el borrador y vuelve a la actividad para publicar el calendario.</p>}
     <AcademicForm kind="schedule" path={`/teacher/activities/${id}/schedule`} version={activity.version}>
-      <label for="opens-at">Apertura (UTC)</label><input id="opens-at" name="opensAt" type="datetime-local" step="1" value={inputDate(activity.opensAt)}/>
-      <label for="due-at">{quiz?"Vencimiento":"Fecha de entrega"} (UTC)</label><input id="due-at" name="dueAt" type="datetime-local" step="1" value={inputDate(activity.dueAt)}/>
-      <label for="closes-at">Cierre (UTC)</label><input id="closes-at" name="closesAt" type="datetime-local" step="1" value={inputDate(activity.closesAt)}/>
+      <label for="opens-at">Apertura (UTC)</label><input class="input" id="opens-at" name="opensAt" type="datetime-local" step="1" value={inputDate(activity.opensAt)}/>
+      <label for="due-at">{quiz?"Vencimiento":"Fecha de entrega"} (UTC)</label><input class="input" id="due-at" name="dueAt" type="datetime-local" step="1" value={inputDate(activity.dueAt)}/>
+      <label for="closes-at">Cierre (UTC)</label><input class="input" id="closes-at" name="closesAt" type="datetime-local" step="1" value={inputDate(activity.closesAt)}/>
     </AcademicForm>
   </section>}
 </Layout>

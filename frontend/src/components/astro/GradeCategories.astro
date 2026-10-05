@@ -6,35 +6,35 @@ const { courseId, categories, missingPolicy } = Astro.props;
 <grade-categories data-course={courseId}>
   <section class="panel">
     <h2>Categorías de calificación</h2>
-    <p class="helper">Agrupa las actividades para ponderar el total del curso: una categoría con peso 2 cuenta el doble que una con peso 1. Solo las actividades publicadas participan y las notas sin publicar nunca viajan al alumno.</p>
-    {categories.length === 0 ? <p>Todavía no hay categorías. La primera se crea sola al publicar una tarea o un cuestionario.</p> : <ul class="category-list" data-list>
+    <p class="text-sm opacity-70">Agrupa las actividades para ponderar el total del curso: una categoría con peso 2 cuenta el doble que una con peso 1. Solo las actividades publicadas participan y las notas sin publicar nunca viajan al alumno.</p>
+      {categories.length === 0 ? <p>Todavía no hay categorías. La primera se crea sola al publicar una tarea o un cuestionario.</p> : <ul class="category-list" data-list>
       {categories.map((category, index) => <li data-category data-id={category.id} data-version={category.version}>
         <form data-save>
           <input type="hidden" name="version" value={category.version} />
-          <label>Nombre <input name="name" required maxlength="160" value={category.name} /></label>
-          <label>Peso <input name="weight" type="number" min="1" max="1000" step="1" required value={category.weight} /></label>
-          <div class="toolbar">
-            <button type="submit">Guardar</button>
-            <button type="button" class="quiet" data-move="up" disabled={index === 0} aria-label={`Subir ${category.name}`}>↑ Subir</button>
-            <button type="button" class="quiet" data-move="down" disabled={index === categories.length - 1} aria-label={`Bajar ${category.name}`}>↓ Bajar</button>
-            <button type="button" class="quiet" data-delete aria-label={`Eliminar ${category.name}`}>Eliminar</button>
+          <label>Nombre <input class="input" name="name" required maxlength="160" value={category.name} /></label>
+          <label>Peso <input class="input" name="weight" type="number" min="1" max="1000" step="1" required value={category.weight} /></label>
+          <div class="flex flex-wrap items-center gap-3 my-2">
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" class="btn btn-outline btn-sm" data-move="up" disabled={index === 0} aria-label={`Subir ${category.name}`}>↑ Subir</button>
+            <button type="button" class="btn btn-outline btn-sm" data-move="down" disabled={index === categories.length - 1} aria-label={`Bajar ${category.name}`}>↓ Bajar</button>
+            <button type="button" class="btn btn-outline btn-sm" data-delete aria-label={`Eliminar ${category.name}`}>Eliminar</button>
           </div>
         </form>
       </li>)}
     </ul>}
     <form data-create>
-      <label>Nueva categoría <input name="name" required maxlength="160" placeholder="Por ejemplo: Exámenes" /></label>
-      <label>Peso <input name="weight" type="number" min="1" max="1000" step="1" value="1" required /></label>
-      <button type="submit">Crear categoría</button>
+      <label>Nueva categoría <input class="input" name="name" required maxlength="160" placeholder="Por ejemplo: Exámenes" /></label>
+      <label>Peso <input class="input" name="weight" type="number" min="1" max="1000" step="1" value="1" required /></label>
+      <button type="submit" class="btn btn-primary">Crear categoría</button>
     </form>
     <form data-policy>
       <label>Política de actividades sin nota
-        <select name="missingPolicy">
+        <select class="select" name="missingPolicy">
           <option value="exclude" selected={missingPolicy === "exclude"}>Excluirlas del total (no cuentan como cero)</option>
           <option value="zero" selected={missingPolicy === "zero"}>Contarlas como cero cuando la actividad está publicada</option>
         </select>
       </label>
-      <button type="submit" class="quiet">Guardar política</button>
+      <button type="submit" class="btn btn-outline">Guardar política</button>
     </form>
     <p data-status role="status" aria-live="polite"></p>
   </section>
@@ -106,6 +106,4 @@ const { courseId, categories, missingPolicy } = Astro.props;
   .category-list { list-style: none; padding: 0; }
   .category-list li { border-bottom: 1px solid var(--color-line); padding-block: 1rem; }
   label { display: block; margin-block: .5rem; }
-  input, select { min-height: 44px; }
-  form .toolbar { margin-block: .5rem; }
 </style>

@@ -27,9 +27,12 @@ test("GC1–GC7 categorías, totales y notas del alumno", async ({ page, browser
   await manager.locator("form[data-create]").getByRole("button", { name: "Crear categoría" }).click();
   await expect(manager.locator(`form[data-save] input[name="name"][value="${categoryName}"]`)).toHaveCount(1);
   await manager.locator("form[data-policy]").getByLabel("Política de actividades sin nota").selectOption("zero");
-  await manager.locator("form[data-policy]").getByRole("button", { name: "Guardar política" }).click();
+  await Promise.all([
+    page.waitForEvent("load"),
+    manager.locator("form[data-policy]").getByRole("button", { name: "Guardar política" }).click(),
+  ]);
   await expect(manager.locator("form[data-policy]").getByLabel("Política de actividades sin nota")).toHaveValue("zero");
-  await page.screenshot({ path: "../docs/screenshots/grade-categories-tablet.png", animations: "disabled" });
+  if (process.env.E2E_SCREENSHOTS === "1") await page.screenshot({ path: "../docs/screenshots/grade-categories-tablet.png", animations: "disabled" });
 
   // GC2: a new assignment is authored, assigned to the category and published.
   const title = `Actividad categoría ${Date.now()}`;
@@ -87,7 +90,7 @@ test("GC1–GC7 categorías, totales y notas del alumno", async ({ page, browser
     await expect(student.getByText("80 / 100").first()).toBeVisible();
     await student.reload();
     await expect(student.getByText(`Total del curso: ${expectedMe} / 100`, { exact: true })).toBeVisible();
-    await student.screenshot({ path: "../docs/screenshots/student-grades-tablet.png", animations: "disabled" });
+    if (process.env.E2E_SCREENSHOTS === "1") await student.screenshot({ path: "../docs/screenshots/student-grades-tablet.png", animations: "disabled" });
   } finally {
     await context.close();
   }

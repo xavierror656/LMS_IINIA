@@ -12,38 +12,38 @@ if (!error) try {
 } catch (e) { error = e instanceof Error ? e.message : "No se pudo abrir el curso."; }
 ---
 <Layout title={result?.course.title ?? "Actividades"}>
-  <a class="crumb" href="/teacher/courses">← Mis cursos</a>
+  <a class="link link-primary min-h-11 inline-flex items-center" href="/teacher/courses">← Mis cursos</a>
   {error ? <ServiceError message={error} /> : result && <>
-    <span class="eyebrow">Taller de actividades</span><h1>{result.course.title}</h1>
+    <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">Taller de actividades</span><h1>{result.course.title}</h1>
     <p>Los cambios se guardan como borrador. Tú decides cuándo publicarlos.</p>
-    <a class="button quiet" href={`/teacher/courses/${courseId}/gradebook`}>Ver calificaciones →</a>
-    <a class="button quiet" href={`/teacher/courses/${courseId}/questions`}>Banco de preguntas →</a>
-    <a class="button quiet" href={`/teacher/courses/${courseId}/groups`}>Grupos del curso →</a>
+    <a class="btn btn-outline" href={`/teacher/courses/${courseId}/gradebook`}>Ver calificaciones →</a>
+    <a class="btn btn-outline" href={`/teacher/courses/${courseId}/questions`}>Banco de preguntas →</a>
+    <a class="btn btn-outline" href={`/teacher/courses/${courseId}/groups`}>Grupos del curso →</a>
     <div class="academic-columns">
       <section class="panel">
         <h2>Crear una actividad</h2>
         {result.modules.length === 0 ? <p>Este curso necesita un módulo antes de crear actividades.</p> :
         <AcademicForm kind="create" path={`/teacher/courses/${courseId}/activities`}>
           <label for="activity-module">Módulo</label>
-          <select id="activity-module" name="moduleId" required>{result.modules.map((m) => <option value={m.id}>{m.title}</option>)}</select>
+          <select class="select" id="activity-module" name="moduleId" required>{result.modules.map((m) => <option value={m.id}>{m.title}</option>)}</select>
           <label for="activity-type">Tipo de actividad</label>
-          <select id="activity-type" name="type"><option value="reading">Lectura</option><option value="assignment">Tarea</option><option value="quiz">Cuestionario</option></select>
-          <label for="activity-title">Título</label><input id="activity-title" name="title" required maxlength="160" />
-          <label for="activity-description">Descripción breve</label><textarea id="activity-description" name="description" maxlength="1000" rows="2"></textarea>
-          <label for="activity-body">Contenido o instrucciones</label><textarea id="activity-body" name="body" required maxlength="12000" rows="9"></textarea>
-          <p class="helper">Texto plano. Las tareas se califican de 0 a 100; no otorgan recompensas automáticamente.</p>
+          <select class="select" id="activity-type" name="type"><option value="reading">Lectura</option><option value="assignment">Tarea</option><option value="quiz">Cuestionario</option></select>
+          <label for="activity-title">Título</label><input class="input" id="activity-title" name="title" required maxlength="160" />
+          <label for="activity-description">Descripción breve</label><textarea class="textarea" id="activity-description" name="description" maxlength="1000" rows="2"></textarea>
+          <label for="activity-body">Contenido o instrucciones</label><textarea class="textarea" id="activity-body" name="body" required maxlength="12000" rows="9"></textarea>
+          <p class="text-sm opacity-70">Texto plano. Las tareas se califican de 0 a 100; no otorgan recompensas automáticamente.</p>
         </AcademicForm>}
       </section>
       <section aria-labelledby="activities-heading">
         <h2 id="activities-heading">Actividades creadas</h2>
-        <p class="helper">Aquí aparecen las actividades creadas con el editor. Las lecciones iniciales del curso se conservan.</p>
+        <p class="text-sm opacity-70">Aquí aparecen las actividades creadas con el editor. Las lecciones iniciales del curso se conservan.</p>
         {result.items.length === 0 && <p class="panel">Todavía no hay actividades creadas en esta página.</p>}
-        <div class="path">{result.items.map((a) => <article class="panel">
-          <span class="tag">{a.publishedVersion === 0 ? "Borrador privado" : a.publishedVersion === a.version ? "Publicada" : "Cambios sin publicar"}</span>
+        <div class="grid gap-4 my-6 mb-10">{result.items.map((a) => <article class="panel">
+          <span class="badge badge-primary badge-soft">{a.publishedVersion === 0 ? "Borrador privado" : a.publishedVersion === a.version ? "Publicada" : "Cambios sin publicar"}</span>
           <h3>{a.title}</h3><p>{a.type === "reading" ? "Lectura" : a.type === "quiz" ? "Cuestionario" : "Tarea"}</p>
-          <a class="button quiet" href={`/teacher/activities/${a.id}`}>Editar{a.type === "assignment" ? " y revisar entregas" : " actividad"} →</a>
+          <a class="btn btn-outline" href={`/teacher/activities/${a.id}`}>Editar{a.type === "assignment" ? " y revisar entregas" : " actividad"} →</a>
         </article>)}</div>
-        <nav class="toolbar" aria-label="Páginas de actividades">{page > 1 && <a class="crumb" href={`?page=${page-1}`}>← Anterior</a>}{result.items.length === 20 && <a class="crumb" href={`?page=${page+1}`}>Siguiente →</a>}</nav>
+        <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de actividades">{page > 1 && <a class="link link-primary min-h-11 inline-flex items-center" href={`?page=${page-1}`}>← Anterior</a>}{result.items.length === 20 && <a class="link link-primary min-h-11 inline-flex items-center" href={`?page=${page+1}`}>Siguiente →</a>}</nav>
       </section>
     </div>
   </>}

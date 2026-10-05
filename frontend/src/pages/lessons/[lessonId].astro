@@ -51,26 +51,36 @@ if (!error)
   ) : (
     lesson && (
       <>
-        <a class="crumb" href="/courses">
+        <a
+          class="link link-primary font-medium min-h-11 inline-flex items-center mb-2"
+          href="/courses"
+        >
           ← Mis aventuras
         </a>
-        <span class="eyebrow">Un nuevo descubrimiento</span>
+        <span class="badge badge-primary badge-soft mb-3 block">
+          Un nuevo descubrimiento
+        </span>
         <h1>{lesson.title}</h1>
         <p>{lesson.description}</p>
         {plugin && (
-          <aside class="plugin-intro">
-            <h2>{plugin.title}</h2>
-            <p>{plugin.instructions}</p>
+          <aside class="alert alert-info">
+            <div>
+              <h2 class="text-base font-bold m-0">{plugin.title}</h2>
+              <p class="m-0">{plugin.instructions}</p>
+            </div>
           </aside>
         )}
         {lesson.type === "reading" ? (
-          <article class="panel reading">
-            <span class="tag">Lee a tu ritmo</span>
+          <article class="card card-border bg-base-100 p-8 max-w-3xl mx-auto">
+            <span class="badge badge-primary badge-soft mb-4">
+              Lee a tu ritmo
+            </span>
             <div class="reading-body">{lesson.config.body}</div>
-            <div style="margin-top:32px">
+            <div class="mt-8">
               <button
                 id="complete-reading"
                 data-lesson={lesson.id}
+                class="btn btn-primary"
                 disabled={lesson.status === "completed"}
               >
                 {lesson.status === "completed"
@@ -80,8 +90,7 @@ if (!error)
               <p
                 id="completion-status"
                 role="status"
-                class="helper"
-                style="margin-top:20px"
+                class="text-sm text-muted mt-5"
               >
                 Completar esta lectura otorga 25 XP, 1 estrella y 2 gemas una
                 sola vez.

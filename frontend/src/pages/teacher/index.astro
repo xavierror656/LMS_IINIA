@@ -24,19 +24,19 @@ if (!error)
     <ServiceError message={error} />
   ) : (
     <>
-      <span class="eyebrow">Espacio docente</span>
+      <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">Espacio docente</span>
       <h1>Cada estudiante, su propio camino</h1>
       <p>Consulta los avances de los estudiantes vinculados a tu cuenta.</p>
-      {import.meta.env.PUBLIC_DEMO_MODE !== "true" && <p><a class="button" href="/teacher/courses">Crear actividades y calificar →</a></p>}
+      {import.meta.env.PUBLIC_DEMO_MODE !== "true" && <p><a class="btn btn-primary" href="/teacher/courses">Crear actividades y calificar →</a></p>}
       {import.meta.env.PUBLIC_DEMO_MODE === "true" && (
         <p>
-          <a class="button" href="/teacher/plugins">
+          <a class="btn btn-primary" href="/teacher/plugins">
             Editar plugins →
           </a>
         </p>
       )}
       <section class="panel table-wrap">
-        <table>
+        <table class="table">
           <caption class="sr-only">Estudiantes de mi grupo</caption>
           <thead>
             <tr>
@@ -59,14 +59,14 @@ if (!error)
           <p>No hay estudiantes vinculados en esta página.</p>
         )}
       </section>
-      <nav class="toolbar" aria-label="Páginas de estudiantes">
+      <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de estudiantes">
         {page > 1 && (
-          <a class="crumb" href={`/teacher?page=${page - 1}`}>
+          <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher?page=${page - 1}`}>
             ← Anterior
           </a>
         )}
         {students.length === 20 && (
-          <a class="crumb" href={`/teacher?page=${page + 1}`}>
+          <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher?page=${page + 1}`}>
             Siguiente →
           </a>
         )}

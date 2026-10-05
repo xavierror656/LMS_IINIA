@@ -11,13 +11,13 @@ const { path, kind, version = 0, lessonVersion, canPublish = false } = Astro.pro
 <academic-form data-path={path} data-kind={kind} data-version={version} data-lesson-version={lessonVersion}>
   <form class="academic-form">
     <slot />
-    <div class="toolbar">
-      <button type="submit" value="save">{kind === "reopen" ? "Autorizar nuevo intento" : kind === "grade" ? "Guardar calificación" : kind === "extension" ? "Guardar prórroga" : kind === "quiz-extension" ? "Guardar excepción de tiempo" : "Guardar borrador"}</button>
-      {!['create','evaluation','schedule','extension','quiz-extension','attempt-policy','reopen'].includes(kind) && <button type="submit" value="publish" class="quiet" disabled={!canPublish}>
+    <div class="flex flex-wrap items-center gap-3 my-3">
+      <button type="submit" class="btn btn-primary" value="save">{kind === "reopen" ? "Autorizar nuevo intento" : kind === "grade" ? "Guardar calificación" : kind === "extension" ? "Guardar prórroga" : kind === "quiz-extension" ? "Guardar excepción de tiempo" : "Guardar borrador"}</button>
+      {!['create','evaluation','schedule','extension','quiz-extension','attempt-policy','reopen'].includes(kind) && <button type="submit" class="btn btn-outline" value="publish" disabled={!canPublish}>
         {kind === "submission" ? "Enviar al docente" : kind === "grade" ? "Publicar devolución" : "Publicar actividad"}
       </button>}
     </div>
-    <p class="helper" data-status role="status" aria-live="polite">
+    <p class="text-sm opacity-70" data-status role="status" aria-live="polite">
       {kind === "reopen" ? "Autorizar crea un borrador vacío. Las fechas siguen vigentes y la entrega anterior se conserva." : kind === "create" ? "El borrador será privado hasta que lo publiques." : kind === "extension" ? "La prórroga entra en vigor al guardar." : kind === "quiz-extension" ? "La excepción entra en vigor al guardar y solo amplía los límites publicados." : "Guarda los cambios antes de publicar o enviar."}
     </p>
   </form>

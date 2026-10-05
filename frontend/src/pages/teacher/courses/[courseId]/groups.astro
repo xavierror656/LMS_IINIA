@@ -13,30 +13,30 @@ if (!error) try {
 const groupName = (groupId: number) => data?.items.find((g) => g.id === groupId)?.name;
 ---
 <Layout title="Grupos del curso">
-  <a class="crumb" href={`/teacher/courses/${id}`}>← Volver al curso</a>
+  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${id}`}>← Volver al curso</a>
   <h1>Grupos del curso</h1>
   {error ? <ServiceError message={error} /> : data && <group-admin data-course={id}>
     <section class="panel">
       <h2>Crear un grupo</h2>
       <form data-create>
         <label for="new-group">Nombre del grupo</label>
-        <input id="new-group" name="name" required maxlength="100" />
-        <button type="submit">Crear grupo</button>
+        <input class="input" id="new-group" name="name" required maxlength="100" />
+        <button class="btn btn-primary" type="submit">Crear grupo</button>
       </form>
-      <p class="helper" data-status role="status" aria-live="polite">Un estudiante pertenece como máximo a un grupo de este curso.</p>
+      <p class="text-sm opacity-70" data-status role="status" aria-live="polite">Un estudiante pertenece como máximo a un grupo de este curso.</p>
     </section>
     <section class="admin-section" aria-labelledby="groups-title">
       <h2 id="groups-title">Grupos</h2>
       {data.items.length === 0 && <p class="panel">Todavía no hay grupos en este curso.</p>}
-      <div class="path">{data.items.map((group) => <article class="panel">
+      <div class="grid gap-4 my-6 mb-10">{data.items.map((group) => <article class="panel">
         <h3>{group.name}</h3>
         <p>{group.members} {group.members === 1 ? "estudiante" : "estudiantes"}</p>
         <form data-rename data-id={group.id} data-version={group.version}>
           <label for={`rename-${group.id}`}>Nuevo nombre del grupo</label>
-          <input id={`rename-${group.id}`} name="name" required maxlength="100" value={group.name} />
-          <div class="toolbar">
-            <button type="submit">Guardar nombre</button>
-            <button type="button" class="quiet" data-delete data-id={group.id} data-name={group.name}>Eliminar grupo</button>
+          <input class="input" id={`rename-${group.id}`} name="name" required maxlength="100" value={group.name} />
+          <div class="flex flex-wrap items-center gap-3">
+            <button class="btn btn-primary" type="submit">Guardar nombre</button>
+            <button type="button" class="btn btn-outline" data-delete data-id={group.id} data-name={group.name}>Eliminar grupo</button>
           </div>
         </form>
       </article>)}</div>
@@ -44,22 +44,22 @@ const groupName = (groupId: number) => data?.items.find((g) => g.id === groupId)
     <section class="admin-section" aria-labelledby="roster-title">
       <h2 id="roster-title">Estudiantes vinculados e inscritos</h2>
       {data.roster.length === 0 && <p class="panel">No hay estudiantes vinculados e inscritos en esta página.</p>}
-      <div class="path">{data.roster.map((student) => <form class="panel" data-member data-student={student.studentId} data-group={student.groupId}>
+      <div class="grid gap-4 my-6 mb-10">{data.roster.map((student) => <form class="panel" data-member data-student={student.studentId} data-group={student.groupId}>
         <h3>{student.alias}</h3>
         {student.groupId === 0
           ? <><label for={`pick-${student.studentId}`}>Grupo para {student.alias}</label>
-            <select id={`pick-${student.studentId}`} name="groupId" required>
+            <select class="select" id={`pick-${student.studentId}`} name="groupId" required>
               <option value="" disabled selected>Elige un grupo</option>
               {data.items.map((group) => <option value={group.id}>{group.name}</option>)}
             </select>
-            <button type="submit" disabled={data.items.length === 0}>Añadir al grupo</button></>
+            <button class="btn btn-primary" type="submit" disabled={data.items.length === 0}>Añadir al grupo</button></>
           : <><p>Pertenece a {groupName(student.groupId) ?? "un grupo del curso"}.</p>
-            <button type="submit" class="quiet" data-remove>Quitar del grupo</button></>}
+            <button type="submit" class="btn btn-outline" data-remove>Quitar del grupo</button></>}
       </form>)}</div>
     </section>
-    <nav class="toolbar" aria-label="Páginas de grupos">
-      {data.page > 1 && <a class="button quiet" href={`?page=${data.page - 1}`}>← Anterior</a>}
-      {data.items.length === 20 && <a class="button quiet" href={`?page=${data.page + 1}`}>Siguiente →</a>}
+    <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de grupos">
+      {data.page > 1 && <a class="btn btn-outline" href={`?page=${data.page - 1}`}>← Anterior</a>}
+      {data.items.length === 20 && <a class="btn btn-outline" href={`?page=${data.page + 1}`}>Siguiente →</a>}
     </nav>
   </group-admin>}
 </Layout>

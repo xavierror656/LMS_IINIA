@@ -9,14 +9,14 @@ if(!error)try{result=await api<components['schemas']['QuestionList']>(`/teacher/
 const labels={single_choice:'Selección única',multiple_choice:'Selección múltiple',true_false:'Verdadero o falso',short_answer:'Respuesta corta'};
 ---
 <Layout title="Banco de preguntas">
- <a class="crumb" href={`/teacher/courses/${courseId}`}>← Volver al curso</a><h1>Banco de preguntas</h1>
+ <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${courseId}`}>← Volver al curso</a><h1>Banco de preguntas</h1>
  {error?<ServiceError message={error}/>:result&&<>
   <p>Preguntas privadas de docentes de este curso. Cada edición conserva su versión anterior. Todavía no se publican como cuestionarios para estudiantes.</p>
-  <nav class="toolbar" aria-label="Estado de las preguntas"><a class="button quiet" href="?archived=false" aria-current={!archived?'page':undefined}>Activas</a><a class="button quiet" href="?archived=true" aria-current={archived?'page':undefined}>Archivadas</a></nav>
+  <nav class="flex flex-wrap items-center gap-3" aria-label="Estado de las preguntas"><a class="btn btn-outline" href="?archived=false" aria-current={!archived?'page':undefined}>Activas</a><a class="btn btn-outline" href="?archived=true" aria-current={archived?'page':undefined}>Archivadas</a></nav>
   <section aria-labelledby="questions-list"><h2 id="questions-list">{archived?'Preguntas archivadas':'Preguntas activas'}</h2>
    {result.items.length===0&&<p class="panel">No hay preguntas en esta página.</p>}
-   <div class="path">{result.items.map(q=><article class="panel"><span class="tag">{labels[q.type]} · versión {q.version}</span><h3>{q.name}</h3><a class="button quiet" href={`/teacher/questions/${q.id}`}>Abrir pregunta: {q.name}</a></article>)}</div>
-   <nav class="toolbar" aria-label="Páginas de preguntas">{page>1&&<a class="crumb" href={`?archived=${archived}&page=${page-1}`}>← Anterior</a>}{result.items.length===20&&<a class="crumb" href={`?archived=${archived}&page=${page+1}`}>Siguiente →</a>}</nav>
+   <div class="grid gap-4 my-6 mb-10">{result.items.map(q=><article class="panel"><span class="badge badge-primary badge-soft">{labels[q.type]} · versión {q.version}</span><h3>{q.name}</h3><a class="btn btn-outline" href={`/teacher/questions/${q.id}`}>Abrir pregunta: {q.name}</a></article>)}</div>
+   <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de preguntas">{page>1&&<a class="link link-primary min-h-11 inline-flex items-center" href={`?archived=${archived}&page=${page-1}`}>← Anterior</a>}{result.items.length===20&&<a class="link link-primary min-h-11 inline-flex items-center" href={`?archived=${archived}&page=${page+1}`}>Siguiente →</a>}</nav>
   </section>
   {!archived&&<section class="panel admin-section"><h2>Crear pregunta</h2><QuestionForm courseId={Number(courseId)}/></section>}
  </>}

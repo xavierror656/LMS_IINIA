@@ -17,12 +17,13 @@ if(!error)try{
 }catch(e){error=e instanceof Error?e.message:"No se pudieron cargar tus intentos.";}
 ---
 <Layout title="Mis intentos">
-  <a class="crumb" href={`/lessons/${id}`}>← Volver al intento actual</a><h1>Mis intentos</h1>
+  <a class="link link-primary font-medium min-h-11 inline-flex items-center mb-2" href={`/lessons/${id}`}>← Volver al intento actual</a>
+  <h1>Mis intentos</h1>
   {error ? <ServiceError message={error}/> : <>
     <p>El historial conserva tus trabajos. Solo puedes editar el borrador del intento actual desde la tarea.</p>
-    <nav class="toolbar" aria-label="Historial de intentos">{items.map(item=><a class="button quiet" href={`?submissionId=${item.id}`}>Intento {item.attempt} · {item.status==='draft'?'Borrador':'Enviado'}</a>)}</nav>
+    <nav class="flex flex-wrap items-center gap-3" aria-label="Historial de intentos">{items.map(item=><a class="btn btn-outline btn-sm" href={`?submissionId=${item.id}`}>Intento {item.attempt} · {item.status==='draft'?'Borrador':'Enviado'}</a>)}</nav>
     {items.length===0 && <p>Aún no has guardado ningún intento.</p>}
-    {submission && <article class="panel">
+    {submission && <article class="card card-border bg-base-100 p-6 mt-6">
       <h2>Intento {submission.attempt}</h2><p>{submission.status==='draft'?'Borrador':'Enviado'}</p>
       <details><summary>Instrucciones de este intento</summary><p class="reading-body">{submission.instructions}</p></details>
       <p class="reading-body">{submission.body}</p><AttachmentList files={submission.attachments}/>

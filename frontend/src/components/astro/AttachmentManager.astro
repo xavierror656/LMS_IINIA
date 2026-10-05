@@ -7,19 +7,19 @@ const files=submission?.attachments??[];
 ---
 <attachment-manager data-lesson={lessonId} data-version={submission?.version??0} data-lesson-version={lessonVersion}>
   <p>Admite TXT en UTF-8, PNG y JPEG: hasta 2 MiB por archivo, 5 archivos por entrega y 50 MiB por estudiante. Las imágenes admiten hasta 4 millones de píxeles y se guardan sin metadatos.</p>
-  <p class="helper">PDF, documentos de oficina y archivos comprimidos todavía no están disponibles. Tu docente verá los adjuntos cuando envíes la tarea.</p>
+  <p class="text-sm opacity-70">PDF, documentos de oficina y archivos comprimidos todavía no están disponibles. Tu docente verá los adjuntos cuando envíes la tarea.</p>
   <AttachmentList files={files}/>
   {files.length===0&&<p>Todavía no hay archivos adjuntos.</p>}
   {editable ? <>
     {files.length<5&&<form class="academic-form">
-      <label for="attachment-file">Archivo para adjuntar</label><input id="attachment-file" name="file" type="file" accept=".txt,.png,.jpg,.jpeg" required/>
-      <button type="submit">Adjuntar archivo</button>
+      <label for="attachment-file">Archivo para adjuntar</label><input class="file-input" id="attachment-file" name="file" type="file" accept=".txt,.png,.jpg,.jpeg" required/>
+      <button class="btn btn-primary" type="submit">Adjuntar archivo</button>
     </form>}
     {files.length===5&&<p>Ya tienes cinco archivos. Quita uno antes de adjuntar otro.</p>}
-    <div class="path">{files.map(file=><div><button type="button" class="quiet" data-remove-file={file.id}>Quitar {file.name}</button></div>)}</div>
+    <div class="path">{files.map(file=><div><button type="button" class="btn btn-outline" data-remove-file={file.id}>Quitar {file.name}</button></div>)}</div>
   </> : <p>Los adjuntos no se pueden cambiar después del envío ni fuera del plazo de entrega.</p>}
   <p role="status" aria-live="polite" data-file-status></p>
-  <p class="helper">Después de adjuntar, vuelve a la tarea para enviar tu trabajo. Si una conexión falla, actualiza esta página para comprobar qué se guardó antes de repetir.</p>
+  <p class="text-sm opacity-70">Después de adjuntar, vuelve a la tarea para enviar tu trabajo. Si una conexión falla, actualiza esta página para comprobar qué se guardó antes de repetir.</p>
 </attachment-manager>
 <script>
   import { api, type Submission } from "../../lib/api";

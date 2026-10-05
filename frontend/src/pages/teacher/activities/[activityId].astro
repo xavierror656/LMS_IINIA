@@ -24,25 +24,25 @@ const graders = (s: Submission) => (s.members?.length ?? 0) > 0
 const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ? "Devolución publicada" : grade ? "Calificación en borrador" : "Por calificar";
 ---
 <Layout title={activity?.title ?? "Editar actividad"}>
-  <a class="crumb" href="/teacher/courses">← Mis cursos</a>
+  <a class="link link-primary min-h-11 inline-flex items-center" href="/teacher/courses">← Mis cursos</a>
   {error ? <ServiceError message={error} /> : activity && <>
-    <span class="eyebrow">{activity.type === "reading" ? "Lectura" : activity.type === "quiz" ? "Cuestionario" : "Tarea"}</span><h1>{activity.title}</h1>
+    <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">{activity.type === "reading" ? "Lectura" : activity.type === "quiz" ? "Cuestionario" : "Tarea"}</span><h1>{activity.title}</h1>
     <p>Versión guardada: {activity.version}. {activity.publishedVersion ? `Última versión publicada: ${activity.publishedVersion}.` : "Todavía no es visible para estudiantes."}</p>
-    {activity.type === "assignment" && <a class="button quiet" href={`/teacher/activities/${id}/evaluation`}>Configurar rúbrica y peso</a>}
-    {activity.type === "assignment" && <a class="button quiet" href={`/teacher/activities/${id}/attempt-policy`}>Configurar intentos</a>}
-    {activity.type === "assignment" && <div class="toolbar"><a class="button quiet" href={`/teacher/activities/${id}/schedule`}>Configurar fechas</a>{activity.lessonId && <a class="button quiet" href={`/teacher/activities/${id}/extensions`}>Gestionar prórrogas</a>}</div>}
+    {activity.type === "assignment" && <a class="btn btn-outline" href={`/teacher/activities/${id}/evaluation`}>Configurar rúbrica y peso</a>}
+    {activity.type === "assignment" && <a class="btn btn-outline" href={`/teacher/activities/${id}/attempt-policy`}>Configurar intentos</a>}
+    {activity.type === "assignment" && <div class="flex flex-wrap items-center gap-3"><a class="btn btn-outline" href={`/teacher/activities/${id}/schedule`}>Configurar fechas</a>{activity.lessonId && <a class="btn btn-outline" href={`/teacher/activities/${id}/extensions`}>Gestionar prórrogas</a>}</div>}
     {(activity.type === "assignment" || activity.type === "reading") && <section class="panel">
       <h2>Archivos de instrucciones</h2>
       <attachment-files data-path={`/teacher/activities/${activity.id}/attachments`}>
         <form data-upload>
           <label for="instruction-file">Añadir un archivo (texto, imagen o PDF; hasta 2 MiB)</label>
-          <input id="instruction-file" type="file" name="file" accept=".txt,.png,.jpg,.jpeg,.pdf" required />
-          <div class="toolbar"><button type="submit">Subir archivo</button></div>
-          <p class="helper" data-status role="status" aria-live="polite">Se congelan al publicar: cada versión publicada conserva los suyos y el borrador sigue siendo tuyo.</p>
+          <input class="file-input" id="instruction-file" type="file" name="file" accept=".txt,.png,.jpg,.jpeg,.pdf" required />
+          <div class="flex flex-wrap items-center gap-3"><button class="btn btn-primary" type="submit">Subir archivo</button></div>
+          <p class="text-sm opacity-70" data-status role="status" aria-live="polite">Se congelan al publicar: cada versión publicada conserva los suyos y el borrador sigue siendo tuyo.</p>
         </form>
         <ul data-list>{(activity.attachments ?? []).map((file) => <li>
-          {file.name} <span class="helper">({Math.ceil(file.size / 1024)} KiB)</span>
-          <button type="button" class="quiet" data-delete data-file={file.id} data-name={file.name}>Quitar</button>
+          {file.name} <span class="text-sm opacity-70">({Math.ceil(file.size / 1024)} KiB)</span>
+          <button type="button" class="btn btn-outline" data-delete data-file={file.id} data-name={file.name}>Quitar</button>
         </li>)}</ul>
       </attachment-files>
     </section>}
@@ -50,69 +50,69 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
       <h2>Trabajo en equipo</h2>
       <group-mode data-id={activity.id} data-version={activity.version}>
         <form>
-          <label class="quiz-choice"><input type="checkbox" name="groupSubmission" checked={activity.groupSubmission} /> Entrega grupal compartida</label>
-          <p class="helper">Con la entrega grupal activada, cualquier miembro del grupo guarda, adjunta y envía el mismo trabajo, y el libro muestra esa entrega a todo el equipo. Los intentos y las reaperturas cuentan por grupo. Entra en vigor al publicar la actividad. Los grupos se crean y se asignan desde <strong>Grupos del curso</strong>, en la página del curso.</p>
-          <div class="toolbar"><button type="submit">Guardar modo de entrega</button></div>
-          <p class="helper" data-status role="status" aria-live="polite">{activity.groupSubmission ? "Ahora mismo la entrega es grupal." : "Ahora mismo cada estudiante entrega por su cuenta."}</p>
+          <label class="quiz-choice"><input class="checkbox" type="checkbox" name="groupSubmission" checked={activity.groupSubmission} /> Entrega grupal compartida</label>
+          <p class="text-sm opacity-70">Con la entrega grupal activada, cualquier miembro del grupo guarda, adjunta y envía el mismo trabajo, y el libro muestra esa entrega a todo el equipo. Los intentos y las reaperturas cuentan por grupo. Entra en vigor al publicar la actividad. Los grupos se crean y se asignan desde <strong>Grupos del curso</strong>, en la página del curso.</p>
+          <div class="flex flex-wrap items-center gap-3"><button class="btn btn-primary" type="submit">Guardar modo de entrega</button></div>
+          <p class="text-sm opacity-70" data-status role="status" aria-live="polite">{activity.groupSubmission ? "Ahora mismo la entrega es grupal." : "Ahora mismo cada estudiante entrega por su cuenta."}</p>
         </form>
       </group-mode>
     </section>}
-    {activity.type === "quiz" && <div class="toolbar"><a class="button quiet" href={`/teacher/activities/${id}/quiz`}>Configurar cuestionario</a><a class="button quiet" href={`/teacher/activities/${id}/schedule`}>Configurar fechas</a>{activity.lessonId && <a class="button quiet" href={`/teacher/activities/${id}/quiz-extensions`}>Gestionar tiempos</a>}<a class="button quiet" href={`/teacher/activities/${id}/quiz-results`}>Ver intentos del cuestionario</a></div>}
+    {activity.type === "quiz" && <div class="flex flex-wrap items-center gap-3"><a class="btn btn-outline" href={`/teacher/activities/${id}/quiz`}>Configurar cuestionario</a><a class="btn btn-outline" href={`/teacher/activities/${id}/schedule`}>Configurar fechas</a>{activity.lessonId && <a class="btn btn-outline" href={`/teacher/activities/${id}/quiz-extensions`}>Gestionar tiempos</a>}<a class="btn btn-outline" href={`/teacher/activities/${id}/quiz-results`}>Ver intentos del cuestionario</a></div>}
     <section class="panel">
       <h2>Editar contenido</h2>
       <AcademicForm kind="activity" path={`/teacher/activities/${id}`} version={activity.version} canPublish={activity.version !== activity.publishedVersion && (activity.type !== "quiz" || !!activity.quizConfig)}>
-        <label for="edit-title">Título</label><input id="edit-title" name="title" required maxlength="160" value={activity.title} />
-        <label for="edit-description">Descripción breve</label><textarea id="edit-description" name="description" maxlength="1000" rows="2">{activity.description}</textarea>
-        <label for="edit-body">Contenido o instrucciones</label><textarea id="edit-body" name="body" required maxlength="12000" rows="9">{activity.body}</textarea>
+        <label for="edit-title">Título</label><input class="input" id="edit-title" name="title" required maxlength="160" value={activity.title} />
+        <label for="edit-description">Descripción breve</label><textarea class="textarea" id="edit-description" name="description" maxlength="1000" rows="2">{activity.description}</textarea>
+        <label for="edit-body">Contenido o instrucciones</label><textarea class="textarea" id="edit-body" name="body" required maxlength="12000" rows="9">{activity.body}</textarea>
       </AcademicForm>
     </section>
     {activity.type === "assignment" && <section class="admin-section" aria-labelledby="submissions-title">
       <h2 id="submissions-title">Entregas para revisar</h2>
       <p>Solo aparecen los trabajos enviados. Guarda tu calificación y publica la devolución cuando esté lista.</p>
       {submissions.length === 0 && <p class="panel">No hay entregas enviadas en esta página.</p>}
-      {submissionId !== null && <p>Mostrando una entrega. <a class="crumb" href={`/teacher/activities/${id}`}>Ver todas las entregas</a></p>}
-      <div class="path">{submissions.map((s) => <article class="panel" id={`submission-${s.id}`}>
-        <span class="tag">{(s.members?.length ?? 0) > 0 ? `Entrega de equipo · ${s.members!.length} miembros` : gradeTag(s.grade)}</span>
+      {submissionId !== null && <p>Mostrando una entrega. <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>Ver todas las entregas</a></p>}
+      <div class="grid gap-4 my-6 mb-10">{submissions.map((s) => <article class="panel" id={`submission-${s.id}`}>
+        <span class="badge badge-primary badge-soft">{(s.members?.length ?? 0) > 0 ? `Entrega de equipo · ${s.members!.length} miembros` : gradeTag(s.grade)}</span>
         <h3>Entrega de {s.alias}</h3>
-        {s.groupName && <p class="helper">Entrega del grupo {s.groupName}. Cada miembro recibe su propia nota y su propia devolución; publicar la de uno no publica las demás.</p>}
+        {s.groupName && <p class="text-sm opacity-70">Entrega del grupo {s.groupName}. Cada miembro recibe su propia nota y su propia devolución; publicar la de uno no publica las demás.</p>}
         <p>Intento {s.attempt}</p>
         <p>{s.effectiveDueAt ? s.late ? "Entrega tardía" : "Entrega a tiempo" : "Sin vencimiento registrado"}</p>
         <details><summary>Instrucciones de esta entrega</summary><p class="reading-body">{s.instructions}</p></details>
         <p class="reading-body">{s.body}</p>
         <AttachmentList files={s.attachments}/>
         {graders(s).map((g) => <div class="grading-block">
-          <h4>Calificación de {g.alias}{(s.members?.length ?? 0) > 0 && <> · <span class="tag">{gradeTag(g.grade)}</span></>}</h4>
+          <h4>Calificación de {g.alias}{(s.members?.length ?? 0) > 0 && <> · <span class="badge badge-primary badge-soft">{gradeTag(g.grade)}</span></>}</h4>
           <AcademicForm kind="grade" path={g.path} version={g.grade?.version ?? 0} canPublish={g.grade?.status === "draft"}>
             {s.rubric ? <fieldset><legend>Evaluación por criterios de esta entrega</legend>
-              {s.rubric.criteria.map((c,i) => <div><label for={`criterion-${g.key}-${i}`}>{c.title}</label><select id={`criterion-${g.key}-${i}`} name="selection" required>
+              {s.rubric.criteria.map((c,i) => <div><label for={`criterion-${g.key}-${i}`}>{c.title}</label><select class="select" id={`criterion-${g.key}-${i}`} name="selection" required>
                 <option value="" disabled selected={g.grade?.assessment == null}>Selecciona un nivel</option>
                 {c.levels.map((l,n) => <option value={n} selected={g.grade?.assessment?.selections[i] === n}>{l.label} — {l.points} puntos</option>)}
               </select></div>)}
-              <p class="helper">El servidor calcula la nota con los niveles elegidos. {g.grade ? `Última nota guardada: ${g.grade.score} / 100.` : ""}</p>
-            </fieldset> : <><label for={`score-${g.key}`}>Calificación de {g.alias} (0 a 100)</label><input id={`score-${g.key}`} type="number" name="score" min="0" max="100" step="1" required value={g.grade?.score} /></>}
-            <label for={`feedback-${g.key}`}>Comentario para {g.alias}</label><textarea id={`feedback-${g.key}`} name="feedback" rows="4" maxlength="4000">{g.grade?.feedback ?? ""}</textarea>
+              <p class="text-sm opacity-70">El servidor calcula la nota con los niveles elegidos. {g.grade ? `Última nota guardada: ${g.grade.score} / 100.` : ""}</p>
+            </fieldset> : <><label for={`score-${g.key}`}>Calificación de {g.alias} (0 a 100)</label><input class="input" id={`score-${g.key}`} type="number" name="score" min="0" max="100" step="1" required value={g.grade?.score} /></>}
+            <label for={`feedback-${g.key}`}>Comentario para {g.alias}</label><textarea class="textarea" id={`feedback-${g.key}`} name="feedback" rows="4" maxlength="4000">{g.grade?.feedback ?? ""}</textarea>
           </AcademicForm>
           <attachment-files data-path={g.filesPath}>
             <form data-upload>
               <label for={`feedback-file-${g.key}`}>Adjuntar un archivo a esta devolución (texto, imagen o PDF; hasta 2 MiB)</label>
-              <input id={`feedback-file-${g.key}`} type="file" name="file" accept=".txt,.png,.jpg,.jpeg,.pdf" required />
-              <div class="toolbar"><button type="submit">Subir devolución</button></div>
-              <p class="helper" data-status role="status" aria-live="polite">Guarda antes la calificación: los archivos van con su nota. El alumno los verá al publicarla.</p>
+              <input class="file-input" id={`feedback-file-${g.key}`} type="file" name="file" accept=".txt,.png,.jpg,.jpeg,.pdf" required />
+              <div class="flex flex-wrap items-center gap-3"><button class="btn btn-primary" type="submit">Subir devolución</button></div>
+              <p class="text-sm opacity-70" data-status role="status" aria-live="polite">Guarda antes la calificación: los archivos van con su nota. El alumno los verá al publicarla.</p>
             </form>
             <ul data-list>{(g.grade?.files ?? []).map((file) => <li>
-              {file.name} <span class="helper">({Math.ceil(file.size / 1024)} KiB)</span>
-              <button type="button" class="quiet" data-delete data-file={file.id} data-name={file.name}>Quitar</button>
+              {file.name} <span class="text-sm opacity-70">({Math.ceil(file.size / 1024)} KiB)</span>
+              <button type="button" class="btn btn-outline" data-delete data-file={file.id} data-name={file.name}>Quitar</button>
             </li>)}</ul>
           </attachment-files>
         </div>)}
         <details><summary>Autorizar otro intento para {s.alias}</summary>
           <p>El límite publicado debe permitirlo. El nuevo intento no cambia las fechas y conserva este trabajo y su devolución en el historial. Repetir la autorización de esta entrega no crea intentos adicionales.</p>
           <AcademicForm kind="reopen" path={`/teacher/submissions/${s.id}/reopen`} version={s.version}>
-            <label for={`reason-${s.id}`}>Motivo de reapertura</label><textarea id={`reason-${s.id}`} name="reason" required maxlength="1000" rows="2" />
+            <label for={`reason-${s.id}`}>Motivo de reapertura</label><textarea class="textarea" id={`reason-${s.id}`} name="reason" required maxlength="1000" rows="2" />
           </AcademicForm>
         </details>
       </article>)}</div>
-      {submissionId === null && <nav class="toolbar" aria-label="Páginas de entregas">{page > 1 && <a class="crumb" href={`?page=${page-1}`}>← Anterior</a>}{submissions.length === 20 && <a class="crumb" href={`?page=${page+1}`}>Siguiente →</a>}</nav>}
+      {submissionId === null && <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de entregas">{page > 1 && <a class="link link-primary min-h-11 inline-flex items-center" href={`?page=${page-1}`}>← Anterior</a>}{submissions.length === 20 && <a class="link link-primary min-h-11 inline-flex items-center" href={`?page=${page+1}`}>Siguiente →</a>}</nav>}
     </section>}
   </>}
 </Layout>

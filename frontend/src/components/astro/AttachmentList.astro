@@ -5,6 +5,6 @@ const { files }=Astro.props;
 ---
 {files.length>0 && <section aria-label="Archivos adjuntos">
   <h3>Archivos adjuntos</h3>
-  <ul>{files.map(file=><li><a class="crumb" href={`/api/v1/attachments/${file.id}`} download data-astro-reload>Descargar {file.name}</a> <span class="helper">({Math.ceil(file.size/1024)} KiB)</span></li>)}</ul>
+  <ul>{files.map(file=><li><a class="link link-primary min-h-11 inline-flex items-center" href={`/api/v1/attachments/${file.id}`} download data-astro-reload>Descargar {file.name}</a> <span class="text-sm opacity-70">({Math.ceil(file.size/1024)} KiB)</span></li>)}</ul>
 </section>}
 <style>li{margin-block:.5rem;overflow-wrap:anywhere;}a{display:inline-flex;align-items:center;min-height:44px;}</style>

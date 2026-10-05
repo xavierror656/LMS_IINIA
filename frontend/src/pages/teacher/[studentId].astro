@@ -23,17 +23,17 @@ if (!error)
   ) : (
     data && (
       <>
-        <a class="crumb" href="/teacher">
+        <a class="link link-primary min-h-11 inline-flex items-center" href="/teacher">
           ← Mi grupo
         </a>
-        <span class="eyebrow">Acompañando su aprendizaje</span>
+        <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">Acompañando su aprendizaje</span>
         <h1>El camino de {data.progress.alias}</h1>
         <p>
           Nivel {data.progress.level} · {data.progress.xp} XP ·{" "}
           {data.progress.completed} lecturas completadas
         </p>
         <section class="panel table-wrap">
-          <table>
+          <table class="table">
             <caption class="sr-only">Progreso por curso</caption>
             <thead>
               <tr>
@@ -52,7 +52,7 @@ if (!error)
               ))}
             </tbody>
           </table>
-          <p class="helper" style="margin-top:24px">
+          <p class="text-sm opacity-70" style="margin-top:24px">
             Las lecturas se completan por declaración del estudiante. Los
             resultados H5P reportados y la consola simulada no son evaluaciones
             validadas.

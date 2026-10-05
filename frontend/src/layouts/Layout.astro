@@ -35,6 +35,7 @@ const demo = import.meta.env.PUBLIC_DEMO_MODE === "true";
       </a>
       <nav aria-label="Navegación principal">
         <a
+          class="link link-primary no-underline font-medium"
           href={roleHome(user?.role)}
           aria-current={
             Astro.url.pathname === roleHome(user?.role) ? "page" : undefined
@@ -47,11 +48,11 @@ const demo = import.meta.env.PUBLIC_DEMO_MODE === "true";
               : "Mis aventuras"}
         </a>
         {user ? (
-          <button class="quiet" id="logout">
+          <button class="btn btn-ghost" id="logout">
             Salir
           </button>
         ) : (
-          <a class="button small" href="/login">
+          <a class="btn btn-primary" href="/login">
             Entrar
           </a>
         )}
@@ -59,7 +60,7 @@ const demo = import.meta.env.PUBLIC_DEMO_MODE === "true";
     </header>
     <div class="page-shell">
       {demo && (
-        <aside class="demo-notice" aria-label="Modo de demostración">
+        <aside class="alert alert-info mb-6" aria-label="Modo de demostración">
           <strong>Modo demo · Datos ficticios</strong>
           <span>
             Tus avances se guardan solo en este equipo. No necesitas Docker ni

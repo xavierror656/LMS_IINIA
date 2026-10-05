@@ -10,15 +10,15 @@ const clock=(s:number)=>`${Math.floor(s/60)}:${String(Math.max(s,0)%60).padStart
   <h2>Intento {attempt.attempt}</h2>
   <details><summary>Instrucciones de este intento</summary><p class="reading-body">{attempt.instructions}</p></details>
   {attempt.score!==null&&<p class="notice"><strong>Resultado de este intento: {attempt.score} / 100</strong></p>}
-  {editable&&attempt.remainingSeconds!==null&&<p class="helper">Tiempo restante: <span data-clock role="timer" aria-live="off">{clock(attempt.remainingSeconds)}</span>. Lo controla el servidor: el reloj de este dispositivo es solo informativo.</p>}
-  {editable&&attempt.expiresAt&&<p class="helper">Tu tiempo termina a las <time datetime={attempt.expiresAt}>{fmt(attempt.expiresAt)} UTC</time>{attempt.closesAt?<> y el cuestionario cierra a las <time datetime={attempt.closesAt}>{fmt(attempt.closesAt)} UTC</time></>:null}.</p>}
+  {editable&&attempt.remainingSeconds!==null&&<p class="text-sm opacity-70">Tiempo restante: <span data-clock role="timer" aria-live="off">{clock(attempt.remainingSeconds)}</span>. Lo controla el servidor: el reloj de este dispositivo es solo informativo.</p>}
+  {editable&&attempt.expiresAt&&<p class="text-sm opacity-70">Tu tiempo termina a las <time datetime={attempt.expiresAt}>{fmt(attempt.expiresAt)} UTC</time>{attempt.closesAt?<> y el cuestionario cierra a las <time datetime={attempt.closesAt}>{fmt(attempt.closesAt)} UTC</time></>:null}.</p>}
   <p>{editable?'Guarda tus respuestas antes de enviarlas. Al enviar, este intento ya no se puede editar.':'Este intento es de solo lectura.'}</p>
   {attempt.questions.map((q,i)=><fieldset class="panel" data-question data-type={q.type} disabled={!editable}>
    <legend>Pregunta {i+1} · peso {q.weight}</legend><p class="reading-body">{q.prompt}</p>
-   {q.type==='short_answer'?<><label for={`quiz-text-${i}`}>Respuesta a la pregunta {i+1}</label><input id={`quiz-text-${i}`} name={`text-${i}`} maxlength="200" value={attempt.answers[i]?.text??''}/></>:q.options.map((option,n)=><label class="quiz-choice"><input type={q.type==='multiple_choice'?'checkbox':'radio'} name={`choice-${i}`} value={n} checked={attempt.answers[i]?.choices.includes(n)}/>{option}</label>)}
+   {q.type==='short_answer'?<><label for={`quiz-text-${i}`}>Respuesta a la pregunta {i+1}</label><input class="input" id={`quiz-text-${i}`} name={`text-${i}`} maxlength="200" value={attempt.answers[i]?.text??''}/></>:q.options.map((option,n)=><label class="quiz-choice"><input class={q.type==='multiple_choice'?'checkbox':'radio'} type={q.type==='multiple_choice'?'checkbox':'radio'} name={`choice-${i}`} value={n} checked={attempt.answers[i]?.choices.includes(n)}/>{option}</label>)}
    {q.review&&<aside class="notice"><h3>Revisión de la pregunta {i+1}</h3><p>{q.review.score} / 100</p><p>Respuesta: {q.type==='short_answer'?q.review.acceptedAnswers.join(' / '):q.review.correctChoices.map(n=>q.options[n]).join(' / ')}</p><p>{q.review.explanation}</p></aside>}
   </fieldset>)}
-  {editable&&<><div class="toolbar"><button type="submit" value="save">Guardar respuestas</button><button type="submit" value="submit" class="quiet">Enviar cuestionario</button></div><p data-status role="status" aria-live="polite">Las preguntas sin responder puntúan cero. Enviar evalúa las respuestas guardadas.</p></>}
+  {editable&&<><div class="flex flex-wrap items-center gap-3"><button class="btn btn-primary" type="submit" value="save">Guardar respuestas</button><button class="btn btn-outline" type="submit" value="submit">Enviar cuestionario</button></div><p data-status role="status" aria-live="polite">Las preguntas sin responder puntúan cero. Enviar evalúa las respuestas guardadas.</p></>}
  </form>
 </quiz-attempt>
 <style>.quiz-choice{display:flex;align-items:center;gap:.75rem;min-height:44px}.quiz-choice input{width:24px;height:24px;flex:none}fieldset{margin-block:1rem}fieldset:disabled{opacity:1}</style>

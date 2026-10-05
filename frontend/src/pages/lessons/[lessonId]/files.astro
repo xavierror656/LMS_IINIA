@@ -20,9 +20,9 @@ if(!error)try{
 const editable=submission?.status!=="submitted"&&(availability?.state==="open"||availability?.state==="late");
 ---
 <Layout title="Mis archivos de la tarea">
-  <a class="crumb" href={`/lessons/${id}`}>← Volver a mi tarea</a>
+  <a class="link link-primary font-medium min-h-11 inline-flex items-center mb-2" href={`/lessons/${id}`}>← Volver a mi tarea</a>
   <h1>Mis archivos de la tarea</h1>
-  {error?<ServiceError message={error}/>:lesson&&<section class="panel">
+  {error?<ServiceError message={error}/>:lesson&&<section class="card card-border bg-base-100 p-6">
     <h2>{lesson.title}</h2>
     <AttachmentManager lessonId={lesson.id} lessonVersion={lesson.config.version??1} submission={submission} editable={editable}/>
   </section>}

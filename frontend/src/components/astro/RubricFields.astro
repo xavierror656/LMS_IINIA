@@ -6,40 +6,40 @@ const criteria = rubric?.criteria ?? [{title:"",levels:[{label:"Por iniciar",poi
 ---
 <rubric-fields>
   <label>Categoría de calificación
-    <select name="categoryId">
+    <select name="categoryId" class="select">
       {categories.length === 0 && <option value="">General (se crea al publicar)</option>}
       {categories.map((category) => <option value={category.id} selected={category.id === categoryId}>{category.name} · peso {category.weight}</option>)}
     </select>
   </label>
-  <p class="helper">Las categorías agrupan actividades con su propio peso en el total del curso. Publicar sin elegir una usa la primera del curso.</p>
-  <label>Peso relativo de la tarea <input name="weight" type="number" min="1" max="1000" step="1" required value={weight} /></label>
-  <p class="helper">Un peso de 2 cuenta el doble que 1 en el promedio ponderado. Solo se aplica al publicar la actividad.</p>
-  <label><input name="useRubric" type="checkbox" checked={!!rubric} /> Evaluar con rúbrica</label>
+  <p class="text-sm opacity-70">Las categorías agrupan actividades con su propio peso en el total del curso. Publicar sin elegir una usa la primera del curso.</p>
+  <label>Peso relativo de la tarea <input class="input" name="weight" type="number" min="1" max="1000" step="1" required value={weight} /></label>
+  <p class="text-sm opacity-70">Un peso de 2 cuenta el doble que 1 en el promedio ponderado. Solo se aplica al publicar la actividad.</p>
+  <label class="flex items-center gap-3 min-h-11"><input class="checkbox checkbox-primary" name="useRubric" type="checkbox" checked={!!rubric} /> Evaluar con rúbrica</label>
   <fieldset data-rubric disabled={!rubric} hidden={!rubric}>
     <legend>Criterios y niveles</legend>
     <p>Ordena los niveles de menor a mayor puntaje. El primero debe valer 0 y el último indica el máximo del criterio.</p>
     <div data-criteria>{criteria.map((c) => <fieldset class="rubric-criterion panel">
       <legend>Criterio</legend>
-      <label>Nombre del criterio <input name="criterionTitle" required maxlength="160" value={c.title} /></label>
+      <label>Nombre del criterio <input class="input" name="criterionTitle" required maxlength="160" value={c.title} /></label>
       <div data-levels>{c.levels.map((l) => <div class="rubric-level">
-        <label>Descripción del nivel <textarea name="levelLabel" required maxlength="500" rows="2">{l.label}</textarea></label>
-        <label>Puntos del nivel <input name="levelPoints" type="number" min="0" max="100" step="1" required value={l.points} /></label>
-        <button type="button" data-remove-level class="quiet">Quitar nivel</button>
+        <label>Descripción del nivel <textarea class="textarea" name="levelLabel" required maxlength="500" rows="2">{l.label}</textarea></label>
+        <label>Puntos del nivel <input class="input" name="levelPoints" type="number" min="0" max="100" step="1" required value={l.points} /></label>
+        <button type="button" data-remove-level class="btn btn-outline btn-sm">Quitar nivel</button>
       </div>)}</div>
-      <div class="toolbar"><button type="button" data-add-level class="quiet">Agregar nivel</button><button type="button" data-remove-criterion class="quiet">Quitar criterio</button></div>
+      <div class="toolbar"><button type="button" data-add-level class="btn btn-outline btn-sm">Agregar nivel</button><button type="button" data-remove-criterion class="btn btn-outline btn-sm">Quitar criterio</button></div>
     </fieldset>)}</div>
-    <button type="button" data-add-criterion class="quiet">Agregar criterio</button>
+    <button type="button" data-add-criterion class="btn btn-outline btn-sm">Agregar criterio</button>
   </fieldset>
   <template data-level-template><div class="rubric-level">
-    <label>Descripción del nivel <textarea name="levelLabel" required maxlength="500" rows="2"></textarea></label>
-    <label>Puntos del nivel <input name="levelPoints" type="number" min="0" max="100" step="1" required value="0" /></label>
-    <button type="button" data-remove-level class="quiet">Quitar nivel</button>
+    <label>Descripción del nivel <textarea class="textarea" name="levelLabel" required maxlength="500" rows="2"></textarea></label>
+    <label>Puntos del nivel <input class="input" name="levelPoints" type="number" min="0" max="100" step="1" required value="0" /></label>
+    <button type="button" data-remove-level class="btn btn-outline btn-sm">Quitar nivel</button>
   </div></template>
   <template data-criterion-template><fieldset class="rubric-criterion panel">
     <legend>Criterio</legend>
-    <label>Nombre del criterio <input name="criterionTitle" required maxlength="160" /></label>
+    <label>Nombre del criterio <input class="input" name="criterionTitle" required maxlength="160" /></label>
     <div data-levels></div>
-    <div class="toolbar"><button type="button" data-add-level class="quiet">Agregar nivel</button><button type="button" data-remove-criterion class="quiet">Quitar criterio</button></div>
+    <div class="toolbar"><button type="button" data-add-level class="btn btn-outline btn-sm">Agregar nivel</button><button type="button" data-remove-criterion class="btn btn-outline btn-sm">Quitar criterio</button></div>
   </fieldset></template>
   <p data-rubric-status role="status" aria-live="polite"></p>
 </rubric-fields>
@@ -89,6 +89,5 @@ const criteria = rubric?.criteria ?? [{title:"",levels:[{label:"Por iniciar",poi
   rubric-fields { display:block; }
   fieldset { min-width:0; border:1px solid var(--color-line); border-radius:1rem; padding:1rem; margin-block:1rem; }
   label { display:block; margin-block:.75rem; }
-  input[type="checkbox"] { width:24px; height:24px; vertical-align:middle; margin:.65rem; }
   .rubric-level { border-bottom:1px solid var(--color-line); padding-block:1rem; }
 </style>

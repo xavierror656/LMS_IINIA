@@ -125,17 +125,21 @@ export default function CodePlayground({
     }
   }
   return (
-    <section className="panel playground" aria-label="Laboratorio de código">
+    <section
+      className="panel playground card card-border bg-base-100"
+      aria-label="Laboratorio de código"
+    >
       <div>
-        <span className="tag">Ejecución simulada</span>
-        <p className="helper">
+        <span className="badge badge-soft badge-primary">Ejecución simulada</span>
+        <p className="alert alert-info text-sm">
           El código que escribes no se ejecuta. Esta consola muestra mensajes de
           demostración enviados por el servidor.
         </p>
       </div>
-      <div className="toolbar">
+      <div className="flex flex-wrap items-center gap-3">
         <label htmlFor="language">Lenguaje</label>
         <select
+          className="select"
           id="language"
           value={language}
           disabled={running}
@@ -152,30 +156,37 @@ export default function CodePlayground({
           <option value="javascript">JavaScript</option>
           <option value="python">Python</option>
         </select>
-        <span role="status" className="status">
+        <span role="status" className="text-sm opacity-70">
           {connected ? "● Conectado" : "○ Desconectado"}
         </span>
         {!connected && (
-          <button className="quiet" onClick={() => setRetry((n) => n + 1)}>
+          <button
+            className="btn btn-outline"
+            onClick={() => setRetry((n) => n + 1)}
+          >
             Reconectar
           </button>
         )}
       </div>
       <div className="editor" ref={container} />
-      <div className="toolbar">
-        <button onClick={run} disabled={!connected || running}>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          className="btn btn-primary"
+          onClick={run}
+          disabled={!connected || running}
+        >
           <Play size={18} aria-hidden="true" />
           Ejecutar
         </button>
         <button
-          className="quiet"
+          className="btn btn-outline"
           onClick={() => client.current?.cancel(active.current)}
           disabled={!running || !accepted}
         >
           <Square size={18} aria-hidden="true" />
           Detener
         </button>
-        <button className="quiet" onClick={() => setLines([])}>
+        <button className="btn btn-outline" onClick={() => setLines([])}>
           <Trash2 size={18} aria-hidden="true" />
           Limpiar consola
         </button>

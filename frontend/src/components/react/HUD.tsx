@@ -53,22 +53,33 @@ export default function HUD({ userId }: { userId: number }) {
   }, [userId]);
   if (state.error)
     return (
-      <aside className="hud" aria-label="Tu progreso">
+      <aside
+        className="hud card card-border bg-base-100 shadow-sm"
+        aria-label="Tu progreso"
+      >
         <span role="status">{state.error}</span>
-        <button onClick={() => void refreshProgress()}>Reintentar</button>
+        <button className="btn btn-primary btn-sm" onClick={() => void refreshProgress()}>
+          Reintentar
+        </button>
       </aside>
     );
   if (!state.progress)
     return (
-      <aside className="hud" aria-busy={state.loading}>
+      <aside
+        className="hud card card-border bg-base-100 shadow-sm"
+        aria-busy={state.loading}
+      >
         Cargando tu mochila de logros…
       </aside>
     );
   const p = state.progress;
   return (
-    <aside className="hud" aria-label="Tu progreso">
+    <aside
+      className="hud card card-border bg-base-100 shadow-sm"
+      aria-label="Tu progreso"
+    >
       <motion.div
-        className="avatar"
+        className="avatar avatar-placeholder"
         aria-hidden="true"
         animate={
           !reduced && reward
@@ -77,7 +88,9 @@ export default function HUD({ userId }: { userId: number }) {
         }
         transition={{ duration: reduced ? 0 : 0.55 }}
       >
-        <Smile size={34} strokeWidth={1.6} />
+        <div className="bg-info text-primary w-12 h-12 rounded-2xl flex items-center justify-center">
+          <Smile size={34} strokeWidth={1.6} />
+        </div>
       </motion.div>
       <div className="hud-name">
         <strong>{p.alias}</strong>
@@ -106,17 +119,19 @@ export default function HUD({ userId }: { userId: number }) {
         animate={!reduced && reward ? { scale: [1, 1.045, 1] } : { scale: 1 }}
         transition={{ duration: reduced ? 0 : 0.5 }}
       >
-        <span>
-          <Star aria-hidden="true" /> {p.stars} <small>estrellas</small>
+        <span className="badge badge-ghost gap-1">
+          <Star aria-hidden="true" size={18} /> {p.stars}{" "}
+          <small>estrellas</small>
         </span>
-        <span>
-          <Gem aria-hidden="true" /> {p.gems} <small>gemas</small>
+        <span className="badge badge-ghost gap-1">
+          <Gem aria-hidden="true" size={18} /> {p.gems} <small>gemas</small>
         </span>
-        <span>
-          <Heart aria-hidden="true" /> {p.lives} <small>vidas</small>
+        <span className="badge badge-ghost gap-1">
+          <Heart aria-hidden="true" size={18} /> {p.lives} <small>vidas</small>
         </span>
-        <span>
-          <Sparkles aria-hidden="true" /> {p.completed} <small>logros</small>
+        <span className="badge badge-ghost gap-1">
+          <Sparkles aria-hidden="true" size={18} /> {p.completed}{" "}
+          <small>logros</small>
         </span>
       </motion.div>
       {reward && (

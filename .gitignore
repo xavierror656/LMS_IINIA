@@ -11,3 +11,6 @@ test-results/
 backend/bin/
 frontend/public/h5p/player/
 frontend/.demo/
+
+# Deepwork local progress state
+.slim/deepwork/

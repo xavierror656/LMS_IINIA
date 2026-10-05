@@ -3,22 +3,26 @@ import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout title="Entrar">
-  <section class="login-wrap panel">
-    <span class="eyebrow">Qué bueno verte por aquí</span>
+  <section class="card card-border bg-base-100 max-w-lg mx-auto my-12 p-8">
+    <span class="badge badge-primary badge-soft mb-4">
+      Qué bueno verte por aquí
+    </span>
     <h1>Vamos a descubrir algo nuevo</h1>
     <p>Usa la cuenta que te compartió tu docente.</p>
     {import.meta.env.PUBLIC_DEMO_MODE === "true" && (
-      <aside class="demo-access">
-        <strong>Prueba la aplicación</strong>
-        <p>
-          Estudiante: <code>luna</code> o <code>sol</code>
-          <br />
-          Docente: <code>profe</code>
-          <br />
-          Administrador: <code>admin</code>
-          <br />
-          Contraseña para todos: <code>aulaquest-demo</code>
-        </p>
+      <aside class="alert alert-info mt-5">
+        <div>
+          <strong>Prueba la aplicación</strong>
+          <p>
+            Estudiante: <code>luna</code> o <code>sol</code>
+            <br />
+            Docente: <code>profe</code>
+            <br />
+            Administrador: <code>admin</code>
+            <br />
+            Contraseña para todos: <code>aulaquest-demo</code>
+          </p>
+        </div>
       </aside>
     )}
     <form id="login-form" method="post" action="/api/v1/auth/login">
@@ -26,6 +30,7 @@ import Layout from "../layouts/Layout.astro";
         <label for="username">Tu usuario</label>
         <input
           id="username"
+          class="input"
           name="username"
           autocomplete="username"
           maxlength="64"
@@ -36,6 +41,7 @@ import Layout from "../layouts/Layout.astro";
         <label for="password">Tu contraseña</label>
         <input
           id="password"
+          class="input"
           name="password"
           type="password"
           autocomplete="current-password"
@@ -45,14 +51,14 @@ import Layout from "../layouts/Layout.astro";
         />
       </div>
       <p id="login-status" role="status" class="error"></p>
-      <button type="submit" disabled>
+      <button type="submit" class="btn btn-primary btn-block" disabled>
         Entrar a mi aventura →
       </button>
       <noscript>
         <p>Activa JavaScript para iniciar sesión de forma segura.</p>
       </noscript>
     </form>
-    <p class="helper" style="margin-top:24px">
+    <p class="text-sm text-muted mt-6">
       ¿Necesitas ayuda? Pídele a tu docente que revise tu acceso.
     </p>
   </section>

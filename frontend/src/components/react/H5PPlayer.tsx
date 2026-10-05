@@ -95,11 +95,11 @@ export default function H5PPlayer({
     };
   }, [lessonId, activity]);
   return (
-    <section className="panel">
-      <span className="tag">Actividad interactiva</span>
+    <section className="panel card card-border bg-base-100">
+      <span className="badge badge-soft badge-primary">Actividad interactiva</span>
       <p role="status">{status}</p>
       <div className="h5p-container" ref={container} />
-      <p className="helper">
+      <p className="text-sm opacity-70">
         Los intentos reportados por esta actividad no otorgan recompensas
         automáticamente.
       </p>

@@ -15,21 +15,21 @@ const format = new Intl.NumberFormat("es-MX", { minimumFractionDigits: 2, maximu
 const href = (page: number, activityPage: number) => `?page=${page}&activityPage=${activityPage}`;
 ---
 <Layout title="Libro de calificaciones">
-  <a class="crumb" href={`/teacher/courses/${courseId}`}>← Actividades del curso</a>
-  <span class="eyebrow">Evaluación</span><h1>Libro de calificaciones</h1>
-  <a class="button quiet" href={`/api/v1/teacher/courses/${courseId}/gradebook.csv`} download data-astro-reload>Descargar CSV</a>
+  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${courseId}`}>← Actividades del curso</a>
+  <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">Evaluación</span><h1>Libro de calificaciones</h1>
+  <a class="btn btn-outline" href={`/api/v1/teacher/courses/${courseId}/gradebook.csv`} download data-astro-reload>Descargar CSV</a>
   {error ? <ServiceError message={error} /> : book && <>
     <h2>{book.course.title}</h2>
     <p>Consulta las tareas y cuestionarios publicados de tus estudiantes vinculados e inscritos en este curso.</p>
     <p id="gradebook-help">El total del curso combina las categorías por su peso; cada categoría pesa la media de sus actividades publicadas. El promedio publicado muestra solo lo calificado. La política de actividades sin nota decide si una actividad publicada sin calificar cuenta como cero. Una nota sin publicar nunca viaja al alumno ni cambia su total. Los resúmenes abarcan todas las páginas y no son una calificación final del curso.</p>
     <p>Los cuestionarios usan la política publicada: primera, última, mejor nota o promedio de intentos terminados.</p>
     <p>Cuenta el último intento enviado de cada tarea. Autorizar un borrador nuevo conserva la nota anterior hasta que el estudiante lo envíe; entonces queda pendiente de calificar.</p>
-    {book.totalActivities === 0 && <p class="panel">Todavía no hay tareas publicadas. <a class="crumb" href={`/teacher/courses/${courseId}`}>Crear una tarea</a></p>}
+    {book.totalActivities === 0 && <p class="panel">Todavía no hay tareas publicadas. <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${courseId}`}>Crear una tarea</a></p>}
     {book.totalStudents === 0 && <p class="panel">No tienes estudiantes vinculados e inscritos en este curso.</p>}
     {book.totalActivities > 0 && book.totalStudents > 0 && <>
-      {(book.rows.length === 0 || book.activities.length === 0) ? <p class="panel">Esta página no tiene resultados. <a class="crumb" href="?page=1&activityPage=1">Volver a la primera página</a></p> :
-      <div class="gradebook-scroll" role="region" tabindex="0" aria-label="Tabla de calificaciones desplazable" aria-describedby="gradebook-help">
-        <table>
+      {(book.rows.length === 0 || book.activities.length === 0) ? <p class="panel">Esta página no tiene resultados. <a class="link link-primary min-h-11 inline-flex items-center" href="?page=1&activityPage=1">Volver a la primera página</a></p> :
+      <div class="gradebook-scroll overflow-x-auto" role="region" tabindex="0" aria-label="Tabla de calificaciones desplazable" aria-describedby="gradebook-help">
+        <table class="table">
           <caption>Calificaciones de {book.course.title} · escala de 0 a 100</caption>
           <thead><tr><th scope="col">Estudiante</th>{book.activities.map((a) => <th scope="col">{a.title}<span class="gradebook-state">Peso: {a.weight}</span></th>)}<th scope="col">Total del curso</th><th scope="col">Pendientes del curso</th></tr></thead>
           <tbody>{book.rows.map((row) => <tr>
@@ -37,8 +37,8 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
             {row.cells.map((cell) => <td>
               <span class="gradebook-state">{labels[cell.state]}</span>
               {cell.score !== null && <strong>{cell.score} / 100</strong>}
-              {cell.quizAttemptId !== null && <a class="crumb" href={`/teacher/quiz-attempts/${cell.quizAttemptId}`}>Ver intento de cuestionario →</a>}
-              {cell.submissionId !== null && <a class="crumb" aria-label={`Revisar entrega de ${row.alias}: ${book!.activities.find((a) => a.activityId === cell.activityId)?.title}`} href={`/teacher/activities/${cell.activityId}?submissionId=${cell.submissionId}#submission-${cell.submissionId}`}>Revisar entrega →</a>}
+              {cell.quizAttemptId !== null && <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/quiz-attempts/${cell.quizAttemptId}`}>Ver intento de cuestionario →</a>}
+              {cell.submissionId !== null && <a class="link link-primary min-h-11 inline-flex items-center" aria-label={`Revisar entrega de ${row.alias}: ${book!.activities.find((a) => a.activityId === cell.activityId)?.title}`} href={`/teacher/activities/${cell.activityId}?submissionId=${cell.submissionId}#submission-${cell.submissionId}`}>Revisar entrega →</a>}
             </td>)}
             <td><strong>{row.summary.courseTotalHundredths === null ? "Sin categorías con notas" : `${format.format(row.summary.courseTotalHundredths / 100)} / 100`}</strong>
               {book.categories.map((category) => {
@@ -52,15 +52,15 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
           </tr>)}</tbody>
         </table>
       </div>}
-      <nav class="toolbar" aria-label="Páginas de estudiantes">
-        {book.page > 1 && <a class="button quiet" href={href(book.page-1,book.activityPage)}>← Estudiantes anteriores</a>}
+      <nav class="flex flex-wrap items-center gap-3 my-4" aria-label="Páginas de estudiantes">
+        {book.page > 1 && <a class="btn btn-outline" href={href(book.page-1,book.activityPage)}>← Estudiantes anteriores</a>}
         <span>Estudiantes: página {book.page} de {Math.ceil(book.totalStudents/book.pageSize)}</span>
-        {book.page*book.pageSize < book.totalStudents && <a class="button quiet" href={href(book.page+1,book.activityPage)}>Más estudiantes →</a>}
+        {book.page*book.pageSize < book.totalStudents && <a class="btn btn-outline" href={href(book.page+1,book.activityPage)}>Más estudiantes →</a>}
       </nav>
-      <nav class="toolbar" aria-label="Páginas de tareas">
-        {book.activityPage > 1 && <a class="button quiet" href={href(book.page,book.activityPage-1)}>← Tareas anteriores</a>}
+      <nav class="flex flex-wrap items-center gap-3 my-4" aria-label="Páginas de tareas">
+        {book.activityPage > 1 && <a class="btn btn-outline" href={href(book.page,book.activityPage-1)}>← Tareas anteriores</a>}
         <span>Tareas: página {book.activityPage} de {Math.ceil(book.totalActivities/book.activityPageSize)}</span>
-        {book.activityPage*book.activityPageSize < book.totalActivities && <a class="button quiet" href={href(book.page,book.activityPage+1)}>Más tareas →</a>}
+        {book.activityPage*book.activityPageSize < book.totalActivities && <a class="btn btn-outline" href={href(book.page,book.activityPage+1)}>Más tareas →</a>}
       </nav>
     </>}
     <GradeCategories courseId={courseId} categories={book.categories} missingPolicy={book.missingPolicy}/>
@@ -72,7 +72,5 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
   caption { text-align: left; padding: 1rem; font-weight: 700; }
   th, td { min-width: 12rem; padding: 1rem; vertical-align: top; text-align: left; border-bottom: 1px solid var(--color-line); }
   th { background: var(--color-canvas); }
-  .gradebook-state { display: block; margin-block: .35rem; }
-  td .crumb { display: flex; align-items: center; min-height: 44px; }
-  .toolbar { margin-block: 1rem; }
+  .gradebook-state { display: block; margin-block: .35rem; }
 </style>

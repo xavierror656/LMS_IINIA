@@ -27,10 +27,10 @@ if (!error)
 ---
 
 <Layout title="Editar plugins">
-  <a class="crumb" href={`/${area}`}>
+  <a class="link link-primary min-h-11 inline-flex items-center" href={`/${area}`}>
     ← {area === "admin" ? "Administración" : "Mi grupo"}
   </a>
-  <span class="eyebrow">
+  <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">
     {area === "admin" ? "Administración" : "Espacio docente"} · Demo
   </span>
   <h1>Un laboratorio a tu manera</h1>
@@ -48,7 +48,7 @@ if (!error)
           data-plugin={plugin.id}
           data-area={area}
         >
-          <span class="tag">
+          <span class="badge badge-primary badge-soft">
             {plugin.id === "code"
               ? "Código · Ejecución simulada"
               : "H5P · Actividad aún no configurada"}
@@ -58,6 +58,7 @@ if (!error)
           </h2>
           <label for={`${plugin.id}-title`}>Nombre del plugin</label>
           <input
+            class="input"
             id={`${plugin.id}-title`}
             name="title"
             required
@@ -68,6 +69,7 @@ if (!error)
             Instrucciones para estudiantes
           </label>
           <textarea
+            class="textarea"
             id={`${plugin.id}-instructions`}
             name="instructions"
             required
@@ -77,7 +79,7 @@ if (!error)
           {plugin.id === "code" && (
             <>
               <label for="code-language">Lenguaje inicial</label>
-              <select id="code-language" name="defaultLanguage">
+              <select class="select" id="code-language" name="defaultLanguage">
                 <option
                   value="lesson"
                   selected={plugin.defaultLanguage === "lesson"}
@@ -97,20 +99,20 @@ if (!error)
                   Python
                 </option>
               </select>
-              <p class="helper">
+              <p class="text-sm opacity-70">
                 Se aplica al abrir el laboratorio; elegir un lenguaje reemplaza
                 su ejemplo inicial.
               </p>
             </>
           )}
           {plugin.id === "h5p" && (
-            <p class="helper">
+            <p class="text-sm opacity-70">
               Editar estos textos no instala una actividad. El contenido H5P
               revisado se configura por separado.
             </p>
           )}
-          <button type="submit">Guardar cambios</button>
-          <p role="status" aria-live="polite" class="helper plugin-status"></p>
+          <button class="btn btn-primary" type="submit">Guardar cambios</button>
+          <p role="status" aria-live="polite" class="text-sm opacity-70 plugin-status"></p>
         </form>
       ))}
     </div>

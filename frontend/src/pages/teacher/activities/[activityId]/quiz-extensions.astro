@@ -14,7 +14,7 @@ const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0
 const minutes=result?.timeLimitSeconds?Math.round(result.timeLimitSeconds/60):null;
 ---
 <Layout title="Tiempos del cuestionario">
-  <a class="crumb" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
+  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
   <h1>Tiempos del cuestionario</h1>
   {error ? <ServiceError message={error}/> : result && <>
     <section class="panel"><h2>Calendario general publicado</h2><ScheduleView schedule={result.schedule} kind="quiz"/>
@@ -22,19 +22,19 @@ const minutes=result?.timeLimitSeconds?Math.round(result.timeLimitSeconds/60):nu
     </section>
     <p>Las excepciones se aplican al guardar y solo amplían límites existentes: no crean un vencimiento donde no lo hay, no acortan plazos ni añaden minutos si el cuestionario no tiene tiempo máximo. Para revocar una excepción, vacía ambas fechas, escribe 0 minutos extra y explica el motivo. Fechas en UTC, no en la hora local del dispositivo.</p>
     {result.items.length===0 && <p class="panel">No hay estudiantes vinculados e inscritos en esta página.</p>}
-    <div class="path">{result.items.map((student)=><section class="panel">
+    <div class="grid gap-4 my-6 mb-10">{result.items.map((student)=><section class="panel">
       <h2>{student.alias}</h2>
       {student.version>0&&<p class="notice">Excepción vigente: {student.extraSeconds?`${Math.round(student.extraSeconds/60)} minutos extra`:"sin minutos extra"}{student.closesAt?" y cierre ampliado":""}.</p>}
       <AcademicForm kind="quiz-extension" path={`/teacher/activities/${id}/quiz-extensions/${student.studentId}`} version={student.version}>
-        <label for={`qdue-${student.studentId}`}>Nuevo vencimiento (UTC)</label><input id={`qdue-${student.studentId}`} name="dueAt" type="datetime-local" step="1" value={inputDate(student.dueAt)}/>
-        <label for={`qclose-${student.studentId}`}>Nuevo cierre (UTC)</label><input id={`qclose-${student.studentId}`} name="closesAt" type="datetime-local" step="1" value={inputDate(student.closesAt)}/>
-        <label for={`qextra-${student.studentId}`}>Minutos extra para resolver (0 a 240)</label><input id={`qextra-${student.studentId}`} name="extraMinutes" type="number" min="0" max="240" step="1" value={Math.round(student.extraSeconds/60)}/>
-        <label for={`qreason-${student.studentId}`}>Motivo de la excepción o revocación</label><textarea id={`qreason-${student.studentId}`} name="reason" required maxlength="1000" rows="3">{student.reason}</textarea>
+        <label for={`qdue-${student.studentId}`}>Nuevo vencimiento (UTC)</label><input class="input" id={`qdue-${student.studentId}`} name="dueAt" type="datetime-local" step="1" value={inputDate(student.dueAt)}/>
+        <label for={`qclose-${student.studentId}`}>Nuevo cierre (UTC)</label><input class="input" id={`qclose-${student.studentId}`} name="closesAt" type="datetime-local" step="1" value={inputDate(student.closesAt)}/>
+        <label for={`qextra-${student.studentId}`}>Minutos extra para resolver (0 a 240)</label><input class="input" id={`qextra-${student.studentId}`} name="extraMinutes" type="number" min="0" max="240" step="1" value={Math.round(student.extraSeconds/60)}/>
+        <label for={`qreason-${student.studentId}`}>Motivo de la excepción o revocación</label><textarea class="textarea" id={`qreason-${student.studentId}`} name="reason" required maxlength="1000" rows="3">{student.reason}</textarea>
       </AcademicForm>
     </section>)}</div>
-    <nav class="toolbar" aria-label="Páginas de excepciones de tiempo">
-      {result.page>1&&<a class="button quiet" href={`?page=${result.page-1}`}>← Anterior</a>}
-      {result.items.length===20&&<a class="button quiet" href={`?page=${result.page+1}`}>Siguiente →</a>}
+    <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de excepciones de tiempo">
+      {result.page>1&&<a class="btn btn-outline" href={`?page=${result.page-1}`}>← Anterior</a>}
+      {result.items.length===20&&<a class="btn btn-outline" href={`?page=${result.page+1}`}>Siguiente →</a>}
     </nav>
   </>}
 </Layout>

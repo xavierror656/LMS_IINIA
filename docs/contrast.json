@@ -12,7 +12,7 @@
     "ratio": 6.24
   },
   {
-    "pair": "Bot\u00f3n principal",
+    "pair": "Botón principal",
     "foreground": "#ffffff",
     "background": "#6534cf",
     "ratio": 7.13
@@ -33,6 +33,66 @@
     "pair": "Error",
     "foreground": "#a12240",
     "background": "#ffffff",
+    "ratio": 7.45
+  },
+  {
+    "pair": "Tema base-content sobre base-100",
+    "foreground": "#292442",
+    "background": "#ffffff",
+    "ratio": 14.73
+  },
+  {
+    "pair": "Tema base-content sobre base-200",
+    "foreground": "#292442",
+    "background": "#f8f7fc",
+    "ratio": 13.82
+  },
+  {
+    "pair": "Tema primary-content sobre primary",
+    "foreground": "#ffffff",
+    "background": "#6534cf",
+    "ratio": 7.13
+  },
+  {
+    "pair": "Tema secondary-content sobre secondary",
+    "foreground": "#292442",
+    "background": "#d5f578",
+    "ratio": 12.04
+  },
+  {
+    "pair": "Tema accent-content sobre accent",
+    "foreground": "#292442",
+    "background": "#ffdb66",
+    "ratio": 10.93
+  },
+  {
+    "pair": "Tema neutral-content sobre neutral",
+    "foreground": "#ffffff",
+    "background": "#635d78",
+    "ratio": 6.24
+  },
+  {
+    "pair": "Tema info-content sobre info",
+    "foreground": "#292442",
+    "background": "#d9efff",
+    "ratio": 12.45
+  },
+  {
+    "pair": "Tema success-content sobre success",
+    "foreground": "#292442",
+    "background": "#d5f578",
+    "ratio": 12.04
+  },
+  {
+    "pair": "Tema warning-content sobre warning",
+    "foreground": "#292442",
+    "background": "#ffdb66",
+    "ratio": 10.93
+  },
+  {
+    "pair": "Tema error-content sobre error",
+    "foreground": "#ffffff",
+    "background": "#a12240",
     "ratio": 7.45
   }
 ]

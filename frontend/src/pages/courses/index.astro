@@ -26,63 +26,79 @@ if (!error)
     <ServiceError message={error} />
   ) : (
     <>
-      <section class="hero">
-        <div>
-          <span class="eyebrow">Tu mapa de descubrimientos</span>
-          <h1>
-            ¡Hola, {Astro.locals.user?.alias}!<br />
-            ¿Qué exploramos hoy?
-          </h1>
-          <p>
-            Cada aventura empieza con un pequeño paso. Elige tu camino y sigue
-            aprendiendo a tu ritmo.
-          </p>
-          <span class="tag">✦ Aquí, cada intento cuenta</span>
-        </div>
-        <div class="hero-art" aria-hidden="true">
-          <div class="orbit"></div>
-          <div class="planet"><Icon name="rocket" size={100}/></div>
-          <span class="sticker top">Tu imaginación despega</span>
-          <span class="sticker bottom">¡Vamos a explorar! ✦</span>
+      <section
+        class="hero bg-lilac border border-lilac-line rounded-hero mb-9 overflow-hidden min-h-[unset]"
+      >
+        <div
+          class="hero-content flex-col md:flex-row items-start md:items-center gap-8 p-8 md:p-12 max-w-none"
+        >
+          <div class="max-w-lg">
+            <span class="badge badge-primary badge-soft mb-4">
+              Tu mapa de descubrimientos
+            </span>
+            <h1>
+              ¡Hola, {Astro.locals.user?.alias}!<br />
+              ¿Qué exploramos hoy?
+            </h1>
+            <p>
+              Cada aventura empieza con un pequeño paso. Elige tu camino y sigue
+              aprendiendo a tu ritmo.
+            </p>
+            <span class="badge badge-accent badge-soft">
+              ✦ Aquí, cada intento cuenta
+            </span>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="orbit"></div>
+            <div class="planet"><Icon name="rocket" size={100}/></div>
+            <span class="sticker top">Tu imaginación despega</span>
+            <span class="sticker bottom">¡Vamos a explorar! ✦</span>
+          </div>
         </div>
       </section>
-      <div class="section-heading">
+      <div class="flex items-end justify-between my-8 mb-5">
         <div>
-          <span class="eyebrow">Elige tu siguiente paso</span>
+          <span class="badge badge-primary badge-soft mb-3">
+            Elige tu siguiente paso
+          </span>
           <h2>Mis aventuras</h2>
         </div>
         <p>{courses.length} cursos en esta página</p>
       </div>
-      <section class="grid">
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
         {courses.map((course) => (
-          <article class="course-card">
-            <div class="course-visual" aria-hidden="true">
+          <article class="course-card card card-border bg-base-100">
+            <div class="aq-visual" aria-hidden="true">
               <Icon name={course.slug==="reading-worlds"?"sprout":"rocket"} size={82}/>
             </div>
             <div>
-              <span class="tag">A tu ritmo · Sin límites de intentos</span>
+              <span class="badge badge-primary badge-soft">
+                A tu ritmo · Sin límites de intentos
+              </span>
             </div>
-            <h2>{course.title}</h2>
+            <h2 class="card-title">{course.title}</h2>
             <p>{course.description}</p>
-            <a class="button" href={`/courses/${course.id}`}>
-              Ver mi camino <span aria-hidden="true">→</span>
-            </a>
+            <div class="card-actions mt-auto pt-4">
+              <a class="btn btn-primary" href={`/courses/${course.id}`}>
+                Ver mi camino <span aria-hidden="true">→</span>
+              </a>
+            </div>
           </article>
         ))}
       </section>
       {courses.length === 0 && (
-        <p class="panel">
+        <div class="alert alert-info">
           Aún no hay aventuras aquí. Tu docente puede ayudarte a empezar.
-        </p>
+        </div>
       )}
-      <nav aria-label="Páginas de cursos" class="toolbar">
+      <nav aria-label="Páginas de cursos" class="flex flex-wrap items-center gap-3 mt-8">
         {page > 1 && (
-          <a class="crumb" href={`/courses?page=${page - 1}`}>
+          <a class="btn btn-outline btn-sm" href={`/courses?page=${page - 1}`}>
             ← Anterior
           </a>
         )}
         {courses.length === 20 && (
-          <a class="crumb" href={`/courses?page=${page + 1}`}>
+          <a class="btn btn-outline btn-sm" href={`/courses?page=${page + 1}`}>
             Siguiente →
           </a>
         )}
@@ -90,3 +106,21 @@ if (!error)
     </>
   )}
 </Layout>
+
+<style scoped>
+  .aq-visual {
+    height: 9rem;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4.5rem;
+    margin-bottom: 1.5rem;
+    background: var(--color-sky);
+    color: var(--color-primary);
+  }
+  .course-card:nth-child(2n) .aq-visual {
+    background: var(--color-lime);
+    color: var(--color-primary-dark);
+  }
+</style>
