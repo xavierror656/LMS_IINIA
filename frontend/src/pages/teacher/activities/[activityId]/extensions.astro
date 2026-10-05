@@ -12,7 +12,7 @@ if(!error)try{result=await api<ExtensionList>(`/teacher/activities/${id}/extensi
 const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0,19):"";
 ---
 <Layout title="Prórrogas de entrega">
-  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
+  <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a></li><li><span class="opacity-70">Prórrogas</span></li></ul></nav>
   <h1>Prórrogas de entrega</h1>
   {error ? <ServiceError message={error}/> : result && <>
     <section class="panel"><h2>Calendario general publicado</h2><ScheduleView schedule={result.schedule}/></section>
@@ -26,9 +26,9 @@ const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0
         <label for={`reason-${student.studentId}`}>Motivo de la prórroga o revocación</label><textarea class="textarea" id={`reason-${student.studentId}`} name="reason" required maxlength="1000" rows="3">{student.reason}</textarea>
       </AcademicForm>
     </section>)}</div>
-    <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de prórrogas">
-      {result.page>1&&<a class="btn btn-outline" href={`?page=${result.page-1}`}>← Anterior</a>}
-      {result.items.length===20&&<a class="btn btn-outline" href={`?page=${result.page+1}`}>Siguiente →</a>}
+    <nav class="join my-4 flex flex-wrap" aria-label="Páginas de prórrogas">
+      {result.page>1&&<a class="btn btn-outline join-item" href={`?page=${result.page-1}`}>← Anterior</a>}
+      {result.items.length===20&&<a class="btn btn-outline join-item" href={`?page=${result.page+1}`}>Siguiente →</a>}
     </nav>
   </>}
 </Layout>

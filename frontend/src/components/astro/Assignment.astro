@@ -19,7 +19,10 @@ const unavailable = availability.state === "closed" || availability.state === "u
   <ScheduleView schedule={availability}/>
   {availability.extended && <p class="notice">Tienes una prórroga. Estas son tus fechas efectivas.</p>}
   {availability.state === "late" && submission?.status !== "submitted" && <p class="notice">La fecha de entrega pasó, pero todavía puedes enviar tu trabajo. Quedará registrado como entrega tardía.</p>}
-  <div class="reading-body">{lesson.config.body}</div>
+  <details class="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box my-4" open>
+    <summary class="collapse-title font-semibold">Instrucciones de la actividad</summary>
+    <div class="collapse-content"><div class="reading-body">{lesson.config.body}</div></div>
+  </details>
   <InstructionList files={files} lessonId={lesson.id} />
   {submission?.groupName && <p class="text-sm opacity-70">Entrega del grupo {submission.groupName}.</p>}
   <AttachmentList files={submission?.attachments??[]}/>
@@ -30,7 +33,7 @@ const unavailable = availability.state === "closed" || availability.state === "u
     <p>{submission.effectiveDueAt ? submission.late ? "Entrega tardía" : "Entrega a tiempo" : "Sin vencimiento registrado"}</p>
     {submission.effectiveDueAt && <p class="text-sm opacity-70">Fecha límite aplicada a tu entrega: <time datetime={submission.effectiveDueAt}>{formatDate(submission.effectiveDueAt)} UTC</time>.</p>}
     <p class="text-sm opacity-70">Tu docente ya puede revisarlo. La entrega conserva las instrucciones con las que guardaste tu trabajo.</p>
-    <details><summary>Ver instrucciones de mi entrega</summary><p class="reading-body">{submission.instructions}</p></details>
+    <details class="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box my-3"><summary class="collapse-title font-semibold">Ver instrucciones de mi entrega</summary><div class="collapse-content"><p class="reading-body">{submission.instructions}</p></div></details>
     <p class="reading-body">{submission.body}</p>
     {submission.grade ? <aside class="demo-access"><h3>Tu devolución</h3><p><strong>Calificación: {submission.grade.score} / 100</strong></p><p class="reading-body">{submission.grade.feedback || "Tu docente publicó la calificación."}</p>
       {(submission.grade.files ?? []).length > 0 && <ul>{(submission.grade.files ?? []).map((file) => <li>
@@ -41,7 +44,7 @@ const unavailable = availability.state === "closed" || availability.state === "u
     </aside> : <p role="status">Aún no hay una devolución publicada. Puedes volver a consultarla más tarde.</p>}
   </section> : <section class="admin-section">
     <h2>Mi respuesta</h2>
-    {submission && (submission.instructions !== lesson.config.body || JSON.stringify(submission.rubric) !== JSON.stringify(lesson.config.rubric ?? null)) && <aside class="demo-access"><p>Las instrucciones o los criterios de evaluación cambiaron desde que guardaste tu borrador. Si lo envías ahora, conservará las instrucciones anteriores. Guarda de nuevo para usar las actuales.</p><details><summary>Instrucciones de mi borrador</summary><p class="reading-body">{submission.instructions}</p></details></aside>}
+    {submission && (submission.instructions !== lesson.config.body || JSON.stringify(submission.rubric) !== JSON.stringify(lesson.config.rubric ?? null)) && <aside class="demo-access"><p>Las instrucciones o los criterios de evaluación cambiaron desde que guardaste tu borrador. Si lo envías ahora, conservará las instrucciones anteriores. Guarda de nuevo para usar las actuales.</p><details class="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box my-3"><summary class="collapse-title font-semibold">Instrucciones de mi borrador</summary><div class="collapse-content"><p class="reading-body">{submission.instructions}</p></div></details></aside>}
     {noGroup ? <aside class="demo-access"><p>Pídele a tu docente que te asigne un grupo para entregar este trabajo. Mientras tanto puedes leer las instrucciones.</p><a class="btn btn-outline" href={`/lessons/${lesson.id}`} data-astro-reload>Actualizar disponibilidad</a></aside> : unavailable ? <aside class="demo-access"><p>{availability.state === "upcoming" ? "La entrega todavía no abre." : "La entrega está cerrada."} Puedes seguir leyendo las instrucciones.</p>
       {submission && <><h3>Tu borrador guardado</h3><p class="reading-body">{submission.body}</p></>}
       <a class="btn btn-outline" href={`/lessons/${lesson.id}`} data-astro-reload>Actualizar disponibilidad</a>

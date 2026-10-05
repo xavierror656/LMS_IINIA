@@ -13,7 +13,7 @@ if (!error) try {
 const groupName = (groupId: number) => data?.items.find((g) => g.id === groupId)?.name;
 ---
 <Layout title="Grupos del curso">
-  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${id}`}>← Volver al curso</a>
+  <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${id}`}>← Volver al curso</a></li><li><span class="opacity-70">Grupos</span></li></ul></nav>
   <h1>Grupos del curso</h1>
   {error ? <ServiceError message={error} /> : data && <group-admin data-course={id}>
     <section class="panel">
@@ -57,9 +57,9 @@ const groupName = (groupId: number) => data?.items.find((g) => g.id === groupId)
             <button type="submit" class="btn btn-outline" data-remove>Quitar del grupo</button></>}
       </form>)}</div>
     </section>
-    <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de grupos">
-      {data.page > 1 && <a class="btn btn-outline" href={`?page=${data.page - 1}`}>← Anterior</a>}
-      {data.items.length === 20 && <a class="btn btn-outline" href={`?page=${data.page + 1}`}>Siguiente →</a>}
+    <nav class="join my-4 flex flex-wrap" aria-label="Páginas de grupos">
+      {data.page > 1 && <a class="btn btn-outline join-item" href={`?page=${data.page - 1}`}>← Anterior</a>}
+      {data.items.length === 20 && <a class="btn btn-outline join-item" href={`?page=${data.page + 1}`}>Siguiente →</a>}
     </nav>
   </group-admin>}
 </Layout>

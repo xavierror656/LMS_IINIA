@@ -14,7 +14,7 @@ const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0
 const minutes=result?.timeLimitSeconds?Math.round(result.timeLimitSeconds/60):null;
 ---
 <Layout title="Tiempos del cuestionario">
-  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
+  <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a></li><li><span class="opacity-70">Tiempos</span></li></ul></nav>
   <h1>Tiempos del cuestionario</h1>
   {error ? <ServiceError message={error}/> : result && <>
     <section class="panel"><h2>Calendario general publicado</h2><ScheduleView schedule={result.schedule} kind="quiz"/>
@@ -32,9 +32,9 @@ const minutes=result?.timeLimitSeconds?Math.round(result.timeLimitSeconds/60):nu
         <label for={`qreason-${student.studentId}`}>Motivo de la excepción o revocación</label><textarea class="textarea" id={`qreason-${student.studentId}`} name="reason" required maxlength="1000" rows="3">{student.reason}</textarea>
       </AcademicForm>
     </section>)}</div>
-    <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de excepciones de tiempo">
-      {result.page>1&&<a class="btn btn-outline" href={`?page=${result.page-1}`}>← Anterior</a>}
-      {result.items.length===20&&<a class="btn btn-outline" href={`?page=${result.page+1}`}>Siguiente →</a>}
+    <nav class="join my-4 flex flex-wrap" aria-label="Páginas de excepciones de tiempo">
+      {result.page>1&&<a class="btn btn-outline join-item" href={`?page=${result.page-1}`}>← Anterior</a>}
+      {result.items.length===20&&<a class="btn btn-outline join-item" href={`?page=${result.page+1}`}>Siguiente →</a>}
     </nav>
   </>}
 </Layout>

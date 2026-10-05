@@ -15,7 +15,7 @@ const format = new Intl.NumberFormat("es-MX", { minimumFractionDigits: 2, maximu
 const href = (page: number, activityPage: number) => `?page=${page}&activityPage=${activityPage}`;
 ---
 <Layout title="Libro de calificaciones">
-  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${courseId}`}>← Actividades del curso</a>
+  <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${courseId}`}>← Actividades del curso</a></li><li><span class="opacity-70">Libro de calificaciones</span></li></ul></nav>
   <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">Evaluación</span><h1>Libro de calificaciones</h1>
   <a class="btn btn-outline" href={`/api/v1/teacher/courses/${courseId}/gradebook.csv`} download data-astro-reload>Descargar CSV</a>
   {error ? <ServiceError message={error} /> : book && <>
@@ -29,7 +29,7 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
     {book.totalActivities > 0 && book.totalStudents > 0 && <>
       {(book.rows.length === 0 || book.activities.length === 0) ? <p class="panel">Esta página no tiene resultados. <a class="link link-primary min-h-11 inline-flex items-center" href="?page=1&activityPage=1">Volver a la primera página</a></p> :
       <div class="gradebook-scroll overflow-x-auto" role="region" tabindex="0" aria-label="Tabla de calificaciones desplazable" aria-describedby="gradebook-help">
-        <table class="table">
+        <table class="table table-zebra">
           <caption>Calificaciones de {book.course.title} · escala de 0 a 100</caption>
           <thead><tr><th scope="col">Estudiante</th>{book.activities.map((a) => <th scope="col">{a.title}<span class="gradebook-state">Peso: {a.weight}</span></th>)}<th scope="col">Total del curso</th><th scope="col">Pendientes del curso</th></tr></thead>
           <tbody>{book.rows.map((row) => <tr>
@@ -53,14 +53,14 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
         </table>
       </div>}
       <nav class="flex flex-wrap items-center gap-3 my-4" aria-label="Páginas de estudiantes">
-        {book.page > 1 && <a class="btn btn-outline" href={href(book.page-1,book.activityPage)}>← Estudiantes anteriores</a>}
+        {book.page > 1 && <a class="btn btn-outline join-item" href={href(book.page-1,book.activityPage)}>← Estudiantes anteriores</a>}
         <span>Estudiantes: página {book.page} de {Math.ceil(book.totalStudents/book.pageSize)}</span>
-        {book.page*book.pageSize < book.totalStudents && <a class="btn btn-outline" href={href(book.page+1,book.activityPage)}>Más estudiantes →</a>}
+        {book.page*book.pageSize < book.totalStudents && <a class="btn btn-outline join-item" href={href(book.page+1,book.activityPage)}>Más estudiantes →</a>}
       </nav>
       <nav class="flex flex-wrap items-center gap-3 my-4" aria-label="Páginas de tareas">
-        {book.activityPage > 1 && <a class="btn btn-outline" href={href(book.page,book.activityPage-1)}>← Tareas anteriores</a>}
+        {book.activityPage > 1 && <a class="btn btn-outline join-item" href={href(book.page,book.activityPage-1)}>← Tareas anteriores</a>}
         <span>Tareas: página {book.activityPage} de {Math.ceil(book.totalActivities/book.activityPageSize)}</span>
-        {book.activityPage*book.activityPageSize < book.totalActivities && <a class="btn btn-outline" href={href(book.page,book.activityPage+1)}>Más tareas →</a>}
+        {book.activityPage*book.activityPageSize < book.totalActivities && <a class="btn btn-outline join-item" href={href(book.page,book.activityPage+1)}>Más tareas →</a>}
       </nav>
     </>}
     <GradeCategories courseId={courseId} categories={book.categories} missingPolicy={book.missingPolicy}/>

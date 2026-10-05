@@ -12,7 +12,7 @@ const title=quiz?"Fechas del cuestionario":"Fechas de la tarea";
 const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0,19):"";
 ---
 <Layout title={title}>
-  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
+  <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a></li><li><span class="opacity-70">Fechas</span></li></ul></nav>
   <h1>{title}</h1>
   {error ? <ServiceError message={error}/> : activity && <section class="panel">
     <h2>{activity.title}</h2>

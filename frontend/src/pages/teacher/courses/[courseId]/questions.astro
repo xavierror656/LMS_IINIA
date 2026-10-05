@@ -9,7 +9,7 @@ if(!error)try{result=await api<components['schemas']['QuestionList']>(`/teacher/
 const labels={single_choice:'Selección única',multiple_choice:'Selección múltiple',true_false:'Verdadero o falso',short_answer:'Respuesta corta'};
 ---
 <Layout title="Banco de preguntas">
- <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${courseId}`}>← Volver al curso</a><h1>Banco de preguntas</h1>
+ <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${courseId}`}>← Volver al curso</a></li><li><span class="opacity-70">Banco de preguntas</span></li></ul></nav><h1>Banco de preguntas</h1>
  {error?<ServiceError message={error}/>:result&&<>
   <p>Preguntas privadas de docentes de este curso. Cada edición conserva su versión anterior. Todavía no se publican como cuestionarios para estudiantes.</p>
   <nav class="flex flex-wrap items-center gap-3" aria-label="Estado de las preguntas"><a class="btn btn-outline" href="?archived=false" aria-current={!archived?'page':undefined}>Activas</a><a class="btn btn-outline" href="?archived=true" aria-current={archived?'page':undefined}>Archivadas</a></nav>

@@ -19,3 +19,4 @@ Consultadas el 1 de octubre de 2026 mediante metadatos npm, proxy.golang.org y d
 - create-astro 5.2.4 --help consultado: admite --template, --no-install, --no-git y --yes. No se ejecutó scaffolding sobre frontend.
 
 Revisión de seguridad: se fijaron fasthttp v1.70.0 y klauspost/compress v1.18.7 para resolver GO-2026-4950 y GO-2026-5841 en dependencias transitivas. Regresión PostgreSQL y WS aprobada después del cambio. Govulncheck conserva únicamente el aviso del módulo x/crypto sobre OpenPGP (no importado ni invocado).
+- shadcn/ui: CLI 4.21.2 para generar componentes; dependencias fijadas exactas `@radix-ui/react-alert-dialog` 1.1.23, `@radix-ui/react-slot` 1.3.3, `class-variance-authority` 0.7.1, `clsx` 2.1.1 y `tailwind-merge` 3.7.0. Solo se usan primitivas React en islas; el diálogo se carga bajo demanda. Solo se usan primitivas React en islas; el diálogo se carga bajo demanda.

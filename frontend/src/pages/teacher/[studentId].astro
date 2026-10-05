@@ -23,9 +23,9 @@ if (!error)
   ) : (
     data && (
       <>
-        <a class="link link-primary min-h-11 inline-flex items-center" href="/teacher">
+        <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href="/teacher">
           ← Mi grupo
-        </a>
+        </a></li><li><span class="opacity-70">Progreso</span></li></ul></nav>
         <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">Acompañando su aprendizaje</span>
         <h1>El camino de {data.progress.alias}</h1>
         <p>
@@ -33,7 +33,7 @@ if (!error)
           {data.progress.completed} lecturas completadas
         </p>
         <section class="panel table-wrap">
-          <table class="table">
+          <table class="table table-zebra">
             <caption class="sr-only">Progreso por curso</caption>
             <thead>
               <tr>

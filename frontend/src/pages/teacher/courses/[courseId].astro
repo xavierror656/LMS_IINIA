@@ -12,7 +12,7 @@ if (!error) try {
 } catch (e) { error = e instanceof Error ? e.message : "No se pudo abrir el curso."; }
 ---
 <Layout title={result?.course.title ?? "Actividades"}>
-  <a class="link link-primary min-h-11 inline-flex items-center" href="/teacher/courses">← Mis cursos</a>
+  <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href="/teacher/courses">← Mis cursos</a></li><li><span class="opacity-70">Curso</span></li></ul></nav>
   {error ? <ServiceError message={error} /> : result && <>
     <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">Taller de actividades</span><h1>{result.course.title}</h1>
     <p>Los cambios se guardan como borrador. Tú decides cuándo publicarlos.</p>

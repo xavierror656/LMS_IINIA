@@ -16,7 +16,7 @@ if (!error) try {
 } catch(e){error=e instanceof Error?e.message:"No se pudo cargar la evaluación.";}
 ---
 <Layout title="Rúbrica y peso">
-  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
+  <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/activities/${id}`}>← Volver a la actividad</a></li><li><span class="opacity-70">Rúbrica y peso</span></li></ul></nav>
   <h1>Rúbrica y peso</h1>
   {error ? <ServiceError message={error}/> : activity && <section class="panel">
     <h2>{activity.title}</h2>

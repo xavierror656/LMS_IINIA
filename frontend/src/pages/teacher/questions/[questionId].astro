@@ -10,7 +10,7 @@ if(!error)try{[question,history]=await Promise.all([api<components['schemas']['Q
 ---
 <Layout title={question?.content.name??'Pregunta'}>
  {error?<ServiceError message={error}/>:question&&history&&<>
-  <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${question.courseId}/questions`}>← Volver al banco</a><h1>{question.content.name}</h1>
+  <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${question.courseId}/questions`}>← Volver al banco</a></li><li><span class="opacity-70">Pregunta</span></li></ul></nav><h1>{question.content.name}</h1>
   <p>Versión {question.version} · {question.archived?'Archivada':'Activa'} · <time datetime={question.createdAt}>{new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(question.createdAt))} UTC</time></p>
   {selected!==null?<aside class="notice">Esta versión histórica es de solo lectura. <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/questions/${id}`}>Abrir versión actual</a></aside>:question.archived?<p class="notice">Restaura esta pregunta antes de editarla. Su historial sigue disponible.</p>:<section class="panel"><h2>Editar pregunta</h2><QuestionForm courseId={question.courseId} question={question}/></section>}
   <details class="panel admin-section"><summary>Solución de esta versión</summary><p class="reading-body">{question.content.prompt}</p><ul>{(question.content.type==='short_answer'?question.content.acceptedAnswers:question.content.correctChoices.map(i=>question!.content.options[i])).map(answer=><li>{answer}</li>)}</ul><p>{question.content.explanation}</p></details>

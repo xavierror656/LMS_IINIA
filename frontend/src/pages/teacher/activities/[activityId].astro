@@ -24,7 +24,7 @@ const graders = (s: Submission) => (s.members?.length ?? 0) > 0
 const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ? "Devolución publicada" : grade ? "Calificación en borrador" : "Por calificar";
 ---
 <Layout title={activity?.title ?? "Editar actividad"}>
-  <a class="link link-primary min-h-11 inline-flex items-center" href="/teacher/courses">← Mis cursos</a>
+  <nav class="breadcrumbs text-sm mb-3" aria-label="Ruta de navegación"><ul><li><a class="link link-primary min-h-11 inline-flex items-center" href="/teacher/courses">← Mis cursos</a></li><li><span class="opacity-70">Actividad</span></li></ul></nav>
   {error ? <ServiceError message={error} /> : activity && <>
     <span class="text-xs font-bold uppercase tracking-widest text-primary block mb-3">{activity.type === "reading" ? "Lectura" : activity.type === "quiz" ? "Cuestionario" : "Tarea"}</span><h1>{activity.title}</h1>
     <p>Versión guardada: {activity.version}. {activity.publishedVersion ? `Última versión publicada: ${activity.publishedVersion}.` : "Todavía no es visible para estudiantes."}</p>
@@ -112,7 +112,7 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
           </AcademicForm>
         </details>
       </article>)}</div>
-      {submissionId === null && <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de entregas">{page > 1 && <a class="link link-primary min-h-11 inline-flex items-center" href={`?page=${page-1}`}>← Anterior</a>}{submissions.length === 20 && <a class="link link-primary min-h-11 inline-flex items-center" href={`?page=${page+1}`}>Siguiente →</a>}</nav>}
+      {submissionId === null && <nav class="join my-4 flex flex-wrap" aria-label="Páginas de entregas">{page > 1 && <a class="link link-primary min-h-11 inline-flex items-center join-item" href={`?page=${page-1}`}>← Anterior</a>}{submissions.length === 20 && <a class="link link-primary min-h-11 inline-flex items-center join-item" href={`?page=${page+1}`}>Siguiente →</a>}</nav>}
     </section>}
   </>}
 </Layout>

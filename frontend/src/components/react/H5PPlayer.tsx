@@ -98,6 +98,7 @@ export default function H5PPlayer({
     <section className="panel card card-border bg-base-100">
       <span className="badge badge-soft badge-primary">Actividad interactiva</span>
       <p role="status">{status}</p>
+      {status === "Cargando actividad…" && <div className="skeleton h-64 w-full" aria-hidden="true" />}
       <div className="h5p-container" ref={container} />
       <p className="text-sm opacity-70">
         Los intentos reportados por esta actividad no otorgan recompensas

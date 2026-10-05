@@ -6,12 +6,17 @@ const { rubric, assessment } = Astro.props;
 <section aria-label="Criterios de evaluación" class="rubric-view">
   <h3>{assessment ? "Tus resultados por criterio" : "Cómo se evaluará tu trabajo"}</h3>
   <p>La nota se calcula con los puntos logrados respecto al máximo de todos los criterios, en escala de 0 a 100.</p>
-  {rubric.criteria.map((criterion,index) => <article class="panel">
-    <h4>{criterion.title}</h4>
-    <ul>{criterion.levels.map((level,levelIndex) => <li>
-      {assessment?.selections[index] === levelIndex && <strong>Resultado logrado: </strong>}
-      {level.label} — {level.points} puntos
-    </li>)}</ul>
-  </article>)}
+  <details class="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box my-3" open>
+    <summary class="collapse-title font-semibold">Criterios y niveles</summary>
+    <div class="collapse-content">
+      {rubric.criteria.map((criterion,index) => <article class="panel">
+        <h4>{criterion.title}</h4>
+        <ul>{criterion.levels.map((level,levelIndex) => <li>
+          {assessment?.selections[index] === levelIndex && <strong>Resultado logrado: </strong>}
+          {level.label} — {level.points} puntos
+        </li>)}</ul>
+      </article>)}
+    </div>
+  </details>
 </section>
 <style>.rubric-view { margin-block: 1.5rem; } article { margin-block: .75rem; } li { margin-block: .5rem; }</style>

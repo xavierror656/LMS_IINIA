@@ -28,6 +28,17 @@ const labels = {
 const types = { reading: "Lectura", code: "Laboratorio", h5p: "Actividad", assignment: "Tarea", quiz: "Cuestionario" };
 const grade = (hundredths: number | null) => (hundredths === null ? null : (hundredths / 100).toFixed(2));
 const hasPublished = grades?.courseTotalHundredths !== null && grades?.courseTotalHundredths !== undefined;
+const moduleStats = (data?.modules ?? []).map((module) => {
+  const lessons = data!.lessons.filter((lesson) => lesson.moduleId === module.id);
+  const done = lessons.filter((lesson) => lesson.status === "completed").length;
+  return {
+    module,
+    lessons,
+    done,
+    total: lessons.length,
+    percent: lessons.length ? Math.round((done / lessons.length) * 100) : 0,
+  };
+});
 ---
 
 <Layout title={data?.course.title ?? "Tu camino"}>
@@ -47,11 +58,34 @@ const hasPublished = grades?.courseTotalHundredths !== null && grades?.courseTot
         </span>
         <h1>{data.course.title}</h1>
         <p>{data.course.description}</p>
-        {data.modules.map((module) => (
+        <ul class="steps steps-horizontal w-full my-6" aria-label="Módulos del curso">
+          {moduleStats.map(({ module, total, done }) => (
+            <li
+              class:list={["step", total > 0 && done === total && "step-primary"]}
+              aria-label={`${module.title}: ${done} de ${total} lecciones completadas`}
+            >
+              {module.position}
+            </li>
+          ))}
+        </ul>
+        {moduleStats.map(({ module, done, total, percent }) => (
           <section class="mt-8">
-            <h2>
-              {module.position}. {module.title}
-            </h2>
+            <div class="flex flex-wrap items-end justify-between gap-2">
+              <h2 class="m-0">
+                {module.position}. {module.title}
+              </h2>
+              <span class="text-sm opacity-70">
+                {total === 0
+                  ? "Sin lecciones"
+                  : `${done} de ${total} lecciones completadas`}
+              </span>
+            </div>
+            <progress
+              class="progress progress-primary w-full max-w-md my-3"
+              value={percent}
+              max="100"
+              aria-label={`Avance del módulo ${module.title}`}
+            ></progress>
             <div class="flex flex-col gap-4 my-6">
               {data.lessons
                 .filter((l) => l.moduleId === module.id)

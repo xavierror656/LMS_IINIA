@@ -69,7 +69,12 @@ export default function HUD({ userId }: { userId: number }) {
         className="hud card card-border bg-base-100 shadow-sm"
         aria-busy={state.loading}
       >
-        Cargando tu mochila de logros…
+        <span className="sr-only">Cargando tu mochila de logros…</span>
+        <div className="skeleton h-12 w-12 rounded-2xl" aria-hidden="true" />
+        <div className="w-40 space-y-2" aria-hidden="true">
+          <div className="skeleton h-4 w-32" />
+          <div className="skeleton h-3 w-24" />
+        </div>
       </aside>
     );
   const p = state.progress;
@@ -119,17 +124,17 @@ export default function HUD({ userId }: { userId: number }) {
         animate={!reduced && reward ? { scale: [1, 1.045, 1] } : { scale: 1 }}
         transition={{ duration: reduced ? 0 : 0.5 }}
       >
-        <span className="badge badge-ghost gap-1">
+        <span className="badge badge-ghost gap-1 tooltip tooltip-bottom" data-tip="Se ganan al completar lecciones">
           <Star aria-hidden="true" size={18} /> {p.stars}{" "}
           <small>estrellas</small>
         </span>
-        <span className="badge badge-ghost gap-1">
+        <span className="badge badge-ghost gap-1 tooltip tooltip-bottom" data-tip="Recompensas por tus logros">
           <Gem aria-hidden="true" size={18} /> {p.gems} <small>gemas</small>
         </span>
-        <span className="badge badge-ghost gap-1">
+        <span className="badge badge-ghost gap-1 tooltip tooltip-bottom" data-tip="Nunca bloquean tu aprendizaje">
           <Heart aria-hidden="true" size={18} /> {p.lives} <small>vidas</small>
         </span>
-        <span className="badge badge-ghost gap-1">
+        <span className="badge badge-ghost gap-1 tooltip tooltip-bottom" data-tip="Lecciones completadas">
           <Sparkles aria-hidden="true" size={18} /> {p.completed}{" "}
           <small>logros</small>
         </span>

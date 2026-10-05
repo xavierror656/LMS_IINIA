@@ -22,10 +22,10 @@ if(!error)try{
   {error ? <ServiceError message={error}/> : <>
     <p>El historial conserva tus trabajos. Solo puedes editar el borrador del intento actual desde la tarea.</p>
     <nav class="flex flex-wrap items-center gap-3" aria-label="Historial de intentos">{items.map(item=><a class="btn btn-outline btn-sm" href={`?submissionId=${item.id}`}>Intento {item.attempt} · {item.status==='draft'?'Borrador':'Enviado'}</a>)}</nav>
-    {items.length===0 && <p>Aún no has guardado ningún intento.</p>}
+    {items.length===0 && <div class="card card-border bg-base-100 p-6 my-4"><p class="m-0">✏️ Aún no has guardado ningún intento. Abre la tarea para empezar tu borrador.</p></div>}
     {submission && <article class="card card-border bg-base-100 p-6 mt-6">
       <h2>Intento {submission.attempt}</h2><p>{submission.status==='draft'?'Borrador':'Enviado'}</p>
-      <details><summary>Instrucciones de este intento</summary><p class="reading-body">{submission.instructions}</p></details>
+      <details class="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box my-3"><summary class="collapse-title font-semibold">Instrucciones de este intento</summary><div class="collapse-content"><p class="reading-body">{submission.instructions}</p></div></details>
       <p class="reading-body">{submission.body}</p><AttachmentList files={submission.attachments}/>
       {submission.rubric && <RubricView rubric={submission.rubric} assessment={submission.grade?.assessment}/>}
       {submission.grade ? <><h3>Devolución publicada</h3><p>Calificación: {submission.grade.score} / 100</p><p class="reading-body">{submission.grade.feedback}</p></> : <p>No hay devolución publicada para este intento.</p>}

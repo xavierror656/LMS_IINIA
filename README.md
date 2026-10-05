@@ -302,6 +302,8 @@ En el libro de calificaciones, **Descargar CSV** entrega el libro completo con l
 
 La interfaz completa usa **daisyUI 5.7.47** sobre Tailwind 4 con un tema propio `aulaquest` (colores y radios de AulaQuest, contraste AA verificado). Se integra en CSS-first con `@plugin` en `global.css`, sin `tailwind.config.mjs` y sin JavaScript de cliente; botones, campos, tarjetas, alertas, insignias, tablas y portadas usan los componentes de la librería. La migración retiró el CSS propio duplicado y midió el resultado: el CSS de la app pasó de 27.7 KB a 91.2 KB sin comprimir (+8.9 KB gzip) con el sistema completo. Evidencia, hallazgos y límites: [docs/daisyui-validation.md](docs/daisyui-validation.md).
 
+Los borrados destructivos (categoría, archivo de entrega, grupo y adjunto docente) confirman con un **AlertDialog de shadcn/ui** dentro de una isla React que se descarga solo al primer uso; las tablas llevan `table-zebra` y scroll. Evidencia: [docs/shadcn-validation.md](docs/shadcn-validation.md).
+
 La **accesibilidad (AC1)** de T6 quedó auditada con criterios comprobables (etiquetas, encabezados, foco visible, objetivos táctiles, contraste y movimiento reducido): dos correcciones de tamaño táctil y cero hallazgos en diez páginas ([docs/accessibility-validation.md](docs/accessibility-validation.md)). Queda PL1 (administración real con capacidades por contexto) en el catálogo pendiente.
 
 ### Categorías de calificación y total del curso (Go/PostgreSQL)

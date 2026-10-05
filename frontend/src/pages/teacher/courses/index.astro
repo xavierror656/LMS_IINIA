@@ -21,9 +21,9 @@ if (!error) try {
       <a class="link link-primary min-h-11 inline-flex items-center" href={`/teacher/courses/${course.id}/gradebook`}>Ver calificaciones →</a>
     </article>)}</div>
     {courses.length === 0 && <p class="panel">Todavía no tienes cursos asignados en esta página.</p>}
-    <nav class="flex flex-wrap items-center gap-3" aria-label="Páginas de cursos">
-      {page > 1 && <a class="link link-primary min-h-11 inline-flex items-center" href={`?page=${page-1}`}>← Anterior</a>}
-      {courses.length === 20 && <a class="link link-primary min-h-11 inline-flex items-center" href={`?page=${page+1}`}>Siguiente →</a>}
+    <nav class="join my-4 flex flex-wrap" aria-label="Páginas de cursos">
+      {page > 1 && <a class="link link-primary min-h-11 inline-flex items-center join-item" href={`?page=${page-1}`}>← Anterior</a>}
+      {courses.length === 20 && <a class="link link-primary min-h-11 inline-flex items-center join-item" href={`?page=${page+1}`}>Siguiente →</a>}
     </nav>
   </>}
 </Layout>
