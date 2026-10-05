@@ -132,7 +132,7 @@ func TestQuizIntegration(t *testing.T) {
 	call("PUT", path+"/quiz-config", map[string]any{"version": 1, "maxAttempts": 2, "weight": 2, "items": config.Items, "gradePolicy": "last", "reviewPolicy": "never"}, "luna", 403)
 	bad := config
 	bad.Items = []models.QuizItem{{QuestionID: 999999, Version: 1, Weight: 1}}
-	if _, e := quiz.Configure(teacher, activity.ID, 1, 2, 2, bad); e == nil {
+	if _, e := quiz.Configure(teacher, activity.ID, 1, 2, 2, bad, nil); e == nil {
 		t.Fatal("missing question allowed")
 	}
 	var otherModule models.Module
@@ -144,7 +144,7 @@ func TestQuizIntegration(t *testing.T) {
 		t.Fatal(e)
 	}
 	bad.Items = []models.QuizItem{{QuestionID: foreign.ID, Version: 1, Weight: 1}}
-	if _, e = quiz.Configure(teacher, activity.ID, 1, 2, 2, bad); e == nil {
+	if _, e = quiz.Configure(teacher, activity.ID, 1, 2, 2, bad, nil); e == nil {
 		t.Fatal("foreign question allowed")
 	}
 	configure(2, "last", "never")

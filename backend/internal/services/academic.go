@@ -26,7 +26,11 @@ func (s AcademicService) Create(user, course int64, input models.ActivityInput) 
 		if module == 0 {
 			return gorm.ErrRecordNotFound
 		}
-		return tx.Raw(`INSERT INTO authored_activities(module_id,title,description,type,body) VALUES (?,?,?,?,?) RETURNING *`, input.ModuleID, input.Title, input.Description, input.Type, input.Body).Scan(&result).Error
+		if e := tx.Raw(`INSERT INTO authored_activities(module_id,title,description,type,body) VALUES (?,?,?,?,?) RETURNING *`, input.ModuleID, input.Title, input.Description, input.Type, input.Body).Scan(&result).Error; e != nil {
+			return e
+		}
+		result.CourseID = course
+		return nil
 	})
 	return result, e
 }
@@ -75,6 +79,14 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			}
 		}
 		conf, _ := json.Marshal(map[string]any{"body": a.Body, "version": a.Version, "rubric": a.Rubric})
+		// Every published graded activity belongs to a category: the draft choice
+		// or the course default, so totals always have a bucket.
+		var category any
+		if a.Type == "assignment" || a.Type == "quiz" {
+			if category, e = ensureActivityCategory(tx, a.ModuleID, a.GradeCategoryID); e != nil {
+				return e
+			}
+		}
 		if a.LessonID == nil {
 			// Serialize append positions across different activities in the same module.
 			var module int64
@@ -82,7 +94,7 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 				return e
 			}
 			var lesson int64
-			if e = tx.Raw(`INSERT INTO lessons(module_id,title,description,position,type,config) SELECT ?,?,?,COALESCE(MAX(position),0)+1,?,?::jsonb FROM lessons WHERE module_id=? RETURNING id`, a.ModuleID, a.Title, a.Description, a.Type, string(conf), a.ModuleID).Scan(&lesson).Error; e != nil {
+			if e = tx.Raw(`INSERT INTO lessons(module_id,title,description,position,type,config,grade_category_id) SELECT ?,?,?,COALESCE(MAX(position),0)+1,?,?::jsonb,? FROM lessons WHERE module_id=? RETURNING id`, a.ModuleID, a.Title, a.Description, a.Type, string(conf), category, a.ModuleID).Scan(&lesson).Error; e != nil {
 				return e
 			}
 			a.LessonID = &lesson
@@ -99,7 +111,7 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			}
 			rubricJSON = string(raw)
 		}
-		if e = tx.Exec(`UPDATE lessons SET grade_weight=?,opens_at=?,due_at=?,closes_at=?,max_attempts=?,group_submission=? WHERE id=?`, a.Weight, a.OpensAt, a.DueAt, a.ClosesAt, a.MaxAttempts, a.GroupSubmission, *a.LessonID).Error; e != nil {
+		if e = tx.Exec(`UPDATE lessons SET grade_weight=?,opens_at=?,due_at=?,closes_at=?,max_attempts=?,group_submission=?,grade_category_id=? WHERE id=?`, a.Weight, a.OpensAt, a.DueAt, a.ClosesAt, a.MaxAttempts, a.GroupSubmission, category, *a.LessonID).Error; e != nil {
 			return e
 		}
 		var quizJSON any
@@ -111,7 +123,7 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			quizJSON = string(b)
 		}
 		var publication int64
-		if e = tx.Raw(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by,rubric,quiz_config,group_submission) VALUES (?,?,?,?,?,?,?::jsonb,?::jsonb,?) RETURNING id`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user, rubricJSON, quizJSON, a.GroupSubmission).Scan(&publication).Error; e != nil {
+		if e = tx.Raw(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by,rubric,quiz_config,group_submission,grade_category_id) VALUES (?,?,?,?,?,?,?::jsonb,?::jsonb,?,?) RETURNING id`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user, rubricJSON, quizJSON, a.GroupSubmission, category).Scan(&publication).Error; e != nil {
 			return e
 		}
 		// The instruction files are frozen with the version, like the text and the

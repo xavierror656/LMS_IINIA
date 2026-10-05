@@ -1,18 +1,24 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import ServiceError from "../../components/astro/ServiceError.astro";
-import { api, type CourseMap } from "../../lib/api";
+import { api, type CourseMap, type StudentGrades } from "../../lib/api";
 let data: CourseMap | undefined;
+let grades: StudentGrades | undefined;
+let gradesError: string | undefined;
 let error = Astro.locals.apiError;
+const courseId = encodeURIComponent(Astro.params.courseId ?? "");
+const cookie = Astro.request.headers.get("cookie") ?? "";
 if (!error)
   try {
-    data = await api<CourseMap>(
-      `/courses/${encodeURIComponent(Astro.params.courseId ?? "")}`,
-      {},
-      Astro.request.headers.get("cookie") ?? "",
-    );
+    data = await api<CourseMap>(`/courses/${courseId}`, {}, cookie);
   } catch (e) {
     error = e instanceof Error ? e.message : "No se pudo abrir el curso.";
+  }
+if (!error)
+  try {
+    grades = await api<StudentGrades>(`/me/courses/${courseId}/grades`, {}, cookie);
+  } catch (e) {
+    gradesError = e instanceof Error ? e.message : "No pudimos cargar tus notas.";
   }
 const labels = {
   available: "Disponible",
@@ -20,6 +26,8 @@ const labels = {
   completed: "Completado",
 };
 const types = { reading: "Lectura", code: "Laboratorio", h5p: "Actividad", assignment: "Tarea", quiz: "Cuestionario" };
+const grade = (hundredths: number | null) => (hundredths === null ? null : (hundredths / 100).toFixed(2));
+const hasPublished = grades?.courseTotalHundredths !== null && grades?.courseTotalHundredths !== undefined;
 ---
 
 <Layout title={data?.course.title ?? "Tu camino"}>
@@ -67,6 +75,39 @@ const types = { reading: "Lectura", code: "Laboratorio", h5p: "Actividad", assig
         <p class="helper">
           Puedes volver a cualquier lección. Aprender no gasta tus vidas.
         </p>
+        <section class="panel">
+          <h2>Mis notas</h2>
+          {gradesError ? (
+            <p>{gradesError} Recarga la página para volver a intentarlo.</p>
+          ) : grades && hasPublished ? (
+            <>
+              <p>
+                <strong>Total del curso: {grade(grades.courseTotalHundredths)} / 100</strong>
+              </p>
+              <ul>
+                {grades.categories.map((category) => (
+                  <li>
+                    <strong>{category.name}</strong> (peso {category.weight}):{" "}
+                    {grade(category.totalHundredths) ?? "sin notas todavía"}
+                    <ul>
+                      {category.items.map((item) => (
+                        <li>
+                          {item.title}: {item.score === null ? "sin nota publicada" : `${item.score} / 100`}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+              <p class="helper">
+                Solo aparecen las notas que tu docente publicó. Es un cálculo interno para acompañar tu
+                aprendizaje, no un boletín oficial.
+              </p>
+            </>
+          ) : (
+            <p>Todavía no hay notas publicadas en este curso. Sigue avanzando: tu progreso se guarda.</p>
+          )}
+        </section>
       </>
     )
   )}

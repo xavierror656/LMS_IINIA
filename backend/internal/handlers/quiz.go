@@ -51,15 +51,16 @@ func (a API) saveQuizConfig(c *fiber.Ctx) error {
 		return e
 	}
 	var b struct {
-		Version     int `json:"version"`
-		MaxAttempts int `json:"maxAttempts"`
-		Weight      int `json:"weight"`
+		Version     int    `json:"version"`
+		MaxAttempts int    `json:"maxAttempts"`
+		Weight      int    `json:"weight"`
+		CategoryID  *int64 `json:"categoryId"`
 		models.QuizConfig
 	}
 	if e = Decode(c, &b); e != nil {
 		return e
 	}
-	out, e := a.quizService().Configure(middleware.User(c).ID, id, b.Version, b.MaxAttempts, b.Weight, b.QuizConfig)
+	out, e := a.quizService().Configure(middleware.User(c).ID, id, b.Version, b.MaxAttempts, b.Weight, b.QuizConfig, b.CategoryID)
 	if e != nil {
 		return academicError(e)
 	}

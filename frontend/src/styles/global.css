@@ -123,6 +123,7 @@ p {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 44px;
   font-weight: 700;
   font-size: 1.45rem;
   letter-spacing: -0.05em;

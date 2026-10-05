@@ -30,6 +30,20 @@ func (a API) gradebook(c *fiber.Ctx) error {
 	return c.JSON(out)
 }
 
+// meGrades is the student's own view of the book: published categories and
+// totals only, never drafts or hidden grades.
+func (a API) meGrades(c *fiber.Ctx) error {
+	course, e := ID(c, "courseId")
+	if e != nil {
+		return e
+	}
+	out, e := a.academic().StudentGrades(middleware.User(c).ID, course)
+	if e != nil {
+		return academicError(e)
+	}
+	return c.JSON(out)
+}
+
 // gradebookCSV downloads the book with the same numbers the table shows. Only
 // published grades travel: an unpublished one stays on the teacher's screen.
 func (a API) gradebookCSV(c *fiber.Ctx) error {
@@ -50,9 +64,12 @@ func (a API) gradebookCSV(c *fiber.Ctx) error {
 	writer := csv.NewWriter(&buf)
 	header := []string{"Estudiante"}
 	for _, activity := range book.Activities {
-		header = append(header, activity.Title)
+		header = append(header, csvSafe(activity.Title))
 	}
-	header = append(header, "Peso publicado", "Promedio publicado", "Entregadas", "Calificadas", "Publicadas", "Pendientes de revisión", "Pendientes de publicación", "Sin entregar")
+	for _, category := range book.Categories {
+		header = append(header, csvSafe("Total "+category.Name))
+	}
+	header = append(header, "Total del curso", "Peso publicado", "Promedio publicado", "Entregadas", "Calificadas", "Publicadas", "Pendientes de revisión", "Pendientes de publicación", "Sin entregar")
 	if e = writer.Write(header); e != nil {
 		return dbError(e)
 	}
@@ -65,7 +82,15 @@ func (a API) gradebookCSV(c *fiber.Ctx) error {
 			}
 			line = append(line, value)
 		}
+		totals := map[int64]*int64{}
+		for _, total := range row.Summary.CategoryTotals {
+			totals[total.CategoryID] = total.TotalHundredths
+		}
+		for _, category := range book.Categories {
+			line = append(line, hundredths(totals[category.ID]))
+		}
 		line = append(line,
+			hundredths(row.Summary.CourseTotalHundredths),
 			strconv.FormatInt(row.Summary.PublishedWeight, 10),
 			hundredths(row.Summary.WeightedAverageHundredths),
 			strconv.FormatInt(row.Summary.Published+row.Summary.PendingReview+row.Summary.PendingPublication, 10),

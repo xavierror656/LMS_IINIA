@@ -14,7 +14,7 @@ Especificación previa al código. T6 / LMS-022 / A8, en tres partes. No acredit
 
 ## Alcance de esta rebanada
 
-Implementadas y verificadas: EX1–EX3, EZ1, RP1 y RP2. **AC1 queda sin ejecutar en esta ronda** y así se registra: no hay auditoría de accesibilidad hecha, solo la intención especificada.
+Implementadas y verificadas: EX1–EX3, EZ1, RP1 y RP2. AC1 quedó especificada aquí y se ejecutó después (T6-2) con Playwright sobre diez páginas: dos correcciones de tamaño táctil y cero hallazgos finales. Evidencia: `docs/accessibility-validation.md`.
 
 ## Fuera de alcance
 

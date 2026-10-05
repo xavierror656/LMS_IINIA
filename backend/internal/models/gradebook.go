@@ -14,16 +14,22 @@ type GradebookCell struct {
 	Score         *int   `json:"score"`
 	SubmissionID  *int64 `json:"submissionId"`
 }
+type GradebookCategoryTotal struct {
+	TotalHundredths *int64 `json:"totalHundredths"`
+	CategoryID      int64  `json:"categoryId"`
+}
 type GradebookSummary struct {
-	WeightedAverageHundredths *int64 `json:"weightedAverageHundredths"`
-	PublishedWeight           int64  `json:"publishedWeight"`
-	TotalWeight               int64  `json:"totalWeight"`
-	TotalActivities           int64  `json:"totalActivities"`
-	NotSubmitted              int64  `json:"notSubmitted"`
-	PendingReview             int64  `json:"pendingReview"`
-	PendingPublication        int64  `json:"pendingPublication"`
-	Published                 int64  `json:"published"`
-	AverageHundredths         *int64 `json:"averageHundredths"`
+	WeightedAverageHundredths *int64                   `json:"weightedAverageHundredths"`
+	CourseTotalHundredths     *int64                   `json:"courseTotalHundredths"`
+	CategoryTotals            []GradebookCategoryTotal `json:"categoryTotals"`
+	PublishedWeight           int64                    `json:"publishedWeight"`
+	TotalWeight               int64                    `json:"totalWeight"`
+	TotalActivities           int64                    `json:"totalActivities"`
+	NotSubmitted              int64                    `json:"notSubmitted"`
+	PendingReview             int64                    `json:"pendingReview"`
+	PendingPublication        int64                    `json:"pendingPublication"`
+	Published                 int64                    `json:"published"`
+	AverageHundredths         *int64                   `json:"averageHundredths"`
 }
 type GradebookRow struct {
 	StudentID int64            `json:"studentId"`
@@ -33,6 +39,8 @@ type GradebookRow struct {
 }
 type Gradebook struct {
 	Course           Course              `json:"course"`
+	MissingPolicy    string              `json:"missingPolicy"`
+	Categories       []GradeCategory     `json:"categories"`
 	Activities       []GradebookActivity `json:"activities"`
 	Rows             []GradebookRow      `json:"rows"`
 	Page             int                 `json:"page"`

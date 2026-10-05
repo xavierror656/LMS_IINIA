@@ -80,7 +80,7 @@ test("RB1–RB5 crear rúbrica, publicar peso y devolver criterios", async ({ pa
     await expect(student.getByText("Resultado logrado:", { exact: true })).toHaveCount(2);
     await student.screenshot({ path: "../docs/screenshots/rubric-feedback-tablet.png", fullPage: true, animations: "disabled" });
     await page.goto(`/teacher/courses/${courseId}/gradebook`);
-    await expect(page.getByRole("columnheader", { name: "Promedio ponderado publicado" })).toBeVisible();
-    await expect(page.getByText(/Peso evaluado:/)).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "Total del curso" })).toBeVisible();
+    await expect(page.getByText(/Promedio publicado:/).first()).toBeVisible();
   } finally { await context.close(); }
 });

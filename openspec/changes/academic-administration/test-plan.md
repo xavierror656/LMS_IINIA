@@ -7,7 +7,7 @@ Plan completo; el subconjunto del incremento 1 ya tiene pruebas ejecutadas, regi
 | A1 | Autoría y publicación con docente propio/ajeno; borrador privado | Handler Go + PostgreSQL + E2E docente/estudiante |
 | A2 | Guardar, enviar, recargar; reintento idéntico, revisión conflictiva y dos envíos concurrentes | Integración PostgreSQL con recuento/versión + E2E |
 | A3 | Borrador de nota invisible, publicación visible, dos correctores editando | Transacciones + 409 de versión obsoleta + historial intacto |
-| A4 | 80/100 × 60 % + 30/50 × 40 % = 72; faltante/exento/cero y nota oculta | Casos unitarios de agregación y API de estudiante |
+| A4 | 80/100 × 60 % + 30/50 × 40 % = 72; categoría con total nulo, política exclude/zero, nota oculta y total de curso. La exención individual sigue pendiente | Casos unitarios de agregación y API de estudiante |
 | A5 | Rúbrica nueva no altera nota previa | Integración con dos versiones y recarga |
 | A6 | Score manipulado, respuestas privadas, reloj/intententos y reintento | Handler, servicio y navegador; claves ausentes de HTML/JSON |
 | A7 | Otro curso/estudiante, archivos, CSV, sesión revocada y auditoría | Matriz positiva/negativa por endpoint, sin cambios ante rechazo |

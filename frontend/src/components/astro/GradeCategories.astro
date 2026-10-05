@@ -1,0 +1,111 @@
+---
+import type { GradeCategory } from "../../lib/api";
+interface Props { courseId: string; categories: GradeCategory[]; missingPolicy: string; }
+const { courseId, categories, missingPolicy } = Astro.props;
+---
+<grade-categories data-course={courseId}>
+  <section class="panel">
+    <h2>Categorías de calificación</h2>
+    <p class="helper">Agrupa las actividades para ponderar el total del curso: una categoría con peso 2 cuenta el doble que una con peso 1. Solo las actividades publicadas participan y las notas sin publicar nunca viajan al alumno.</p>
+    {categories.length === 0 ? <p>Todavía no hay categorías. La primera se crea sola al publicar una tarea o un cuestionario.</p> : <ul class="category-list" data-list>
+      {categories.map((category, index) => <li data-category data-id={category.id} data-version={category.version}>
+        <form data-save>
+          <input type="hidden" name="version" value={category.version} />
+          <label>Nombre <input name="name" required maxlength="160" value={category.name} /></label>
+          <label>Peso <input name="weight" type="number" min="1" max="1000" step="1" required value={category.weight} /></label>
+          <div class="toolbar">
+            <button type="submit">Guardar</button>
+            <button type="button" class="quiet" data-move="up" disabled={index === 0} aria-label={`Subir ${category.name}`}>↑ Subir</button>
+            <button type="button" class="quiet" data-move="down" disabled={index === categories.length - 1} aria-label={`Bajar ${category.name}`}>↓ Bajar</button>
+            <button type="button" class="quiet" data-delete aria-label={`Eliminar ${category.name}`}>Eliminar</button>
+          </div>
+        </form>
+      </li>)}
+    </ul>}
+    <form data-create>
+      <label>Nueva categoría <input name="name" required maxlength="160" placeholder="Por ejemplo: Exámenes" /></label>
+      <label>Peso <input name="weight" type="number" min="1" max="1000" step="1" value="1" required /></label>
+      <button type="submit">Crear categoría</button>
+    </form>
+    <form data-policy>
+      <label>Política de actividades sin nota
+        <select name="missingPolicy">
+          <option value="exclude" selected={missingPolicy === "exclude"}>Excluirlas del total (no cuentan como cero)</option>
+          <option value="zero" selected={missingPolicy === "zero"}>Contarlas como cero cuando la actividad está publicada</option>
+        </select>
+      </label>
+      <button type="submit" class="quiet">Guardar política</button>
+    </form>
+    <p data-status role="status" aria-live="polite"></p>
+  </section>
+</grade-categories>
+<script>
+  import { api } from "../../lib/api";
+  class GradeCategoriesElement extends HTMLElement {
+    private controller?: AbortController;
+    private busy = false;
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const signal = this.controller.signal;
+      const course = this.dataset.course!;
+      const status = this.querySelector<HTMLElement>("[data-status]")!;
+      const run = async (work: () => Promise<unknown>, message: string) => {
+        if (this.busy) return;
+        this.busy = true;
+        status.textContent = "Guardando…";
+        try {
+          await work();
+          window.location.reload();
+        } catch (error) {
+          status.textContent = (error instanceof Error ? error.message : message) + " No se cambió nada; revisa los datos.";
+          this.busy = false;
+        }
+      };
+      this.addEventListener("submit", (event) => {
+        const form = (event.target as Element).closest("form")!;
+        event.preventDefault();
+        const data = new FormData(form);
+        if (form.hasAttribute("data-save")) {
+          const id = form.closest<HTMLElement>("[data-category]")!.dataset.id!;
+          void run(() => api(`/teacher/courses/${course}/grade-categories/${id}`, { method: "PUT", body: JSON.stringify({ version: Number(data.get("version")), name: data.get("name"), weight: Number(data.get("weight")) }) }), "No se pudo guardar la categoría.");
+        } else if (form.hasAttribute("data-create")) {
+          void run(() => api(`/teacher/courses/${course}/grade-categories`, { method: "POST", body: JSON.stringify({ name: data.get("name"), weight: Number(data.get("weight")) }) }), "No se pudo crear la categoría.");
+        } else if (form.hasAttribute("data-policy")) {
+          void run(() => api(`/teacher/courses/${course}/grade-settings`, { method: "PUT", body: JSON.stringify({ missingPolicy: data.get("missingPolicy") }) }), "No se pudo guardar la política.");
+        }
+      }, { signal });
+      this.addEventListener("click", (event) => {
+        const button = (event.target as Element).closest<HTMLButtonElement>("button");
+        if (!button || button.disabled) return;
+        if (button.hasAttribute("data-delete")) {
+          const item = button.closest<HTMLElement>("[data-category]")!;
+          const name = item.querySelector<HTMLInputElement>('[name="name"]')!.value;
+          if (!window.confirm(`¿Eliminar la categoría «${name}»? Solo se puede si no tiene actividades.`)) return;
+          void run(() => api(`/teacher/courses/${course}/grade-categories/${item.dataset.id}`, { method: "DELETE" }), "No se pudo eliminar la categoría.");
+        } else if (button.dataset.move) {
+          const list = this.querySelector<HTMLElement>("[data-list]")!;
+          const items = Array.from(list.querySelectorAll<HTMLElement>("[data-category]"));
+          const index = items.indexOf(button.closest<HTMLElement>("[data-category]")!);
+          const target = button.dataset.move === "up" ? index - 1 : index + 1;
+          const current = items[index];
+          const other = items[target];
+          if (!current || !other) return;
+          items[index] = other;
+          items[target] = current;
+          void run(() => api(`/teacher/courses/${course}/grade-categories/order`, { method: "PUT", body: JSON.stringify({ ids: items.map((item) => Number(item.dataset.id)) }) }), "No se pudo reordenar.");
+        }
+      }, { signal });
+    }
+    disconnectedCallback() { this.controller?.abort(); this.controller = undefined; }
+  }
+  if (!customElements.get("grade-categories")) customElements.define("grade-categories", GradeCategoriesElement);
+</script>
+<style>
+  grade-categories { display: block; margin-block: 2rem; }
+  .category-list { list-style: none; padding: 0; }
+  .category-list li { border-bottom: 1px solid var(--color-line); padding-block: 1rem; }
+  label { display: block; margin-block: .5rem; }
+  input, select { min-height: 44px; }
+  form .toolbar { margin-block: .5rem; }
+</style>

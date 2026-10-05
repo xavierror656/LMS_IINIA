@@ -20,7 +20,7 @@ func (r Repository) StaffCourses(user int64, page int) ([]models.Course, error) 
 }
 func (r Repository) Activity(user, id int64, lock bool) (models.Activity, error) {
 	var out models.Activity
-	q := `SELECT a.* FROM authored_activities a JOIN modules m ON m.id=a.module_id JOIN course_staff s ON s.course_id=m.course_id WHERE a.id=? AND s.user_id=?`
+	q := `SELECT a.*,m.course_id FROM authored_activities a JOIN modules m ON m.id=a.module_id JOIN course_staff s ON s.course_id=m.course_id WHERE a.id=? AND s.user_id=?`
 	if lock {
 		q += " FOR UPDATE OF a FOR SHARE OF s"
 	}
@@ -36,7 +36,7 @@ func (r Repository) Activity(user, id int64, lock bool) (models.Activity, error)
 }
 func (r Repository) Activities(user, course int64, page int) ([]models.Activity, error) {
 	out := []models.Activity{}
-	e := r.DB.Raw(`SELECT a.* FROM authored_activities a JOIN modules m ON m.id=a.module_id JOIN course_staff s ON s.course_id=m.course_id WHERE m.course_id=? AND s.user_id=? ORDER BY a.id DESC LIMIT 20 OFFSET ?`, course, user, (page-1)*20).Scan(&out).Error
+	e := r.DB.Raw(`SELECT a.*,m.course_id FROM authored_activities a JOIN modules m ON m.id=a.module_id JOIN course_staff s ON s.course_id=m.course_id WHERE m.course_id=? AND s.user_id=? ORDER BY a.id DESC LIMIT 20 OFFSET ?`, course, user, (page-1)*20).Scan(&out).Error
 	return out, e
 }
 

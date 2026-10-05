@@ -34,7 +34,11 @@ type Activity struct {
 	Rubric           *Rubric `json:"rubric" gorm:"serializer:json"`
 	Weight           int     `json:"weight"`
 	GroupSubmission  bool    `json:"groupSubmission"`
-	ID               int64   `json:"id"`
+	GradeCategoryID  *int64  `json:"categoryId"`
+	// CourseID is filled on course-scoped reads so an editor can load the course
+	// categories without another lookup; mutations may omit it.
+	CourseID int64 `json:"courseId,omitempty"`
+	ID       int64 `json:"id"`
 	ModuleID         int64   `json:"moduleId"`
 	LessonID         *int64  `json:"lessonId"`
 	Title            string  `json:"title"`

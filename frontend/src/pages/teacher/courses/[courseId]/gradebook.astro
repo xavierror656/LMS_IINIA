@@ -1,6 +1,7 @@
 ---
 import Layout from "../../../../layouts/Layout.astro";
 import ServiceError from "../../../../components/astro/ServiceError.astro";
+import GradeCategories from "../../../../components/astro/GradeCategories.astro";
 import { api, type Gradebook } from "../../../../lib/api";
 let error = Astro.locals.apiError;
 let book: Gradebook | undefined;
@@ -20,7 +21,7 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
   {error ? <ServiceError message={error} /> : book && <>
     <h2>{book.course.title}</h2>
     <p>Consulta las tareas y cuestionarios publicados de tus estudiantes vinculados e inscritos en este curso.</p>
-    <p id="gradebook-help">El promedio ponderado incluye únicamente notas publicadas, según el peso de cada tarea. Un peso de 2 cuenta el doble que 1. Las tareas sin nota no cuentan como cero. Los resúmenes abarcan todas las páginas de actividades; no son una calificación final del curso.</p>
+    <p id="gradebook-help">El total del curso combina las categorías por su peso; cada categoría pesa la media de sus actividades publicadas. El promedio publicado muestra solo lo calificado. La política de actividades sin nota decide si una actividad publicada sin calificar cuenta como cero. Una nota sin publicar nunca viaja al alumno ni cambia su total. Los resúmenes abarcan todas las páginas y no son una calificación final del curso.</p>
     <p>Los cuestionarios usan la política publicada: primera, última, mejor nota o promedio de intentos terminados.</p>
     <p>Cuenta el último intento enviado de cada tarea. Autorizar un borrador nuevo conserva la nota anterior hasta que el estudiante lo envíe; entonces queda pendiente de calificar.</p>
     {book.totalActivities === 0 && <p class="panel">Todavía no hay tareas publicadas. <a class="crumb" href={`/teacher/courses/${courseId}`}>Crear una tarea</a></p>}
@@ -30,7 +31,7 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
       <div class="gradebook-scroll" role="region" tabindex="0" aria-label="Tabla de calificaciones desplazable" aria-describedby="gradebook-help">
         <table>
           <caption>Calificaciones de {book.course.title} · escala de 0 a 100</caption>
-          <thead><tr><th scope="col">Estudiante</th>{book.activities.map((a) => <th scope="col">{a.title}<span class="gradebook-state">Peso: {a.weight}</span></th>)}<th scope="col">Promedio ponderado publicado</th><th scope="col">Pendientes del curso</th></tr></thead>
+          <thead><tr><th scope="col">Estudiante</th>{book.activities.map((a) => <th scope="col">{a.title}<span class="gradebook-state">Peso: {a.weight}</span></th>)}<th scope="col">Total del curso</th><th scope="col">Pendientes del curso</th></tr></thead>
           <tbody>{book.rows.map((row) => <tr>
             <th scope="row">{row.alias}</th>
             {row.cells.map((cell) => <td>
@@ -39,7 +40,14 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
               {cell.quizAttemptId !== null && <a class="crumb" href={`/teacher/quiz-attempts/${cell.quizAttemptId}`}>Ver intento de cuestionario →</a>}
               {cell.submissionId !== null && <a class="crumb" aria-label={`Revisar entrega de ${row.alias}: ${book!.activities.find((a) => a.activityId === cell.activityId)?.title}`} href={`/teacher/activities/${cell.activityId}?submissionId=${cell.submissionId}#submission-${cell.submissionId}`}>Revisar entrega →</a>}
             </td>)}
-            <td><strong>{row.summary.weightedAverageHundredths === null ? "Sin notas publicadas" : `${format.format(row.summary.weightedAverageHundredths / 100)} / 100`}</strong><span class="gradebook-state">{row.summary.published} de {row.summary.totalActivities} notas publicadas</span><span class="gradebook-state">Peso evaluado: {row.summary.publishedWeight} de {row.summary.totalWeight}</span></td>
+            <td><strong>{row.summary.courseTotalHundredths === null ? "Sin categorías con notas" : `${format.format(row.summary.courseTotalHundredths / 100)} / 100`}</strong>
+              {book.categories.map((category) => {
+                const total = row.summary.categoryTotals.find((t) => t.categoryId === category.id)?.totalHundredths ?? null;
+                return <span class="gradebook-state">{category.name}: {total === null ? "sin notas" : `${format.format(total / 100)}`}</span>;
+              })}
+              <span class="gradebook-state">Promedio publicado: {row.summary.weightedAverageHundredths === null ? "sin notas" : `${format.format(row.summary.weightedAverageHundredths / 100)}`}</span>
+              <span class="gradebook-state">{row.summary.published} de {row.summary.totalActivities} notas publicadas</span>
+            </td>
             <td><span class="gradebook-state">{row.summary.notSubmitted} sin entregar</span><span class="gradebook-state">{row.summary.pendingReview} por calificar</span><span class="gradebook-state">{row.summary.pendingPublication} sin publicar</span></td>
           </tr>)}</tbody>
         </table>
@@ -55,6 +63,7 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
         {book.activityPage*book.activityPageSize < book.totalActivities && <a class="button quiet" href={href(book.page,book.activityPage+1)}>Más tareas →</a>}
       </nav>
     </>}
+    <GradeCategories courseId={courseId} categories={book.categories} missingPolicy={book.missingPolicy}/>
   </>}
 </Layout>
 <style>

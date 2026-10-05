@@ -1,10 +1,17 @@
 ---
-import type { Rubric } from "../../lib/api";
-interface Props { rubric: Rubric | null; weight: number; }
-const { rubric, weight } = Astro.props;
+import type { GradeCategory, Rubric } from "../../lib/api";
+interface Props { rubric: Rubric | null; weight: number; categories?: GradeCategory[]; categoryId?: number | null; }
+const { rubric, weight, categories = [], categoryId = null } = Astro.props;
 const criteria = rubric?.criteria ?? [{title:"",levels:[{label:"Por iniciar",points:0},{label:"Logrado",points:1}]}];
 ---
 <rubric-fields>
+  <label>Categoría de calificación
+    <select name="categoryId">
+      {categories.length === 0 && <option value="">General (se crea al publicar)</option>}
+      {categories.map((category) => <option value={category.id} selected={category.id === categoryId}>{category.name} · peso {category.weight}</option>)}
+    </select>
+  </label>
+  <p class="helper">Las categorías agrupan actividades con su propio peso en el total del curso. Publicar sin elegir una usa la primera del curso.</p>
   <label>Peso relativo de la tarea <input name="weight" type="number" min="1" max="1000" step="1" required value={weight} /></label>
   <p class="helper">Un peso de 2 cuenta el doble que 1 en el promedio ponderado. Solo se aplica al publicar la actividad.</p>
   <label><input name="useRubric" type="checkbox" checked={!!rubric} /> Evaluar con rúbrica</label>

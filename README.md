@@ -193,7 +193,7 @@ La administración usa páginas Astro SSR y el servidor local de demostración. 
 
 El espacio **Mi grupo → Crear actividades y calificar** permite al docente gestionar los cursos que tiene asignados: crear lecturas y tareas, guardar borradores, publicarlos, revisar entregas y guardar/publicar una devolución con nota entera de 0 a 100. Las notas no conceden XP. Las lecturas conservan su recompensa única existente.
 
-El enlace **Ver calificaciones** en cada curso abre el libro: estudiantes vinculados e inscritos, tareas publicadas, pendientes, notas y promedio ponderado de notas publicadas. Permite revisar una entrega concreta; las notas ocultas y tareas sin calificar no cuentan en el promedio. Hay paginación independiente de estudiantes y tareas. No es una nota final ponderada.
+El enlace **Ver calificaciones** en cada curso abre el libro: estudiantes vinculados e inscritos, tareas publicadas, pendientes, notas, total por categorías y total del curso con política de faltantes explícita. Permite revisar una entrega concreta; las notas ocultas no cuentan, una actividad sin publicar no participa y el cálculo no es un boletín oficial. Hay paginación independiente de estudiantes y tareas.
 
 Esta función usa Go/PostgreSQL; `npm run demo` conserva la demostración anterior y no incluye autoría ni calificaciones. Para usarla, inicia el modo A o Docker Compose descritos arriba y aplica las nuevas migraciones. En una base de desarrollo con las variables ya configuradas, desde `backend`:
 
@@ -215,7 +215,7 @@ Flujo: docente crea actividad → guarda → publica. El estudiante inscrito la 
 
 Los borradores del docente no son visibles al estudiante; los borradores de respuestas no son visibles al docente. Los cambios publicados conservan snapshots; una entrega definitiva mantiene las instrucciones con las que fue guardada. La entrega no se puede editar tras enviarse en este incremento. Los conflictos de revisión devuelven 409 para evitar sobrescrituras; el formulario conserva el texto y pide revisar la versión antes de reintentar. Texto plano escapado, no HTML activo. Límite REST de 128 KiB; el límite WebSocket sigue siendo 24 KiB.
 
-Todavía faltan formatos adicionales de archivos, reentregas, cuestionarios, categorías y otras agregaciones de notas. Foros, wikis, gestor de extensiones, respaldos y panel de operación están excluidos del nuevo alcance por decisión del usuario. No se afirma paridad del 98 % con Moodle.
+Todavía faltan más formatos de archivo, categorías anidadas, exenciones individuales y otros métodos de agregación de notas. Foros, wikis, gestor de extensiones, respaldos y panel de operación están excluidos del nuevo alcance por decisión del usuario. No se afirma paridad del 98 % con Moodle.
 
 Prueba E2E académica contra una base sintética separada y servidores Go/Astro activos:
 
@@ -298,4 +298,8 @@ T4g queda cerrado con este incremento (formatos, instrucciones, retención y dev
 
 En el libro de calificaciones, **Descargar CSV** entrega el libro completo con los **mismos números** que la tabla: la exportación reutiliza la misma consulta y el mismo ensamblado, solo cambia la ventana. Solo viajan las notas **publicadas**; los pendientes aparecen como contadores. Un archivo que no quepa (más de 500 estudiantes o 100 actividades) se **rechaza con 409** en lugar de truncarse, y un alias que parezca una fórmula se neutraliza. Rendimiento medido con 40 estudiantes, 12 actividades y 480 entregas: el libro pasó de **549 ms a 46 ms** al dejar de reevaluar la vista del libro 9.600 veces, y una prueba fija en **6 sentencias** el número de consultas para impedir N+1. Método, entorno y límites: [docs/gradebook-export-validation.md](docs/gradebook-export-validation.md).
 
-La **accesibilidad (AC1)** de T6 sigue **sin auditar**: está especificada y no ejecutada. Queda PL1 (administración real con capacidades por contexto) en el catálogo pendiente.
+La **accesibilidad (AC1)** de T6 quedó auditada con criterios comprobables (etiquetas, encabezados, foco visible, objetivos táctiles, contraste y movimiento reducido): dos correcciones de tamaño táctil y cero hallazgos en diez páginas ([docs/accessibility-validation.md](docs/accessibility-validation.md)). Queda PL1 (administración real con capacidades por contexto) en el catálogo pendiente.
+
+### Categorías de calificación y total del curso (Go/PostgreSQL)
+
+El libro incorpora **categorías planas con peso** (nombre único por curso, 1..1000, máximo cien), la **política de faltantes** `exclude` o `zero` y el **total del curso** como media ponderada de los totales de categoría. Cada tarea o cuestionario publicado pertenece a una categoría; publicar sin elegir una usa la primera del curso y crea «General» si no existe. Una nota sin publicar nunca participa ni viaja al alumno, y el alumno consulta «Mis notas» en su curso con solo las notas publicadas. La interfaz permite crear, renombrar, ponderar, reordenar y eliminar categorías (409 si tienen actividades) y elegir la categoría al configurar la tarea o el cuestionario. Requiere `015_grade_categories.sql` (`go run ./cmd/migrate`). Contrato OpenAPI 1.10.0. Evidencia y límites: [docs/grade-categories-validation.md](docs/grade-categories-validation.md).

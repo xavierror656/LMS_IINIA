@@ -1,7 +1,7 @@
 ---
-import type{components}from'../../lib/generated/api';
-interface Props{activity:components['schemas']['Activity'];options:components['schemas']['QuizQuestionOptions'];}
-const{activity,options}=Astro.props;const chosen=activity.quizConfig?.items??[];
+import type{components}from'../../lib/generated/api';import type{GradeCategory}from'../../lib/api';
+interface Props{activity:components['schemas']['Activity'];options:components['schemas']['QuizQuestionOptions'];categories?:GradeCategory[];}
+const{activity,options,categories=[]}=Astro.props;const chosen=activity.quizConfig?.items??[];
 const candidates=chosen.map(item=>({...item,name:options.selected.find(q=>q.id===item.questionId&&q.version===item.version)?.name??'Pregunta seleccionada',checked:true}));
 for(const q of options.items)if(!candidates.some(i=>i.questionId===q.id&&i.version===q.version))candidates.push({questionId:q.id,version:q.version,weight:1,name:q.name,checked:false});
 ---
@@ -9,6 +9,7 @@ for(const q of options.items)if(!candidates.some(i=>i.questionId===q.id&&i.versi
  <form class="academic-form">
   <label for="quiz-maximum">Máximo de intentos</label><input id="quiz-maximum" name="maxAttempts" type="number" min="1" max="10" required value={activity.maxAttempts}/>
   <label for="quiz-weight">Peso en el libro de calificaciones</label><input id="quiz-weight" name="weight" type="number" min="1" max="1000" required value={activity.weight}/>
+  <label for="quiz-category">Categoría de calificación</label><select id="quiz-category" name="categoryId">{categories.length===0&&<option value="">General (se crea al publicar)</option>}{categories.map(c=><option value={c.id} selected={c.id===activity.categoryId}>{c.name} · peso {c.weight}</option>)}</select>
   <label for="quiz-limit">Tiempo máximo para resolver, en minutos (vacío = sin límite)</label><input id="quiz-limit" name="timeLimitSeconds" type="number" min="1" max="720" value={activity.quizConfig?.timeLimitSeconds?Math.round(activity.quizConfig.timeLimitSeconds/60):""}/>
   <label for="quiz-policy">Nota que cuenta en el libro</label><select id="quiz-policy" name="gradePolicy"><option value="last" selected={activity.quizConfig?.gradePolicy==='last'}>Último intento</option><option value="first" selected={activity.quizConfig?.gradePolicy==='first'}>Primer intento</option><option value="highest" selected={activity.quizConfig?.gradePolicy==='highest'}>Mejor nota</option><option value="average" selected={activity.quizConfig?.gradePolicy==='average'}>Promedio de intentos</option></select>
   <label for="quiz-review">Cuándo mostrar las soluciones</label><select id="quiz-review" name="reviewPolicy"><option value="never" selected={activity.quizConfig?.reviewPolicy==='never'}>No mostrar soluciones</option><option value="after_attempt" selected={activity.quizConfig?.reviewPolicy==='after_attempt'}>Después de enviar cada intento</option><option value="after_close" selected={activity.quizConfig?.reviewPolicy==='after_close'}>Solo después del cierre</option></select>
@@ -42,7 +43,8 @@ for(const q of options.items)if(!candidates.some(i=>i.questionId===q.id&&i.versi
     const timeLimitSeconds=minutes===''?null:Number(minutes)*60;
     if(timeLimitSeconds!==null&&(!Number.isInteger(timeLimitSeconds)||timeLimitSeconds<60||timeLimitSeconds>43200)){status.textContent='El tiempo máximo debe estar entre 1 y 720 minutos, o quedar vacío.';return;}
     this.busy=true;const fields=form.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLButtonElement>('input,select,button');const previous=Array.from(fields,f=>f.disabled);fields.forEach(f=>f.disabled=true);status.textContent='Guardando configuración…';
-    try{await api(`/teacher/activities/${this.dataset.id}/quiz-config`,{method:'PUT',body:JSON.stringify({version:Number(this.dataset.version),maxAttempts:Number(data.get('maxAttempts')),weight:Number(data.get('weight')),gradePolicy:data.get('gradePolicy'),reviewPolicy:data.get('reviewPolicy'),timeLimitSeconds,items})});this.dirty=false;this.busy=false;window.location.reload();}catch(error){status.textContent=(error instanceof Error?error.message:'No se pudo guardar.')+' Tu selección permanece aquí. Revisa las versiones y guarda antes de publicar.';}finally{this.busy=false;fields.forEach((f,i)=>f.disabled=previous[i]??false);}
+    const category=String(data.get('categoryId')??'');
+    try{await api(`/teacher/activities/${this.dataset.id}/quiz-config`,{method:'PUT',body:JSON.stringify({version:Number(this.dataset.version),maxAttempts:Number(data.get('maxAttempts')),weight:Number(data.get('weight')),categoryId:category===''?null:Number(category),gradePolicy:data.get('gradePolicy'),reviewPolicy:data.get('reviewPolicy'),timeLimitSeconds,items})});this.dirty=false;this.busy=false;window.location.reload();}catch(error){status.textContent=(error instanceof Error?error.message:'No se pudo guardar.')+' Tu selección permanece aquí. Revisa las versiones y guarda antes de publicar.';}finally{this.busy=false;fields.forEach((f,i)=>f.disabled=previous[i]??false);}
    },{signal});
   }
   disconnectedCallback(){this.controller?.abort();this.controller=undefined;}

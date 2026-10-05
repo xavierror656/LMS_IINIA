@@ -40,6 +40,15 @@ func academicError(e error) error {
 	if errors.Is(e, services.ErrGroupNameTaken) {
 		return fiber.NewError(409, "Ya existe un grupo con ese nombre en este curso. Elige otro nombre.")
 	}
+	if errors.Is(e, models.ErrCategoryNameTaken) {
+		return fiber.NewError(409, "Ya existe una categoría de calificación con ese nombre en este curso. Elige otro nombre.")
+	}
+	if errors.Is(e, models.ErrCategoryHasActivities) {
+		return fiber.NewError(409, "Esa categoría todavía tiene actividades asignadas. Muévelas a otra categoría antes de eliminarla.")
+	}
+	if errors.Is(e, models.ErrCategoryLimit) {
+		return fiber.NewError(409, "Este curso ya alcanzó el máximo de cien categorías de calificación.")
+	}
 	if errors.Is(e, models.ErrAcademicInput) {
 		return fiber.ErrBadRequest
 	}

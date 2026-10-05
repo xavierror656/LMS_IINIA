@@ -27,7 +27,7 @@ func validateQuizItems(tx *gorm.DB, user, module int64, config models.QuizConfig
 	}
 	return nil
 }
-func (s QuizService) Configure(user, id int64, version, maximum, weight int, config models.QuizConfig) (models.Activity, error) {
+func (s QuizService) Configure(user, id int64, version, maximum, weight int, config models.QuizConfig, categoryID *int64) (models.Activity, error) {
 	var out models.Activity
 	if version < 1 || maximum < 1 || maximum > 10 || weight < 1 || weight > 1000 || config.Validate() != nil {
 		return out, models.ErrAcademicInput
@@ -43,11 +43,14 @@ func (s QuizService) Configure(user, id int64, version, maximum, weight int, con
 		if a.Version != version {
 			return ErrAcademicConflict
 		}
+		if e = validateActivityCategory(tx, a.ModuleID, categoryID); e != nil {
+			return e
+		}
 		if e = validateQuizItems(tx, user, a.ModuleID, config); e != nil {
 			return e
 		}
 		b, _ := json.Marshal(config)
-		return tx.Raw(`UPDATE authored_activities SET quiz_config=?::jsonb,max_attempts=?,weight=?,version=version+1,updated_at=now() WHERE id=? RETURNING *`, string(b), maximum, weight, id).Scan(&out).Error
+		return tx.Raw(`UPDATE authored_activities SET quiz_config=?::jsonb,max_attempts=?,weight=?,grade_category_id=?,version=version+1,updated_at=now() WHERE id=? RETURNING *`, string(b), maximum, weight, categoryID, id).Scan(&out).Error
 	})
 	return out, err
 }

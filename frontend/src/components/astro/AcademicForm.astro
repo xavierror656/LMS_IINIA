@@ -86,7 +86,8 @@ const { path, kind, version = 0, lessonVersion, canPublish = false } = Astro.pro
               title: criterion.querySelector<HTMLInputElement>('[name="criterionTitle"]')!.value,
               levels: Array.from(criterion.querySelectorAll(".rubric-level"), (level) => ({label:level.querySelector<HTMLTextAreaElement>("textarea")!.value,points:Number(level.querySelector<HTMLInputElement>("input")!.value)})),
             })) } : null;
-            Object.assign(payload,{weight:Number(data.get("weight")),rubric});
+            const category = String(data.get("categoryId") ?? "");
+            Object.assign(payload,{weight:Number(data.get("weight")),rubric,categoryId:category === "" ? null : Number(category)});
           } else {
             Object.assign(payload,{feedback:data.get("feedback")});
             if (data.has("selection")) payload.selections=data.getAll("selection").map(Number);

@@ -15,7 +15,7 @@ Referencia: documentación Moodle 5.2 consultada el 2026-10-02. No se ha probado
 | Configuración de examen | [Quiz settings](https://docs.moodle.org/502/en/Quiz_settings) | No disponible | Fechas, tiempo, intentos, orden aleatorio y política de revisión |
 | Banco de preguntas | [Question banks](https://docs.moodle.org/502/en/Question_bank) | No disponible | Biblioteca reutilizable y versiones; fijar tipos y formatos compatibles |
 | Libro de notas | [Grades](https://docs.moodle.org/502/en/Grades): ítems, escalas e historial | Resumen de lecciones completadas | Notas independientes de recompensas y estados visibles |
-| Agregación | [Grade categories](https://docs.moodle.org/502/en/Grade_categories) | No disponible | Categorías, ponderaciones, exclusiones y reglas de faltantes |
+| Agregación | [Grade categories](https://docs.moodle.org/502/en/Grade_categories) | Categorías planas con peso, política de faltantes y total de curso verificados internamente (incremento 17) | Categorías anidadas, otros métodos, exclusiones y exenciones pendientes |
 | Intercambio de notas | [Grades](https://docs.moodle.org/502/en/Grades): importación/exportación | No disponible | CSV con prevalidación, simulación y auditoría; otros formatos por inventariar |
 | H5P | [Content bank](https://docs.moodle.org/502/en/Content_bank): creación y gestión de contenido | Reproductor sin paquete validado | Selección de paquetes revisados; constructor incluido en la ampliación, todavía pendiente |
 

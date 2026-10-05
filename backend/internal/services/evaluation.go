@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func (s AcademicService) SaveEvaluation(user, id int64, version, weight int, rubric *models.Rubric) (models.Activity, error) {
+func (s AcademicService) SaveEvaluation(user, id int64, version, weight int, rubric *models.Rubric, categoryID *int64) (models.Activity, error) {
 	var out models.Activity
 	if version < 1 || weight < 1 || weight > 1000 || rubric.Validate() != nil {
 		return out, models.ErrAcademicInput
@@ -23,6 +23,9 @@ func (s AcademicService) SaveEvaluation(user, id int64, version, weight int, rub
 		if a.Version != version {
 			return ErrAcademicConflict
 		}
+		if e = validateActivityCategory(tx, a.ModuleID, categoryID); e != nil {
+			return e
+		}
 		var encoded any
 		if rubric != nil {
 			b, e := json.Marshal(rubric)
@@ -31,7 +34,7 @@ func (s AcademicService) SaveEvaluation(user, id int64, version, weight int, rub
 			}
 			encoded = string(b)
 		}
-		return tx.Raw(`UPDATE authored_activities SET rubric=?::jsonb,weight=?,version=version+1,updated_at=now() WHERE id=? RETURNING *`, encoded, weight, id).Scan(&out).Error
+		return tx.Raw(`UPDATE authored_activities SET rubric=?::jsonb,weight=?,grade_category_id=?,version=version+1,updated_at=now() WHERE id=? RETURNING *`, encoded, weight, categoryID, id).Scan(&out).Error
 	})
 	return out, e
 }

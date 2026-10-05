@@ -30,6 +30,38 @@ func PublishedAverage(sum, count int64) *int64 {
 	return &value
 }
 
+// CategoryAverage turns a student's raw sums inside one category into an exact
+// hundredths value, rounding half upward. The course missing policy decides the
+// denominator: `exclude` weighs only published grades, `zero` weighs every
+// published activity and counts an absent grade as zero. publishedSum already
+// carries only published scores in both cases.
+func CategoryAverage(publishedSum, publishedWeight, totalWeight int64, policy string) *int64 {
+	weight := publishedWeight
+	if policy == "zero" {
+		weight = totalWeight
+	}
+	if weight == 0 {
+		return nil
+	}
+	value := (publishedSum*100 + weight/2) / weight
+	return &value
+}
+
+// WeightedHundredths combines already-rounded category totals by category
+// weight. Categories without a total do not participate; nothing becomes zero.
+func WeightedHundredths(values, weights []int64) *int64 {
+	var sum, weight int64
+	for i := range values {
+		sum += values[i] * weights[i]
+		weight += weights[i]
+	}
+	if weight == 0 {
+		return nil
+	}
+	value := (sum + weight/2) / weight
+	return &value
+}
+
 func (s AcademicService) Gradebook(user, course int64, page, activityPage int) (models.Gradebook, error) {
 	if page < 1 || page > 10000 || activityPage < 1 || activityPage > 10000 {
 		return models.Gradebook{}, models.ErrAcademicInput
@@ -63,10 +95,14 @@ func (s AcademicService) GradebookExport(user, course int64) (models.Gradebook, 
 
 // assembleGradebook turns the query rows into the grid the book and the export share.
 func assembleGradebook(data repositories.GradebookData, page, pageSize, activityPage, activityPageSize int) models.Gradebook {
-	out := models.Gradebook{Course: data.Course, Activities: data.Activities, Rows: []models.GradebookRow{}, Page: page, PageSize: pageSize, TotalStudents: data.TotalStudents, ActivityPage: activityPage, ActivityPageSize: activityPageSize, TotalActivities: data.TotalActivities}
+	out := models.Gradebook{Course: data.Course, MissingPolicy: data.MissingPolicy, Categories: data.Categories, Activities: data.Activities, Rows: []models.GradebookRow{}, Page: page, PageSize: pageSize, TotalStudents: data.TotalStudents, ActivityPage: activityPage, ActivityPageSize: activityPageSize, TotalActivities: data.TotalActivities}
 	entries := map[[2]int64]repositories.GradebookEntry{}
 	for _, entry := range data.Entries {
 		entries[[2]int64{entry.StudentID, entry.ActivityID}] = entry
+	}
+	categorySums := map[[2]int64]repositories.GradebookCategorySum{}
+	for _, sum := range data.CategorySums {
+		categorySums[[2]int64{sum.StudentID, sum.CategoryID}] = sum
 	}
 	for _, student := range data.Students {
 		row := models.GradebookRow{StudentID: student.ID, Alias: student.Alias, Cells: []models.GradebookCell{}, Summary: models.GradebookSummary{
@@ -75,6 +111,20 @@ func assembleGradebook(data repositories.GradebookData, page, pageSize, activity
 			PendingReview: student.Submitted - student.Graded, PendingPublication: student.Graded - student.Published,
 			Published: student.Published, AverageHundredths: PublishedAverage(student.PublishedSum, student.Published),
 		}}
+		var totals, weights []int64
+		for _, category := range data.Categories {
+			sum := categorySums[[2]int64{student.ID, category.ID}]
+			total := CategoryAverage(sum.PublishedSum, sum.PublishedWeight, sum.TotalWeight, data.MissingPolicy)
+			row.Summary.CategoryTotals = append(row.Summary.CategoryTotals, models.GradebookCategoryTotal{CategoryID: category.ID, TotalHundredths: total})
+			if total != nil {
+				totals = append(totals, *total)
+				weights = append(weights, int64(category.Weight))
+			}
+		}
+		if row.Summary.CategoryTotals == nil {
+			row.Summary.CategoryTotals = []models.GradebookCategoryTotal{}
+		}
+		row.Summary.CourseTotalHundredths = WeightedHundredths(totals, weights)
 		for _, activity := range data.Activities {
 			cell := models.GradebookCell{ActivityID: activity.ActivityID, State: "not_submitted"}
 			if entry, ok := entries[[2]int64{student.ID, activity.ActivityID}]; ok {

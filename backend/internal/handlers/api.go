@@ -91,6 +91,7 @@ func (a API) Register(app *fiber.App) {
 		}
 		return c.JSON(p)
 	})
+	student.Get("/me/courses/:courseId/grades", middleware.Student, a.meGrades)
 	student.Post("/lessons/:lessonId/complete", middleware.Student, a.complete)
 	student.Get("/lessons/:lessonId/submission", middleware.Student, a.ownSubmission)
 	student.Get("/lessons/:lessonId/submission/history", middleware.Student, a.submissionHistory)
@@ -112,6 +113,13 @@ func (a API) Register(app *fiber.App) {
 	teacher.Get("/courses/:courseId/activities", a.staffActivities)
 	teacher.Get("/courses/:courseId/gradebook", a.gradebook)
 	teacher.Get("/courses/:courseId/gradebook.csv", a.gradebookCSV)
+	teacher.Get("/courses/:courseId/grade-categories", a.gradeCategories)
+	teacher.Post("/courses/:courseId/grade-categories", a.createGradeCategory)
+	// Registered before the parameterized route so "order" is never read as an id.
+	teacher.Put("/courses/:courseId/grade-categories/order", a.reorderGradeCategories)
+	teacher.Put("/courses/:courseId/grade-categories/:categoryId", a.saveGradeCategory)
+	teacher.Delete("/courses/:courseId/grade-categories/:categoryId", a.deleteGradeCategory)
+	teacher.Put("/courses/:courseId/grade-settings", a.saveGradeSettings)
 	teacher.Post("/courses/:courseId/activities", a.createActivity)
 	teacher.Get("/activities/:activityId", a.staffActivity)
 	teacher.Put("/activities/:activityId/quiz-config", a.saveQuizConfig)
