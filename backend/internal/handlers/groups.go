@@ -123,3 +123,24 @@ func (a API) removeGroupMember(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"studentId": student, "groupId": group, "removed": true})
 }
+
+// saveGroupMode switches the shared group delivery of a draft assignment. It takes
+// effect when the activity is published, like the calendar or the rubric.
+func (a API) saveGroupMode(c *fiber.Ctx) error {
+	id, e := ID(c, "activityId")
+	if e != nil {
+		return e
+	}
+	var b struct {
+		Version         int  `json:"version"`
+		GroupSubmission bool `json:"groupSubmission"`
+	}
+	if e = Decode(c, &b); e != nil {
+		return e
+	}
+	out, e := a.academic().SaveGroupMode(middleware.User(c).ID, id, b.Version, b.GroupSubmission)
+	if e != nil {
+		return academicError(e)
+	}
+	return c.JSON(out)
+}

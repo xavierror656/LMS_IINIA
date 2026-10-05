@@ -99,7 +99,7 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			}
 			rubricJSON = string(raw)
 		}
-		if e = tx.Exec(`UPDATE lessons SET grade_weight=?,opens_at=?,due_at=?,closes_at=?,max_attempts=? WHERE id=?`, a.Weight, a.OpensAt, a.DueAt, a.ClosesAt, a.MaxAttempts, *a.LessonID).Error; e != nil {
+		if e = tx.Exec(`UPDATE lessons SET grade_weight=?,opens_at=?,due_at=?,closes_at=?,max_attempts=?,group_submission=? WHERE id=?`, a.Weight, a.OpensAt, a.DueAt, a.ClosesAt, a.MaxAttempts, a.GroupSubmission, *a.LessonID).Error; e != nil {
 			return e
 		}
 		var quizJSON any
@@ -111,7 +111,7 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			quizJSON = string(b)
 		}
 		var publication int64
-		if e = tx.Raw(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by,rubric,quiz_config) VALUES (?,?,?,?,?,?,?::jsonb,?::jsonb) RETURNING id`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user, rubricJSON, quizJSON).Scan(&publication).Error; e != nil {
+		if e = tx.Raw(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by,rubric,quiz_config,group_submission) VALUES (?,?,?,?,?,?,?::jsonb,?::jsonb,?) RETURNING id`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user, rubricJSON, quizJSON, a.GroupSubmission).Scan(&publication).Error; e != nil {
 			return e
 		}
 		if a.Type == "quiz" {
@@ -165,8 +165,13 @@ func (s AcademicService) SaveSubmission(user, lesson int64, body string, version
 		if pub.Version != lessonVersion {
 			return ErrAcademicConflict
 		}
+		// A group task keys the delivery by group; an individual one by student.
+		scope, scopeError := resolveScope(tx, user, lesson)
+		if scopeError != nil {
+			return scopeError
+		}
 		var current models.Submission
-		if e := tx.Raw(`SELECT * FROM submissions WHERE lesson_id=? AND user_id=? ORDER BY attempt DESC LIMIT 1 FOR UPDATE`, lesson, user).Scan(&current).Error; e != nil {
+		if e := tx.Raw(`SELECT * FROM submissions WHERE lesson_id=? AND `+scope.column()+`=? ORDER BY attempt DESC LIMIT 1 FOR UPDATE`, lesson, scope.value()).Scan(&current).Error; e != nil {
 			return e
 		}
 		if current.Version != version || (current.ID != 0 && current.Status != "draft") {
@@ -174,7 +179,7 @@ func (s AcademicService) SaveSubmission(user, lesson int64, body string, version
 		}
 		var id int64
 		if current.ID == 0 {
-			if e := tx.Raw(`INSERT INTO submissions(lesson_id,user_id,publication_id,body) VALUES (?,?,?,?) RETURNING id`, lesson, user, pub.ID, body).Scan(&id).Error; e != nil {
+			if e := tx.Raw(`INSERT INTO submissions(lesson_id,user_id,publication_id,body,group_id) VALUES (?,?,?,?,?) RETURNING id`, lesson, user, pub.ID, body, scope.insertGroup()).Scan(&id).Error; e != nil {
 				return e
 			}
 		} else {
@@ -184,7 +189,7 @@ func (s AcademicService) SaveSubmission(user, lesson int64, body string, version
 			}
 		}
 		var e error
-		if e := tx.Exec(`INSERT INTO lesson_progress(user_id,lesson_id,status) VALUES (?,?,'in_progress') ON CONFLICT DO NOTHING`, user, lesson).Error; e != nil {
+		if e := markScopeProgress(tx, scope, lesson, "in_progress"); e != nil {
 			return e
 		}
 		out, e = (repositories.Repository{DB: tx}).Submission(id, false)
@@ -201,8 +206,12 @@ func (s AcademicService) Submit(user, lesson int64, version int) (models.Submiss
 		if e := lockAssignment(tx, user, lesson); e != nil {
 			return e
 		}
+		scope, scopeError := resolveScope(tx, user, lesson)
+		if scopeError != nil {
+			return scopeError
+		}
 		var sub models.Submission
-		if e := tx.Raw(`SELECT s.* FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN enrollments e ON e.course_id=m.course_id AND e.user_id=s.user_id WHERE s.lesson_id=? AND s.user_id=? ORDER BY s.attempt DESC LIMIT 1 FOR UPDATE OF s FOR SHARE OF e`, lesson, user).Scan(&sub).Error; e != nil {
+		if e := tx.Raw(`SELECT s.* FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN enrollments e ON e.course_id=m.course_id AND e.user_id=? WHERE s.lesson_id=? AND s.`+scope.column()+`=? ORDER BY s.attempt DESC LIMIT 1 FOR UPDATE OF s FOR SHARE OF e`, user, lesson, scope.value()).Scan(&sub).Error; e != nil {
 			return e
 		}
 		if sub.ID == 0 {
@@ -260,7 +269,9 @@ func (s AcademicService) grade(user, id int64, score int, feedback string, versi
 			return e
 		}
 		var sub int64
-		if e := tx.Raw(`SELECT s.id FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN enrollments en ON en.course_id=m.course_id AND en.user_id=s.user_id JOIN course_staff cs ON cs.course_id=m.course_id JOIN teacher_students ts ON ts.teacher_id=cs.user_id AND ts.student_id=s.user_id WHERE s.id=? AND s.status='submitted' AND cs.user_id=? FOR UPDATE OF s FOR SHARE OF cs,ts,en`, id, user).Scan(&sub).Error; e != nil {
+		// A group delivery is visible to a teacher linked to any of its members; an
+		// individual one keeps the rule of being linked to its author.
+		if e := tx.Raw(`SELECT s.id FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN course_staff cs ON cs.course_id=m.course_id WHERE s.id=? AND s.status='submitted' AND cs.user_id=? AND EXISTS(SELECT 1 FROM teacher_students ts JOIN enrollments en ON en.user_id=ts.student_id AND en.course_id=m.course_id LEFT JOIN group_members gm ON gm.user_id=ts.student_id AND gm.group_id=s.group_id WHERE ts.teacher_id=? AND (ts.student_id=s.user_id OR gm.group_id IS NOT NULL)) FOR UPDATE OF s FOR SHARE OF cs`, id, user, user).Scan(&sub).Error; e != nil {
 			return e
 		}
 		if sub == 0 {

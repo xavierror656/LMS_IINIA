@@ -37,7 +37,7 @@ func (r Repository) Activities(user, course int64, page int) ([]models.Activity,
 }
 func (r Repository) Submission(id int64, teacher bool) (models.Submission, error) {
 	var out models.Submission
-	e := r.DB.Raw(`SELECT s.*,u.alias,p.body instructions,p.rubric FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id WHERE s.id=?`, id).Scan(&out).Error
+	e := r.DB.Raw(`SELECT s.*,u.alias,COALESCE(cg.name,'') group_name,p.body instructions,p.rubric FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id LEFT JOIN course_groups cg ON cg.id=s.group_id WHERE s.id=?`, id).Scan(&out).Error
 	if e != nil {
 		return out, e
 	}
@@ -45,7 +45,7 @@ func (r Repository) Submission(id int64, teacher bool) (models.Submission, error
 		return out, gorm.ErrRecordNotFound
 	}
 	out.Attachments = []models.Attachment{}
-	if e = r.DB.Raw(`SELECT id,name,content_type,size FROM submission_attachments WHERE submission_id=? ORDER BY slot`, id).Scan(&out.Attachments).Error; e != nil {
+	if e = r.DB.Raw(`SELECT id,name,content_type,size,uploaded_by FROM submission_attachments WHERE submission_id=? ORDER BY slot`, id).Scan(&out.Attachments).Error; e != nil {
 		return out, e
 	}
 	var grade models.Grade

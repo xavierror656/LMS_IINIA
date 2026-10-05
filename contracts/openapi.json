@@ -5137,6 +5137,125 @@
         }
       }
     },
+    "/api/v1/teacher/activities/{activityId}/group-mode": {
+      "put": {
+        "operationId": "saveGroupMode",
+        "summary": "Turn the shared group delivery on or off for a draft assignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activityId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Canonical persisted result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Activity"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupModeInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/teacher/courses/{courseId}/groups": {
       "get": {
         "operationId": "courseGroups",
@@ -7315,6 +7434,8 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
+          "groupSubmission",
+          "groupName",
           "id",
           "moduleId",
           "title",
@@ -7325,6 +7446,12 @@
           "config"
         ],
         "properties": {
+          "groupSubmission": {
+            "type": "boolean"
+          },
+          "groupName": {
+            "type": "string"
+          },
           "id": {
             "type": "integer"
           },
@@ -7565,6 +7692,9 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "groupSubmission": {
+            "type": "boolean"
+          },
           "id": {
             "type": "integer",
             "minimum": 1
@@ -7663,6 +7793,7 @@
           }
         },
         "required": [
+          "groupSubmission",
           "id",
           "moduleId",
           "title",
@@ -7829,6 +7960,15 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "groupId": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "groupName": {
+            "type": "string"
+          },
           "id": {
             "type": "integer",
             "minimum": 1
@@ -7914,6 +8054,8 @@
           }
         },
         "required": [
+          "groupId",
+          "groupName",
           "id",
           "lessonId",
           "alias",
@@ -8934,16 +9076,38 @@
           "removed"
         ]
       },
+      "GroupModeInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "groupSubmission": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "version",
+          "groupSubmission"
+        ]
+      },
       "Attachment": {
         "type": "object",
         "additionalProperties": false,
         "required": [
+          "uploadedBy",
           "id",
           "name",
           "contentType",
           "size"
         ],
         "properties": {
+          "uploadedBy": {
+            "type": "integer",
+            "minimum": 1
+          },
           "id": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"

@@ -32,7 +32,7 @@ El usuario autorizó continuar con implementación. T1–T3 tienen código y pru
 - [x] T2a Añadir apertura, vencimiento, cierre y prórrogas (MDL-003..005); DT1–DT5 verificados internamente, comparación Moodle pendiente.
 - [x] T2b Añadir reapertura y límite configurable de intentos (MDL-009..010); AT1–AT6 verificados internamente, historial y libro coherentes. Comparación Moodle pendiente.
 - [x] T2c-1 Grupos de curso y pertenencia, con un estudiante por grupo y curso (CG1–CG7 / MDL-011). Verificado con PostgreSQL real y navegador; no cambia entregas ni notas.
-- [ ] T2c-2 Entrega grupal compartida y libro por miembro (GS1–GS6 / MDL-011). Especificado en increment-12.md.
+- [x] T2c-2 Entrega grupal compartida y libro por miembro (GS1–GS6 / MDL-011). Verificado con PostgreSQL real y navegador; la nota sigue siendo una por entrega.
 - [ ] T2c-3 Notas individuales por miembro (GI1–GI6 / MDL-012). Especificado en increment-13.md.
 - [ ] T3a Añadir anotación, anonimato y corrección por varios evaluadores (MDL-017..022).
 

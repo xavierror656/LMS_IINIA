@@ -22,8 +22,14 @@ func academicError(e error) error {
 	if errors.Is(e, services.ErrQuizUnavailable) {
 		return fiber.NewError(409, "Este cuestionario todavía no abre, ya cerró o se agotó tu tiempo. Tus respuestas no se enviaron; revisa las fechas o consulta a tu docente.")
 	}
+	if errors.Is(e, services.ErrGroupRequired) {
+		return fiber.NewError(409, "Esta tarea se entrega en grupo y todavía no tienes grupo en este curso. Pídele a tu docente que te asigne uno.")
+	}
 	if errors.Is(e, services.ErrGroupMemberElsewhere) {
 		return fiber.NewError(409, "Ese estudiante ya pertenece a otro grupo de este curso. Quítalo de ese grupo antes de añadirlo a este.")
+	}
+	if errors.Is(e, services.ErrGroupHasDeliveries) {
+		return fiber.NewError(409, "Ese grupo ya tiene entregas del equipo. No se puede eliminar sin perder trabajo: quita a sus miembros si necesitas reasignarlos.")
 	}
 	if errors.Is(e, services.ErrGroupNameTaken) {
 		return fiber.NewError(409, "Ya existe un grupo con ese nombre en este curso. Elige otro nombre.")
@@ -167,19 +173,15 @@ func (a API) ownSubmission(c *fiber.Ctx) error {
 			return fiber.ErrBadRequest
 		}
 	}
-	var sub int64
-	if e = a.Repo.DB.Raw(`SELECT id FROM submissions WHERE lesson_id=? AND user_id=? AND (?::bigint=0 OR id=?) ORDER BY attempt DESC LIMIT 1`, id, middleware.User(c).ID, requested, requested).Scan(&sub).Error; e != nil {
-		return dbError(e)
+	out, e := a.academic().OwnSubmission(middleware.User(c).ID, id, requested)
+	if e != nil {
+		return academicError(e)
 	}
-	if sub == 0 {
+	if out == nil {
 		if requested != 0 {
 			return fiber.ErrNotFound
 		}
 		return c.JSON(fiber.Map{"submission": nil})
-	}
-	out, e := a.Repo.Submission(sub, false)
-	if e != nil {
-		return dbError(e)
 	}
 	return c.JSON(fiber.Map{"submission": out})
 }
@@ -243,7 +245,8 @@ func (a API) staffSubmissions(c *fiber.Ctx) error {
 	}
 	items := []models.Submission{}
 	if activity.LessonID != nil {
-		if e = a.Repo.DB.Raw(`SELECT s.*,u.alias,p.body instructions,p.rubric FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN enrollments en ON en.user_id=s.user_id AND en.course_id=m.course_id JOIN teacher_students ts ON ts.student_id=s.user_id WHERE ts.teacher_id=? AND s.lesson_id=? AND s.status='submitted' AND (?::bigint=0 OR s.id=?) ORDER BY s.id LIMIT 20 OFFSET ?`, middleware.User(c).ID, *activity.LessonID, submissionID, submissionID, (p-1)*20).Scan(&items).Error; e != nil {
+		// A group delivery shows the group and reaches the teacher linked to any member.
+		if e = a.Repo.DB.Raw(`SELECT s.*,u.alias,COALESCE(cg.name,'') group_name,p.body instructions,p.rubric FROM submissions s JOIN users u ON u.id=s.user_id JOIN activity_publications p ON p.id=s.publication_id JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id LEFT JOIN course_groups cg ON cg.id=s.group_id WHERE s.lesson_id=? AND s.status='submitted' AND (?::bigint=0 OR s.id=?) AND EXISTS(SELECT 1 FROM teacher_students ts JOIN enrollments en ON en.user_id=ts.student_id AND en.course_id=m.course_id LEFT JOIN group_members gm ON gm.user_id=ts.student_id AND gm.group_id=s.group_id WHERE ts.teacher_id=? AND (ts.student_id=s.user_id OR gm.group_id IS NOT NULL)) ORDER BY s.id LIMIT 20 OFFSET ?`, *activity.LessonID, submissionID, submissionID, middleware.User(c).ID, (p-1)*20).Scan(&items).Error; e != nil {
 			return dbError(e)
 		}
 		ids := []int64{}

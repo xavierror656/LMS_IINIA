@@ -9,7 +9,7 @@ type Repository struct{ DB *gorm.DB }
 
 func (r Repository) Lesson(user, id int64) (models.Lesson, error) {
 	var l models.Lesson
-	e := r.DB.Raw(`SELECT l.*,COALESCE(p.status,'available') status FROM lessons l JOIN modules m ON m.id=l.module_id JOIN enrollments e ON e.course_id=m.course_id AND e.user_id=? LEFT JOIN lesson_progress p ON p.lesson_id=l.id AND p.user_id=? WHERE l.id=?`, user, user, id).Scan(&l).Error
+	e := r.DB.Raw(`SELECT l.*,COALESCE(p.status,'available') status,COALESCE(cg.name,'') group_name FROM lessons l JOIN modules m ON m.id=l.module_id JOIN enrollments e ON e.course_id=m.course_id AND e.user_id=? LEFT JOIN lesson_progress p ON p.lesson_id=l.id AND p.user_id=? LEFT JOIN group_members gm ON gm.course_id=m.course_id AND gm.user_id=? LEFT JOIN course_groups cg ON cg.id=gm.group_id WHERE l.id=?`, user, user, user, id).Scan(&l).Error
 	if e == nil && l.ID == 0 {
 		e = gorm.ErrRecordNotFound
 	}

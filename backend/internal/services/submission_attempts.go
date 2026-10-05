@@ -39,8 +39,12 @@ func (s AcademicService) Reopen(user, id int64, version int, reason string) (Reo
 	}
 	err := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
 		// Discover immutable identity, then lock in the same order as student writes.
-		var target struct{ LessonID, UserID int64 }
-		if e := tx.Raw(`SELECT lesson_id,user_id FROM submissions WHERE id=? AND status='submitted'`, id).Scan(&target).Error; e != nil {
+		var target struct {
+			LessonID int64
+			UserID   int64
+			GroupID  *int64
+		}
+		if e := tx.Raw(`SELECT lesson_id,user_id,group_id FROM submissions WHERE id=? AND status='submitted'`, id).Scan(&target).Error; e != nil {
 			return e
 		}
 		if target.LessonID == 0 {
@@ -49,8 +53,13 @@ func (s AcademicService) Reopen(user, id int64, version int, reason string) (Reo
 		if e := lockAssignment(tx, target.UserID, target.LessonID); e != nil {
 			return e
 		}
+		// The teacher must be linked and enrolled with the author, or with any member
+		// of the group on a group delivery.
 		var allowed int64
-		if e := tx.Raw(`SELECT cs.user_id FROM course_staff cs JOIN modules m ON m.course_id=cs.course_id JOIN lessons l ON l.module_id=m.id JOIN teacher_students ts ON ts.teacher_id=cs.user_id WHERE l.id=? AND cs.user_id=? AND ts.student_id=? FOR SHARE OF cs,ts`, target.LessonID, user, target.UserID).Scan(&allowed).Error; e != nil {
+		if e := tx.Raw(`SELECT cs.user_id FROM course_staff cs JOIN modules m ON m.course_id=cs.course_id JOIN lessons l ON l.module_id=m.id
+  WHERE l.id=? AND cs.user_id=? AND EXISTS(SELECT 1 FROM teacher_students ts JOIN enrollments en ON en.user_id=ts.student_id AND en.course_id=m.course_id
+  LEFT JOIN group_members gm ON gm.user_id=ts.student_id AND gm.group_id=? WHERE ts.teacher_id=? AND (ts.student_id=? OR gm.group_id IS NOT NULL))
+  FOR SHARE OF cs`, target.LessonID, user, target.GroupID, user, target.UserID).Scan(&allowed).Error; e != nil {
 			return e
 		}
 		if allowed == 0 {
@@ -77,8 +86,14 @@ func (s AcademicService) Reopen(user, id int64, version int, reason string) (Reo
 		if previous.Attempt >= maximum {
 			return ErrAcademicConflict
 		}
+		// Attempts are counted per group on a group delivery, per student otherwise.
 		var latest int
-		if e := tx.Raw(`SELECT max(attempt) FROM submissions WHERE lesson_id=? AND user_id=?`, target.LessonID, target.UserID).Scan(&latest).Error; e != nil {
+		column := "user_id"
+		value := any(target.UserID)
+		if target.GroupID != nil {
+			column, value = "group_id", any(*target.GroupID)
+		}
+		if e := tx.Raw(`SELECT max(attempt) FROM submissions WHERE lesson_id=? AND `+column+`=?`, target.LessonID, value).Scan(&latest).Error; e != nil {
 			return e
 		}
 		if latest != previous.Attempt {
@@ -91,7 +106,7 @@ func (s AcademicService) Reopen(user, id int64, version int, reason string) (Reo
 		if publication == 0 {
 			return gorm.ErrRecordNotFound
 		}
-		return tx.Raw(`INSERT INTO submissions(lesson_id,user_id,publication_id,body,version,attempt,previous_submission_id,reopened_by,reopen_reason,reopened_at) VALUES (?,?,?,'',?,?,?,?,?,clock_timestamp()) RETURNING id,attempt`, target.LessonID, target.UserID, publication, previous.Version+1, previous.Attempt+1, id, user, reason).Scan(&out).Error
+		return tx.Raw(`INSERT INTO submissions(lesson_id,user_id,publication_id,body,version,attempt,previous_submission_id,reopened_by,reopen_reason,reopened_at,group_id) VALUES (?,?,?,'',?,?,?,?,?,clock_timestamp(),?) RETURNING id,attempt`, target.LessonID, target.UserID, publication, previous.Version+1, previous.Attempt+1, id, user, reason, target.GroupID).Scan(&out).Error
 	})
 	return out, err
 }

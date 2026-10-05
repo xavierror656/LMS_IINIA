@@ -109,12 +109,17 @@ func (a API) downloadAttachment(c *fiber.Ctx) error {
 		Content []byte
 	}
 	// Enrollment is checked for both readers. Teachers cannot read private drafts.
+	// On a group delivery any member of the group may read and the teacher must be
+	// linked to some member.
 	e := a.Repo.DB.Raw(`SELECT f.id,f.name,f.content FROM submission_attachments f
  JOIN submissions s ON s.id=f.submission_id JOIN lessons l ON l.id=s.lesson_id
- JOIN modules m ON m.id=l.module_id JOIN enrollments e ON e.course_id=m.course_id AND e.user_id=s.user_id
- WHERE f.id=? AND ((?='student' AND s.user_id=?) OR (?='teacher' AND s.status='submitted'
+ JOIN modules m ON m.id=l.module_id
+ WHERE f.id=? AND ((?='student' AND (s.user_id=? OR EXISTS(SELECT 1 FROM group_members gm WHERE gm.group_id=s.group_id AND gm.user_id=?)))
+ OR (?='teacher' AND s.status='submitted'
  AND EXISTS(SELECT 1 FROM course_staff cs WHERE cs.course_id=m.course_id AND cs.user_id=?)
- AND EXISTS(SELECT 1 FROM teacher_students ts WHERE ts.student_id=s.user_id AND ts.teacher_id=?)))`, c.Params("attachmentId"), user.Role, user.ID, user.Role, user.ID, user.ID).Scan(&file).Error
+ AND EXISTS(SELECT 1 FROM teacher_students ts JOIN enrollments en ON en.user_id=ts.student_id AND en.course_id=m.course_id
+   LEFT JOIN group_members gm ON gm.user_id=ts.student_id AND gm.group_id=s.group_id
+   WHERE ts.teacher_id=? AND (ts.student_id=s.user_id OR gm.group_id IS NOT NULL))))`, c.Params("attachmentId"), user.Role, user.ID, user.ID, user.Role, user.ID, user.ID).Scan(&file).Error
 	if e != nil {
 		return dbError(e)
 	}

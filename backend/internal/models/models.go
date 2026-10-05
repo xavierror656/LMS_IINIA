@@ -34,6 +34,10 @@ type Lesson struct {
 	Type        string          `json:"type"`
 	Config      json.RawMessage `json:"config"`
 	Status      string          `json:"status" gorm:"->"`
+	// GroupSubmission marks a shared group task; GroupName is the student's own
+	// group in that course, empty when they have none.
+	GroupSubmission bool   `json:"groupSubmission"`
+	GroupName       string `json:"groupName"`
 }
 type LessonConfig struct {
 	Body     string `json:"body,omitempty"`

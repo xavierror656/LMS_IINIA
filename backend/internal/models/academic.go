@@ -33,6 +33,7 @@ type Activity struct {
 	Schedule
 	Rubric           *Rubric `json:"rubric" gorm:"serializer:json"`
 	Weight           int     `json:"weight"`
+	GroupSubmission  bool    `json:"groupSubmission"`
 	ID               int64   `json:"id"`
 	ModuleID         int64   `json:"moduleId"`
 	LessonID         *int64  `json:"lessonId"`
@@ -50,6 +51,14 @@ type Grade struct {
 	Version    int               `json:"version"`
 	Status     string            `json:"status"`
 }
+
+// SubmissionAttemptSummary is one row of the student's own attempt history.
+type SubmissionAttemptSummary struct {
+	ID          int64      `json:"id"`
+	Attempt     int        `json:"attempt"`
+	Status      string     `json:"status"`
+	SubmittedAt *time.Time `json:"submittedAt"`
+}
 type Submission struct {
 	Attempt        int          `json:"attempt"`
 	Attachments    []Attachment `json:"attachments" gorm:"-"`
@@ -65,6 +74,9 @@ type Submission struct {
 	Body           string       `json:"body"`
 	Version        int          `json:"version"`
 	Status         string       `json:"status"`
-	SubmittedAt    *time.Time   `json:"submittedAt"`
-	Grade          *Grade       `json:"grade" gorm:"-"`
+	// GroupID is set only for a group delivery; GroupName labels it for both sides.
+	GroupID     *int64     `json:"groupId"`
+	GroupName   string     `json:"groupName"`
+	SubmittedAt *time.Time `json:"submittedAt"`
+	Grade       *Grade     `json:"grade" gorm:"-"`
 }

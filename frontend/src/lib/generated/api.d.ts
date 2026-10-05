@@ -689,6 +689,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/teacher/activities/{activityId}/group-mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Turn the shared group delivery on or off for a draft assignment */
+        put: operations["saveGroupMode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teacher/courses/{courseId}/groups": {
         parameters: {
             query?: never;
@@ -974,6 +991,8 @@ export interface components {
             rubric?: components["schemas"]["Rubric"] | null;
         };
         Lesson: {
+            groupSubmission: boolean;
+            groupName: string;
             id: number;
             moduleId: number;
             title: string;
@@ -1030,6 +1049,7 @@ export interface components {
             body: string;
         };
         Activity: {
+            groupSubmission: boolean;
             id: number;
             moduleId: number;
             title: string;
@@ -1075,6 +1095,8 @@ export interface components {
             selections?: number[];
         } & (unknown | unknown);
         Submission: {
+            groupId: number | null;
+            groupName: string;
             id: number;
             lessonId: number;
             alias: string;
@@ -1308,7 +1330,12 @@ export interface components {
             groupId: number;
             removed: boolean;
         };
+        GroupModeInput: {
+            version: number;
+            groupSubmission: boolean;
+        };
         Attachment: {
+            uploadedBy: number;
             id: string;
             name: string;
             /** @enum {string} */
@@ -5739,6 +5766,96 @@ export interface operations {
                 };
             };
             /** @description Database unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    saveGroupMode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activityId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupModeInput"];
+            };
+        };
+        responses: {
+            /** @description Canonical persisted result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             503: {
                 headers: {
                     [name: string]: unknown;

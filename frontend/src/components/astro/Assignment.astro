@@ -7,15 +7,19 @@ import type { Lesson, Submission, Availability } from "../../lib/api";
 interface Props { lesson: Lesson; submission: Submission | null; availability: Availability; }
 const { lesson, submission, availability } = Astro.props;
 const formatDate = (s: string) => new Intl.DateTimeFormat("es-MX", {dateStyle:"medium",timeStyle:"short",timeZone:"UTC"}).format(new Date(s));
-const unavailable = availability.state === "closed" || availability.state === "upcoming";
+// A group task needs a group: without one there is nothing to deliver against.
+const noGroup = lesson.groupSubmission && !lesson.groupName;
+const unavailable = availability.state === "closed" || availability.state === "upcoming" || noGroup;
 ---
 <article class="panel reading">
   <span class="tag">Tarea</span>
+  {lesson.groupSubmission && <p class="notice">Trabajo en equipo: {lesson.groupName ? `esta entrega es de ${lesson.groupName} y la comparten todos sus miembros.` : "esta tarea se entrega en grupo y todavía no tienes grupo en este curso."}</p>}
   {submission && <p>Intento {submission.attempt} · <a class="crumb" href={`/lessons/${lesson.id}/attempts`}>Ver mis intentos anteriores</a></p>}
   <ScheduleView schedule={availability}/>
   {availability.extended && <p class="notice">Tienes una prórroga. Estas son tus fechas efectivas.</p>}
   {availability.state === "late" && submission?.status !== "submitted" && <p class="notice">La fecha de entrega pasó, pero todavía puedes enviar tu trabajo. Quedará registrado como entrega tardía.</p>}
   <div class="reading-body">{lesson.config.body}</div>
+  {submission?.groupName && <p class="helper">Entrega del grupo {submission.groupName}.</p>}
   <AttachmentList files={submission?.attachments??[]}/>
   {submission?.status!=="submitted" && !unavailable && <a class="button quiet" href={`/lessons/${lesson.id}/files`}>Gestionar adjuntos</a>}
   {(submission ? submission.rubric : lesson.config.rubric) && <RubricView rubric={submission ? submission.rubric! : lesson.config.rubric!} assessment={submission?.grade?.assessment} />}
@@ -30,7 +34,7 @@ const unavailable = availability.state === "closed" || availability.state === "u
   </section> : <section class="admin-section">
     <h2>Mi respuesta</h2>
     {submission && (submission.instructions !== lesson.config.body || JSON.stringify(submission.rubric) !== JSON.stringify(lesson.config.rubric ?? null)) && <aside class="demo-access"><p>Las instrucciones o los criterios de evaluación cambiaron desde que guardaste tu borrador. Si lo envías ahora, conservará las instrucciones anteriores. Guarda de nuevo para usar las actuales.</p><details><summary>Instrucciones de mi borrador</summary><p class="reading-body">{submission.instructions}</p></details></aside>}
-    {unavailable ? <aside class="demo-access"><p>{availability.state === "upcoming" ? "La entrega todavía no abre." : "La entrega está cerrada."} Puedes seguir leyendo las instrucciones.</p>
+    {noGroup ? <aside class="demo-access"><p>Pídele a tu docente que te asigne un grupo para entregar este trabajo. Mientras tanto puedes leer las instrucciones.</p><a class="button quiet" href={`/lessons/${lesson.id}`} data-astro-reload>Actualizar disponibilidad</a></aside> : unavailable ? <aside class="demo-access"><p>{availability.state === "upcoming" ? "La entrega todavía no abre." : "La entrega está cerrada."} Puedes seguir leyendo las instrucciones.</p>
       {submission && <><h3>Tu borrador guardado</h3><p class="reading-body">{submission.body}</p></>}
       <a class="button quiet" href={`/lessons/${lesson.id}`} data-astro-reload>Actualizar disponibilidad</a>
     </aside> : <AcademicForm kind="submission" path={`/lessons/${lesson.id}/submission`} version={submission?.version ?? 0} lessonVersion={lesson.config.version} canPublish={!!submission}>

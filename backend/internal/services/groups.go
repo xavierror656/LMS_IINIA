@@ -15,6 +15,10 @@ var ErrGroupMemberElsewhere = errors.New("student already belongs to another gro
 // ErrGroupNameTaken means the course already has a group with that name.
 var ErrGroupNameTaken = errors.New("group name already used in this course")
 
+// ErrGroupHasDeliveries means the group already owns submissions, so deleting it
+// would orphan academic work.
+var ErrGroupHasDeliveries = errors.New("group already owns deliveries")
+
 func (s AcademicService) Groups(user, course int64, page int) ([]models.Group, error) {
 	out := []models.Group{}
 	e := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
@@ -94,8 +98,16 @@ func (s AcademicService) DeleteGroup(user, course, id int64) error {
 		if _, e := (repositories.Repository{DB: tx}).StaffCourse(user, course); e != nil {
 			return e
 		}
-		// Membership goes with the group; no submission, grade or progress is touched
-		// because this increment keeps deliveries individual.
+		// A group that already owns deliveries is part of the academic record: it is
+		// never deleted, only emptied, so no work or grade is lost.
+		var deliveries int64
+		if e := tx.Raw(`SELECT count(*) FROM submissions WHERE group_id=?`, id).Scan(&deliveries).Error; e != nil {
+			return e
+		}
+		if deliveries > 0 {
+			return ErrGroupHasDeliveries
+		}
+		// Membership goes with the group; no submission, grade or progress is touched.
 		if e := tx.Exec(`DELETE FROM group_members WHERE group_id=? AND course_id=?`, id, course).Error; e != nil {
 			return e
 		}

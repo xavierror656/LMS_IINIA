@@ -127,6 +127,7 @@ func (a API) Register(app *fiber.App) {
 	teacher.Put("/activities/:activityId/evaluation", a.saveEvaluation)
 	teacher.Put("/activities/:activityId/schedule", a.saveSchedule)
 	teacher.Put("/activities/:activityId/attempt-policy", a.saveAttemptPolicy)
+	teacher.Put("/activities/:activityId/group-mode", a.saveGroupMode)
 	teacher.Post("/submissions/:submissionId/reopen", a.reopenSubmission)
 	teacher.Get("/activities/:activityId/extensions", a.extensions)
 	teacher.Put("/activities/:activityId/extensions/:studentId", a.saveExtension)

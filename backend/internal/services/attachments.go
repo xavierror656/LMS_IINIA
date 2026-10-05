@@ -8,28 +8,47 @@ import (
 	"gorm.io/gorm"
 )
 
-func editableAttachmentSubmission(tx *gorm.DB, user, lesson int64, version int) (models.Submission, error) {
+// editableAttachmentSubmission returns the student's editable delivery together
+// with the scope it belongs to: the group on a group task, the student otherwise.
+func editableAttachmentSubmission(tx *gorm.DB, user, lesson int64, version int) (models.Submission, submissionScope, error) {
 	var sub models.Submission
 	if version < 0 {
-		return sub, models.ErrAcademicInput
+		return sub, submissionScope{}, models.ErrAcademicInput
 	}
 	if e := lockAssignment(tx, user, lesson); e != nil {
-		return sub, e
+		return sub, submissionScope{}, e
 	}
-	if e := tx.Raw(`SELECT * FROM submissions WHERE user_id=? AND lesson_id=? ORDER BY attempt DESC LIMIT 1 FOR UPDATE`, user, lesson).Scan(&sub).Error; e != nil {
-		return sub, e
+	scope, e := resolveScope(tx, user, lesson)
+	if e != nil {
+		return sub, submissionScope{}, e
+	}
+	if e = tx.Raw(`SELECT * FROM submissions WHERE lesson_id=? AND `+scope.column()+`=? ORDER BY attempt DESC LIMIT 1 FOR UPDATE`, lesson, scope.value()).Scan(&sub).Error; e != nil {
+		return sub, scope, e
 	}
 	if sub.Version != version || (sub.ID != 0 && sub.Status != "draft") {
-		return sub, ErrAcademicConflict
+		return sub, scope, ErrAcademicConflict
 	}
 	available, e := assignmentAvailability(tx, user, lesson)
 	if e != nil {
-		return sub, e
+		return sub, scope, e
 	}
 	if available.State == "upcoming" || available.State == "closed" {
-		return sub, ErrAssignmentUnavailable
+		return sub, scope, ErrAssignmentUnavailable
 	}
-	return sub, nil
+	return sub, scope, nil
+}
+
+// attachmentAccountOf reports whether the student may touch the file: it belongs to
+// their delivery, which on a group task means any member of their group.
+func attachmentEditable(tx *gorm.DB, scope submissionScope, submission int64) error {
+	var owned int64
+	if e := tx.Raw(`SELECT count(*) FROM submissions s WHERE s.id=? AND s.`+scope.column()+`=?`, submission, scope.value()).Scan(&owned).Error; e != nil {
+		return e
+	}
+	if owned == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 func lockAttachmentAccount(tx *gorm.DB, user int64) (int64, error) {
 	if e := tx.Exec(`INSERT INTO attachment_accounts(user_id) VALUES (?) ON CONFLICT DO NOTHING`, user).Error; e != nil {
@@ -54,7 +73,7 @@ func (s AcademicService) UploadAttachment(user, lesson int64, version, lessonVer
 	}
 	id := hex.EncodeToString(token)
 	e = s.Repo.DB.Transaction(func(tx *gorm.DB) error {
-		sub, e := editableAttachmentSubmission(tx, user, lesson, version)
+		sub, scope, e := editableAttachmentSubmission(tx, user, lesson, version)
 		if e != nil {
 			return e
 		}
@@ -72,10 +91,12 @@ func (s AcademicService) UploadAttachment(user, lesson int64, version, lessonVer
 			if pub.Version != lessonVersion {
 				return ErrAcademicConflict
 			}
-			if e = tx.Raw(`INSERT INTO submissions(lesson_id,user_id,publication_id,body) VALUES (?,?,?,'') RETURNING *`, lesson, user, pub.ID).Scan(&sub).Error; e != nil {
+			if e = tx.Raw(`INSERT INTO submissions(lesson_id,user_id,publication_id,body,group_id) VALUES (?,?,?,'',?) RETURNING *`, lesson, user, pub.ID, scope.insertGroup()).Scan(&sub).Error; e != nil {
 				return e
 			}
 		}
+		// The uploader is charged, which on a group delivery is not necessarily the
+		// author of the submission.
 		used, e := lockAttachmentAccount(tx, user)
 		if e != nil {
 			return e
@@ -90,7 +111,7 @@ func (s AcademicService) UploadAttachment(user, lesson int64, version, lessonVer
 		if slot == 0 {
 			return ErrAcademicConflict
 		}
-		if e = tx.Exec(`INSERT INTO submission_attachments(id,submission_id,slot,name,content_type,size,content) VALUES (?,?,?,?,?,?,?)`, id, sub.ID, slot, name, kind, len(data), data).Error; e != nil {
+		if e = tx.Exec(`INSERT INTO submission_attachments(id,submission_id,slot,name,content_type,size,content,uploaded_by) VALUES (?,?,?,?,?,?,?,?)`, id, sub.ID, slot, name, kind, len(data), data, user).Error; e != nil {
 			return e
 		}
 		if e = tx.Exec(`UPDATE attachment_accounts SET bytes_used=bytes_used+? WHERE user_id=?`, len(data), user).Error; e != nil {
@@ -102,7 +123,7 @@ func (s AcademicService) UploadAttachment(user, lesson int64, version, lessonVer
 				return e
 			}
 		}
-		if e = tx.Exec(`INSERT INTO lesson_progress(user_id,lesson_id,status) VALUES (?,?,'in_progress') ON CONFLICT DO NOTHING`, user, lesson).Error; e != nil {
+		if e = markScopeProgress(tx, scope, lesson, "in_progress"); e != nil {
 			return e
 		}
 		out, e = (repositories.Repository{DB: tx}).Submission(sub.ID, false)
@@ -113,21 +134,34 @@ func (s AcademicService) UploadAttachment(user, lesson int64, version, lessonVer
 func (s AcademicService) DeleteAttachment(user, lesson int64, id string, version int) (models.Submission, error) {
 	var out models.Submission
 	e := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
-		var owned int64
-		if e := tx.Raw(`SELECT count(*) FROM submission_attachments f JOIN submissions s ON s.id=f.submission_id WHERE f.id=? AND s.user_id=? AND s.lesson_id=?`, id, user, lesson).Scan(&owned).Error; e != nil {
+		var file struct {
+			SubmissionID int64
+			UploadedBy   int64
+		}
+		if e := tx.Raw(`SELECT f.submission_id,f.uploaded_by FROM submission_attachments f JOIN submissions s ON s.id=f.submission_id WHERE f.id=? AND s.lesson_id=?`, id, lesson).Scan(&file).Error; e != nil {
 			return e
 		}
-		if owned == 0 {
+		if file.SubmissionID == 0 {
 			return gorm.ErrRecordNotFound
 		}
-		sub, e := editableAttachmentSubmission(tx, user, lesson, version)
+		// Ownership is decided before revisions: a foreign file is not found, never a
+		// conflict that would leak another delivery's state.
+		scope, scopeError := resolveScope(tx, user, lesson)
+		if scopeError != nil {
+			return scopeError
+		}
+		if e := attachmentEditable(tx, scope, file.SubmissionID); e != nil {
+			return e
+		}
+		sub, _, e := editableAttachmentSubmission(tx, user, lesson, version)
 		if e != nil {
 			return e
 		}
-		if sub.ID == 0 {
+		if sub.ID != file.SubmissionID {
 			return gorm.ErrRecordNotFound
 		}
-		if _, e = lockAttachmentAccount(tx, user); e != nil {
+		// The quota goes back to whoever uploaded the file.
+		if _, e = lockAttachmentAccount(tx, file.UploadedBy); e != nil {
 			return e
 		}
 		var size int
@@ -137,7 +171,7 @@ func (s AcademicService) DeleteAttachment(user, lesson int64, id string, version
 		if size == 0 {
 			return gorm.ErrRecordNotFound
 		}
-		if e = tx.Exec(`UPDATE attachment_accounts SET bytes_used=bytes_used-? WHERE user_id=?`, size, user).Error; e != nil {
+		if e = tx.Exec(`UPDATE attachment_accounts SET bytes_used=bytes_used-? WHERE user_id=?`, size, file.UploadedBy).Error; e != nil {
 			return e
 		}
 		if e = tx.Exec(`UPDATE submissions SET version=version+1 WHERE id=?`, sub.ID).Error; e != nil {
