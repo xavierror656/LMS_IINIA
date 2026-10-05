@@ -186,7 +186,7 @@ func TestSubmissionAttemptsIntegration(t *testing.T) {
 		var book models.Gradebook
 		decode(call("GET", fmt.Sprintf("/teacher/courses/%d/gradebook", module.CourseID), nil, "profe", 200), &book)
 		// Inspect repository rows as well to detect duplicate aggregation.
-		data, e := (API{Repo: repositories.Repository{DB: db}}).academic().Repo.Gradebook(teacher, module.CourseID, 1, 1)
+		data, e := (API{Repo: repositories.Repository{DB: db}}).academic().Repo.Gradebook(teacher, module.CourseID, 1, 20, 1, 10)
 		if e != nil {
 			t.Fatal(e)
 		}

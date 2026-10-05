@@ -36,7 +36,10 @@ type GradebookData struct {
 	TotalActivities int64
 }
 
-func (r Repository) Gradebook(user, course int64, page, activityPage int) (GradebookData, error) {
+// Gradebook builds one window of the book. The screen asks for a page of students
+// and a page of activities; the export asks for everything up to its own caps, with
+// the same queries, so both can never disagree.
+func (r Repository) Gradebook(user, course int64, studentPage, studentSize, activityPage, activitySize int) (GradebookData, error) {
 	out := GradebookData{Activities: []models.GradebookActivity{}, Students: []GradebookStudent{}, Entries: []GradebookEntry{}}
 	err := r.DB.Transaction(func(tx *gorm.DB) error {
 		var e error
@@ -60,24 +63,26 @@ func (r Repository) Gradebook(user, course int64, page, activityPage int) (Grade
 		out.TotalActivities, out.TotalWeight = totals.TotalActivities, totals.TotalWeight
 		if e = tx.Raw(`SELECT a.id activity_id,l.id lesson_id,l.title,l.type,l.grade_weight weight FROM authored_activities a
     JOIN lessons l ON l.id=a.lesson_id JOIN modules m ON m.id=l.module_id
-    WHERE m.course_id=? AND l.type IN ('assignment','quiz') ORDER BY m.position,l.position,l.id LIMIT 10 OFFSET ?`, course, (activityPage-1)*10).Scan(&out.Activities).Error; e != nil {
+    WHERE m.course_id=? AND l.type IN ('assignment','quiz') ORDER BY m.position,l.position,l.id LIMIT ? OFFSET ?`, course, activitySize, (activityPage-1)*activitySize).Scan(&out.Activities).Error; e != nil {
 			return e
 		}
 		if e = tx.Raw(`WITH roster AS (
     SELECT u.id,u.alias FROM users u JOIN enrollments e ON e.user_id=u.id
     JOIN teacher_students ts ON ts.student_id=u.id
-    WHERE u.role='student' AND e.course_id=? AND ts.teacher_id=? ORDER BY u.id LIMIT 20 OFFSET ?
+    WHERE u.role='student' AND e.course_id=? AND ts.teacher_id=? ORDER BY u.id LIMIT ? OFFSET ?
   ), assignments AS (
     SELECT l.id,l.grade_weight FROM authored_activities a JOIN lessons l ON l.id=a.lesson_id
     JOIN modules m ON m.id=l.module_id WHERE m.course_id=? AND l.type IN ('assignment','quiz')
+  ), scoped AS MATERIALIZED (
+    SELECT e.user_id,e.lesson_id,e.score,e.status FROM gradebook_entries e WHERE e.lesson_id IN (SELECT id FROM assignments)
   ) SELECT r.id,r.alias,count(e.lesson_id) submitted,count(e.score) graded,
     count(e.lesson_id) FILTER(WHERE e.status='published') published,
     COALESCE(sum(e.score) FILTER(WHERE e.status='published'),0) published_sum,
     COALESCE(sum(e.score::bigint*aw.grade_weight) FILTER(WHERE e.status='published'),0) weighted_sum,
     COALESCE(sum(aw.grade_weight) FILTER(WHERE e.status='published'),0) published_weight
-    FROM roster r LEFT JOIN gradebook_entries e ON e.user_id=r.id AND e.lesson_id IN (SELECT id FROM assignments)
+    FROM roster r LEFT JOIN scoped e ON e.user_id=r.id
     LEFT JOIN assignments aw ON aw.id=e.lesson_id
-    GROUP BY r.id,r.alias ORDER BY r.id`, course, user, (page-1)*20, course).Scan(&out.Students).Error; e != nil {
+    GROUP BY r.id,r.alias ORDER BY r.id`, course, user, studentSize, (studentPage-1)*studentSize, course).Scan(&out.Students).Error; e != nil {
 			return e
 		}
 		students := []int64{}

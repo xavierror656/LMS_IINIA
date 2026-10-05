@@ -16,6 +16,7 @@ const href = (page: number, activityPage: number) => `?page=${page}&activityPage
 <Layout title="Libro de calificaciones">
   <a class="crumb" href={`/teacher/courses/${courseId}`}>← Actividades del curso</a>
   <span class="eyebrow">Evaluación</span><h1>Libro de calificaciones</h1>
+  <a class="button quiet" href={`/api/v1/teacher/courses/${courseId}/gradebook.csv`} download data-astro-reload>Descargar CSV</a>
   {error ? <ServiceError message={error} /> : book && <>
     <h2>{book.course.title}</h2>
     <p>Consulta las tareas y cuestionarios publicados de tus estudiantes vinculados e inscritos en este curso.</p>

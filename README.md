@@ -292,4 +292,10 @@ Los adjuntos admiten **texto, imagen y PDF**, siempre por análisis del contenid
 
 Cada nota admite hasta cinco archivos de devolución (2 MiB cada uno), **por estudiante**: en una entrega de equipo cada miembro tiene los suyos. Los archivos cuelgan de la nota, así que adjuntar exige haberla guardado antes (si no, 409) y la propia base impide que existan huérfanos. El alumno descarga **solo los suyos y solo cuando la nota está publicada**; un compañero recibe 404 y una devolución en borrador no se filtra. La autorización es literalmente la misma que la de calificar, y la cuota se descuenta a quien sube y se le devuelve al borrar. Requiere `014_grade_attachments.sql` (`go run ./cmd/migrate`). Evidencia y límites: [docs/grade-attachments-validation.md](docs/grade-attachments-validation.md).
 
-T4g queda cerrado con este incremento (formatos, instrucciones, retención y devoluciones). Queda pendiente el resto del catálogo: T6 (CSV del libro, medición y accesibilidad) y PL1 (administración real con capacidades por contexto).
+T4g queda cerrado con este incremento (formatos, instrucciones, retención y devoluciones).
+
+### Exportación del libro y rendimiento (Go/PostgreSQL)
+
+En el libro de calificaciones, **Descargar CSV** entrega el libro completo con los **mismos números** que la tabla: la exportación reutiliza la misma consulta y el mismo ensamblado, solo cambia la ventana. Solo viajan las notas **publicadas**; los pendientes aparecen como contadores. Un archivo que no quepa (más de 500 estudiantes o 100 actividades) se **rechaza con 409** en lugar de truncarse, y un alias que parezca una fórmula se neutraliza. Rendimiento medido con 40 estudiantes, 12 actividades y 480 entregas: el libro pasó de **549 ms a 46 ms** al dejar de reevaluar la vista del libro 9.600 veces, y una prueba fija en **6 sentencias** el número de consultas para impedir N+1. Método, entorno y límites: [docs/gradebook-export-validation.md](docs/gradebook-export-validation.md).
+
+La **accesibilidad (AC1)** de T6 sigue **sin auditar**: está especificada y no ejecutada. Queda PL1 (administración real con capacidades por contexto) en el catálogo pendiente.
