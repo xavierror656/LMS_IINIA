@@ -115,7 +115,7 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 			return e
 		}
 		if a.Type == "quiz" {
-			if e = tx.Exec(`UPDATE lessons SET quiz_grade_policy=? WHERE id=?`, a.QuizConfig.GradePolicy, *a.LessonID).Error; e != nil {
+			if e = tx.Exec(`UPDATE lessons SET quiz_grade_policy=?,quiz_time_limit_seconds=? WHERE id=?`, a.QuizConfig.GradePolicy, a.QuizConfig.TimeLimitSeconds, *a.LessonID).Error; e != nil {
 				return e
 			}
 			items, _ := json.Marshal(a.QuizConfig.Items)

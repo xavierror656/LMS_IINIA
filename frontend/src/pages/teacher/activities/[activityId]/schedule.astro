@@ -6,19 +6,23 @@ import { api, type Activity } from "../../../../lib/api";
 let error=Astro.locals.apiError;
 let activity:Activity|undefined;
 const id=encodeURIComponent(Astro.params.activityId??"");
-if(!error)try {activity=await api<Activity>(`/teacher/activities/${id}`,{},Astro.request.headers.get("cookie")??"");if(activity.type!=="assignment")error="El calendario de entrega solo aplica a tareas.";}catch(e){error=e instanceof Error?e.message:"No se pudo abrir el calendario.";}
+if(!error)try {activity=await api<Activity>(`/teacher/activities/${id}`,{},Astro.request.headers.get("cookie")??"");if(activity.type!=="assignment"&&activity.type!=="quiz")error="El calendario solo aplica a tareas y cuestionarios.";}catch(e){error=e instanceof Error?e.message:"No se pudo abrir el calendario.";}
+const quiz=activity?.type==="quiz";
+const title=quiz?"Fechas del cuestionario":"Fechas de la tarea";
 const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0,19):"";
 ---
-<Layout title="Fechas de la tarea">
+<Layout title={title}>
   <a class="crumb" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
-  <h1>Fechas de la tarea</h1>
+  <h1>{title}</h1>
   {error ? <ServiceError message={error}/> : activity && <section class="panel">
     <h2>{activity.title}</h2>
     <p>Todas las fechas de este formulario están en UTC (tiempo universal), no en la hora local del dispositivo. Deja un campo vacío para quitar ese límite.</p>
-    <p>Después del vencimiento se permiten entregas tardías hasta el cierre. Guarda el borrador y vuelve a la actividad para publicar el calendario.</p>
+    {quiz
+      ? <p>El cuestionario solo se puede comenzar dentro del calendario. Después del vencimiento un intento en curso todavía se puede resolver y enviar hasta el cierre. Guarda el borrador y vuelve a la actividad para publicar el calendario.</p>
+      : <p>Después del vencimiento se permiten entregas tardías hasta el cierre. Guarda el borrador y vuelve a la actividad para publicar el calendario.</p>}
     <AcademicForm kind="schedule" path={`/teacher/activities/${id}/schedule`} version={activity.version}>
       <label for="opens-at">Apertura (UTC)</label><input id="opens-at" name="opensAt" type="datetime-local" step="1" value={inputDate(activity.opensAt)}/>
-      <label for="due-at">Fecha de entrega (UTC)</label><input id="due-at" name="dueAt" type="datetime-local" step="1" value={inputDate(activity.dueAt)}/>
+      <label for="due-at">{quiz?"Vencimiento":"Fecha de entrega"} (UTC)</label><input id="due-at" name="dueAt" type="datetime-local" step="1" value={inputDate(activity.dueAt)}/>
       <label for="closes-at">Cierre (UTC)</label><input id="closes-at" name="closesAt" type="datetime-local" step="1" value={inputDate(activity.closesAt)}/>
     </AcademicForm>
   </section>}

@@ -1,14 +1,28 @@
 ---
-import QuizAttempt from './QuizAttempt.astro';import type{components}from'../../lib/generated/api';
+import QuizAttempt from './QuizAttempt.astro';import ScheduleView from './ScheduleView.astro';import type{components}from'../../lib/generated/api';
 interface Props{lessonId:number;overview:components['schemas']['QuizOverview'];body:string;}
-const{lessonId,overview,body}=Astro.props;const latest=overview.attempts[0];const canStart=(!latest||latest.status==='finished')&&overview.attempts.length<overview.maxAttempts;
+const{lessonId,overview,body}=Astro.props;const latest=overview.attempts[0];
+const open=overview.state==='open'||overview.state==='late';
+const canStart=(!latest||latest.status==='finished')&&overview.attempts.length<overview.maxAttempts&&open;
 const policies={first:'primera nota',last:'última nota',highest:'mejor nota',average:'promedio de notas'};
+const review={never:'Las soluciones de los nuevos intentos no se mostrarán al enviar.',after_attempt:'Las soluciones de los nuevos intentos se podrán revisar después de enviarlos.',after_close:'Las soluciones de los nuevos intentos se mostrarán solo después del cierre del cuestionario.'};
+const notice={upcoming:'Este cuestionario todavía no abre. Puedes leer las instrucciones y volver más tarde.',open:'',late:'Pasó el vencimiento, pero todavía puedes comenzar un intento mientras el cuestionario no cierre.',closed:'Este cuestionario ya cerró. Puedes seguir consultando tu trabajo.'};
+const stateNotice=notice[overview.state];
+const minutes=overview.timeLimitSeconds?Math.round(overview.timeLimitSeconds/60):null;
+const extra=overview.extraSeconds?Math.round(overview.extraSeconds/60):0;
 ---
 <section>
- <div class="panel"><span class="tag">Cuestionario</span><p class="reading-body">{body}</p><p>{overview.questionCount} preguntas · máximo {overview.maxAttempts} intentos · el libro usa {policies[overview.gradePolicy]}.</p>
- <p>{overview.reviewPolicy==='after_attempt'?'Las soluciones de los nuevos intentos se podrán revisar después de enviarlos.':'Las soluciones de los nuevos intentos no se mostrarán al enviar.'}</p>
+ <div class="panel"><span class="tag">Cuestionario</span><p class="reading-body">{body}</p>
+ <ScheduleView schedule={overview} kind="quiz"/>
+ <p>{overview.questionCount} preguntas · máximo {overview.maxAttempts} intentos · el libro usa {policies[overview.gradePolicy]}.</p>
+ <p>{minutes?`Tiempo máximo: ${minutes} ${minutes===1?"minuto":"minutos"} por intento desde que lo comienzas.`:"Sin límite de tiempo."}{extra?` Tienes ${extra} ${extra===1?"minuto":"minutos"} extra.`:""}</p>
+ {overview.extended&&<p class="notice">Tienes una excepción de tiempo. Estas son tus fechas efectivas.</p>}
+ <p>{review[overview.reviewPolicy]}</p>
+ {stateNotice&&<p class="notice">{stateNotice} <a class="crumb" href={`/lessons/${lessonId}`} data-astro-reload>Actualizar disponibilidad</a></p>}
  {canStart&&<quiz-start data-lesson={lessonId} data-after={latest?.attempt??0}><form><button type="submit">Comenzar intento {(latest?.attempt??0)+1}</button><p role="status" data-status></p></form></quiz-start>}
- {!canStart&&latest?.status==='finished'&&<p>Ya usaste los intentos disponibles. Puedes seguir consultando tu trabajo.</p>}
+ {!canStart&&open&&latest?.status==='in_progress'&&<p>Tienes un intento en progreso. Termínalo antes de comenzar otro.</p>}
+ {!canStart&&open&&latest?.status==='finished'&&overview.attempts.length>=overview.maxAttempts&&<p>Ya usaste los intentos disponibles. Puedes seguir consultando tu trabajo.</p>}
+ {!open&&!latest&&<p>Podrás comenzar cuando el cuestionario esté abierto.</p>}
  </div>
  {overview.attempts.length>0&&<nav class="toolbar" aria-label="Intentos del cuestionario">{overview.attempts.map(a=><a class="button quiet" href={`?attemptId=${a.id}`}>Intento {a.attempt} · {a.status==='finished'?'Enviado':'En progreso'}</a>)}</nav>}
  {overview.attempt&&overview.attempt.instructions!==body&&<p class="notice">Las instrucciones cambiaron. Tu intento conserva las anteriores: puedes consultarlas en «Instrucciones de este intento».</p>}

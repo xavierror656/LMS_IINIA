@@ -2,12 +2,16 @@
 import type {components} from '../../lib/generated/api';
 interface Props{attempt:components['schemas']['QuizAttempt'];readonly?:boolean;}
 const {attempt,readonly=false}=Astro.props;const editable=!readonly&&attempt.status==='in_progress';
+const fmt=(s:string)=>new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(s));
+const clock=(s:number)=>`${Math.floor(s/60)}:${String(Math.max(s,0)%60).padStart(2,'0')}`;
 ---
-<quiz-attempt data-lesson={attempt.lessonId} data-id={attempt.id} data-version={attempt.version} data-editable={String(editable)}>
+<quiz-attempt data-lesson={attempt.lessonId} data-id={attempt.id} data-version={attempt.version} data-editable={String(editable)} data-remaining={attempt.remainingSeconds ?? ''}>
  <form class="academic-form">
   <h2>Intento {attempt.attempt}</h2>
   <details><summary>Instrucciones de este intento</summary><p class="reading-body">{attempt.instructions}</p></details>
   {attempt.score!==null&&<p class="notice"><strong>Resultado de este intento: {attempt.score} / 100</strong></p>}
+  {editable&&attempt.remainingSeconds!==null&&<p class="helper">Tiempo restante: <span data-clock role="timer" aria-live="off">{clock(attempt.remainingSeconds)}</span>. Lo controla el servidor: el reloj de este dispositivo es solo informativo.</p>}
+  {editable&&attempt.expiresAt&&<p class="helper">Tu tiempo termina a las <time datetime={attempt.expiresAt}>{fmt(attempt.expiresAt)} UTC</time>{attempt.closesAt?<> y el cuestionario cierra a las <time datetime={attempt.closesAt}>{fmt(attempt.closesAt)} UTC</time></>:null}.</p>}
   <p>{editable?'Guarda tus respuestas antes de enviarlas. Al enviar, este intento ya no se puede editar.':'Este intento es de solo lectura.'}</p>
   {attempt.questions.map((q,i)=><fieldset class="panel" data-question data-type={q.type} disabled={!editable}>
    <legend>Pregunta {i+1} · peso {q.weight}</legend><p class="reading-body">{q.prompt}</p>
@@ -20,13 +24,17 @@ const {attempt,readonly=false}=Astro.props;const editable=!readonly&&attempt.sta
 <style>.quiz-choice{display:flex;align-items:center;gap:.75rem;min-height:44px}.quiz-choice input{width:24px;height:24px;flex:none}fieldset{margin-block:1rem}fieldset:disabled{opacity:1}</style>
 <script>
  import {api} from '../../lib/api';import type{components}from'../../lib/generated/api';
+ const format=(s:number)=>`${Math.floor(Math.max(s,0)/60)}:${String(Math.max(s,0)%60).padStart(2,'0')}`;
  class QuizAttemptElement extends HTMLElement{
-  private controller?:AbortController;private dirty=false;private busy=false;
+  private controller?:AbortController;private dirty=false;private busy=false;private timer?:number;private expired=false;
   connectedCallback(){if(this.controller||this.dataset.editable!=='true')return;this.controller=new AbortController();const signal=this.controller.signal;const form=this.querySelector('form')!;const status=this.querySelector<HTMLElement>('[data-status]')!;const send=form.querySelector<HTMLButtonElement>('button[value="submit"]')!;
+   // The counter only informs the student: the server clock still decides.
+   const clock=this.querySelector<HTMLElement>('[data-clock]');const remaining=this.dataset.remaining;
+   if(clock&&remaining!==''){let left=Number(remaining);if(Number.isFinite(left)){if(left<=0)this.expire();else this.timer=window.setInterval(()=>{left-=1;clock.textContent=format(left);this.dataset.remaining=String(Math.max(left,0));if(left<=0)this.expire();},1000);}}
    form.addEventListener('input',()=>{this.dirty=true;send.disabled=true;status.textContent='Tienes respuestas sin guardar.';},{signal});
    window.addEventListener('beforeunload',e=>{if(this.dirty||this.busy)e.preventDefault();},{signal});
    document.addEventListener('click',e=>{if(!(this.dirty||this.busy)||!(e.target as Element)?.closest?.('a[href]'))return;if(!window.confirm('Tienes respuestas sin guardar. ¿Quieres salir?')){e.preventDefault();e.stopImmediatePropagation();}else this.dirty=false;},{capture:true,signal});
-   form.addEventListener('submit',async e=>{e.preventDefault();if(this.busy)return;const submitting=(e.submitter as HTMLButtonElement)?.value==='submit';if(submitting&&this.dirty)return;
+   form.addEventListener('submit',async e=>{e.preventDefault();if(this.busy||this.expired)return;const submitting=(e.submitter as HTMLButtonElement)?.value==='submit';if(submitting&&this.dirty)return;
     const data=new FormData(form);const answers=Array.from(form.querySelectorAll('[data-question]'),(_,i)=>({choices:data.getAll(`choice-${i}`).map(Number),text:String(data.get(`text-${i}`)??'')}));
     const payload=submitting?{version:Number(this.dataset.version)}:{version:Number(this.dataset.version),answers};this.busy=true;const fields=form.querySelectorAll<HTMLInputElement|HTMLButtonElement>('input,button');fields.forEach(f=>f.disabled=true);status.textContent=submitting?'Evaluando tu cuestionario…':'Guardando respuestas…';
     try{const result=await api<components['schemas']['QuizAttempt']>(`/lessons/${this.dataset.lesson}/quiz/attempts/${this.dataset.id}${submitting?'/submit':''}`,{method:submitting?'POST':'PUT',body:JSON.stringify(payload)});this.dataset.version=String(result.version);this.dirty=false;status.textContent='Respuestas guardadas en el servidor.';if(submitting){this.busy=false;window.location.reload();}}
@@ -34,7 +42,8 @@ const {attempt,readonly=false}=Astro.props;const editable=!readonly&&attempt.sta
     finally{this.busy=false;fields.forEach(f=>f.disabled=false);send.disabled=this.dirty;}
    },{signal});
   }
-  disconnectedCallback(){this.controller?.abort();this.controller=undefined;}
+  private expire(){if(this.timer!==undefined){window.clearInterval(this.timer);this.timer=undefined;}this.expired=true;const form=this.querySelector('form');if(!form)return;form.querySelectorAll<HTMLInputElement|HTMLButtonElement|HTMLTextAreaElement>('input,button,textarea').forEach(f=>{f.disabled=true;});const status=this.querySelector<HTMLElement>('[data-status]');if(status)status.textContent='Se agotó tu tiempo. El servidor calificó las respuestas que ya habías guardado.'+(this.dirty?' Copia los cambios que no guardaste antes de recargar.':'')+' Recarga la página para ver tu resultado.';}
+  disconnectedCallback(){this.controller?.abort();this.controller=undefined;if(this.timer!==undefined){window.clearInterval(this.timer);this.timer=undefined;}}
  }
  if(!customElements.get('quiz-attempt'))customElements.define('quiz-attempt',QuizAttemptElement);
 </script>

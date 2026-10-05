@@ -20,7 +20,8 @@ func (s AcademicService) SaveSchedule(user, id int64, version int, schedule mode
 		if e != nil {
 			return e
 		}
-		if a.Type != "assignment" {
+		// Both tasks and quizzes accept a calendar; only readings reject one.
+		if a.Type != "assignment" && a.Type != "quiz" {
 			return models.ErrAcademicInput
 		}
 		if a.Version != version {

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AulaQuest API",
-    "version": "1.8.0"
+    "version": "1.9.0"
   },
   "servers": [
     {
@@ -2981,7 +2981,7 @@
     "/api/v1/teacher/activities/{activityId}/schedule": {
       "put": {
         "operationId": "saveSchedule",
-        "summary": "Save draft UTC task schedule",
+        "summary": "Save draft UTC calendar for a task or a quiz",
         "parameters": [
           {
             "in": "path",
@@ -3099,7 +3099,7 @@
     },
     "/api/v1/lessons/{lessonId}/availability": {
       "get": {
-        "summary": "Current effective task schedule for enrolled student",
+        "summary": "Current effective calendar for an enrolled student, task or quiz",
         "operationId": "assignmentAvailability",
         "responses": {
           "200": {
@@ -5131,6 +5131,253 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/QuestionAnswer"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/activities/{activityId}/quiz-extensions": {
+      "get": {
+        "operationId": "quizExtensions",
+        "summary": "Linked enrolled roster with individual quiz time exceptions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activityId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Canonical persisted result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizExtensionList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or Origin denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Object not accessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale version or invalid state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 128 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/activities/{activityId}/quiz-extensions/{studentId}": {
+      "put": {
+        "operationId": "saveQuizExtension",
+        "summary": "Grant or revoke an individual quiz time exception with revision and audit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activityId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Canonical persisted result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizExtension"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or Origin denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Object not accessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale version or invalid state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 128 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizExtensionInput"
               }
             }
           }
@@ -7533,6 +7780,19 @@
           },
           "extended": {
             "type": "boolean"
+          },
+          "timeLimitSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 60,
+            "maximum": 43200
+          },
+          "extraSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 14400
           }
         },
         "required": [
@@ -7541,7 +7801,9 @@
           "closesAt",
           "serverNow",
           "state",
-          "extended"
+          "extended",
+          "timeLimitSeconds",
+          "extraSeconds"
         ]
       },
       "ExtensionInput": {
@@ -7647,6 +7909,134 @@
         "required": [
           "items",
           "schedule",
+          "page",
+          "pageSize"
+        ]
+      },
+      "QuizExtension": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "studentId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "alias": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dueAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "closesAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "extraSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 14400
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "studentId",
+          "alias",
+          "version",
+          "dueAt",
+          "closesAt",
+          "extraSeconds",
+          "reason"
+        ]
+      },
+      "QuizExtensionInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dueAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "closesAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "extraSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 14400
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "version",
+          "dueAt",
+          "closesAt",
+          "extraSeconds",
+          "reason"
+        ]
+      },
+      "QuizExtensionList": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizExtension"
+            }
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
+          "timeLimitSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 60,
+            "maximum": 43200
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "const": 20
+          }
+        },
+        "required": [
+          "items",
+          "schedule",
+          "timeLimitSeconds",
           "page",
           "pageSize"
         ]
@@ -8116,14 +8506,24 @@
             "type": "string",
             "enum": [
               "never",
-              "after_attempt"
+              "after_attempt",
+              "after_close"
             ]
+          },
+          "timeLimitSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 60,
+            "maximum": 43200
           }
         },
         "required": [
           "items",
           "gradePolicy",
-          "reviewPolicy"
+          "reviewPolicy",
+          "timeLimitSeconds"
         ]
       },
       "QuizConfigInput": {
@@ -8165,8 +8565,17 @@
             "type": "string",
             "enum": [
               "never",
-              "after_attempt"
+              "after_attempt",
+              "after_close"
             ]
+          },
+          "timeLimitSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 60,
+            "maximum": 43200
           }
         },
         "required": [
@@ -8175,7 +8584,8 @@
           "weight",
           "items",
           "gradePolicy",
-          "reviewPolicy"
+          "reviewPolicy",
+          "timeLimitSeconds"
         ]
       },
       "QuizReview": {
@@ -8344,6 +8754,55 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 12000
+          },
+          "timeLimitSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 60,
+                "maximum": 43200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remainingSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "closesAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serverNow": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8357,7 +8816,12 @@
           "score",
           "answers",
           "questions",
-          "instructions"
+          "instructions",
+          "timeLimitSeconds",
+          "remainingSeconds",
+          "expiresAt",
+          "closesAt",
+          "serverNow"
         ]
       },
       "QuizAttemptSummary": {
@@ -8421,6 +8885,39 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "opensAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dueAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "closesAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "maxAttempts": {
             "type": "integer",
             "minimum": 1,
@@ -8444,7 +8941,41 @@
             "type": "string",
             "enum": [
               "never",
-              "after_attempt"
+              "after_attempt",
+              "after_close"
+            ]
+          },
+          "timeLimitSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 60,
+                "maximum": 43200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extraSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 14400
+          },
+          "extended": {
+            "type": "boolean"
+          },
+          "serverNow": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "upcoming",
+              "open",
+              "late",
+              "closed"
             ]
           },
           "attempts": {
@@ -8466,10 +8997,18 @@
           }
         },
         "required": [
+          "opensAt",
+          "dueAt",
+          "closesAt",
           "maxAttempts",
           "questionCount",
+          "serverNow",
+          "state",
           "gradePolicy",
           "reviewPolicy",
+          "timeLimitSeconds",
+          "extraSeconds",
+          "extended",
           "attempts",
           "attempt"
         ]

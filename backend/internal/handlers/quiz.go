@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
 	"strconv"
+	"time"
 )
 
 func (a API) quizService() services.QuizService { return services.QuizService{Repo: a.Repo} }
@@ -189,4 +190,70 @@ func (a API) quizResults(c *fiber.Ctx) error {
 		}
 	}
 	return c.JSON(fiber.Map{"items": items, "page": p, "pageSize": 20})
+}
+
+// quizExtensions lists the linked and enrolled roster with each student's time
+// exception, even when they have none (version 0).
+func (a API) quizExtensions(c *fiber.Ctx) error {
+	id, e := ID(c, "activityId")
+	if e != nil {
+		return e
+	}
+	p, e := page(c)
+	if e != nil {
+		return e
+	}
+	user := middleware.User(c).ID
+	activity, e := a.Repo.Activity(user, id, false)
+	if e != nil {
+		return dbError(e)
+	}
+	if activity.Type != "quiz" || activity.LessonID == nil {
+		return fiber.ErrConflict
+	}
+	var schedule models.Schedule
+	if e = a.Repo.DB.Raw(`SELECT opens_at,due_at,closes_at FROM lessons WHERE id=?`, *activity.LessonID).Scan(&schedule).Error; e != nil {
+		return dbError(e)
+	}
+	var limit struct{ QuizTimeLimitSeconds *int }
+	if e = a.Repo.DB.Raw(`SELECT quiz_time_limit_seconds FROM lessons WHERE id=?`, *activity.LessonID).Scan(&limit).Error; e != nil {
+		return dbError(e)
+	}
+	items := []models.QuizExtension{}
+	e = a.Repo.DB.Raw(`SELECT u.id student_id,u.alias,COALESCE(x.version,0) version,x.due_at,x.closes_at,COALESCE(x.extra_seconds,0) extra_seconds,COALESCE(x.reason,'') reason
+ FROM users u JOIN teacher_students ts ON ts.student_id=u.id JOIN enrollments e ON e.user_id=u.id JOIN modules m ON m.course_id=e.course_id
+ LEFT JOIN quiz_extensions x ON x.user_id=u.id AND x.lesson_id=?
+ WHERE ts.teacher_id=? AND m.id=? AND u.role='student' ORDER BY u.id LIMIT 20 OFFSET ?`, *activity.LessonID, user, activity.ModuleID, (p-1)*20).Scan(&items).Error
+	if e != nil {
+		return dbError(e)
+	}
+	return c.JSON(fiber.Map{"items": items, "schedule": schedule, "timeLimitSeconds": limit.QuizTimeLimitSeconds, "page": p, "pageSize": 20})
+}
+func (a API) saveQuizExtension(c *fiber.Ctx) error {
+	id, e := ID(c, "activityId")
+	if e != nil {
+		return e
+	}
+	student, e := ID(c, "studentId")
+	if e != nil {
+		return e
+	}
+	var b struct {
+		Version      *int       `json:"version"`
+		DueAt        *time.Time `json:"dueAt"`
+		ClosesAt     *time.Time `json:"closesAt"`
+		ExtraSeconds *int       `json:"extraSeconds"`
+		Reason       string     `json:"reason"`
+	}
+	if e = Decode(c, &b); e != nil {
+		return e
+	}
+	if b.Version == nil || b.ExtraSeconds == nil {
+		return fiber.ErrBadRequest
+	}
+	out, e := a.quizService().SaveQuizExtension(middleware.User(c).ID, id, student, *b.Version, b.DueAt, b.ClosesAt, *b.ExtraSeconds, b.Reason)
+	if e != nil {
+		return academicError(e)
+	}
+	return c.JSON(out)
 }

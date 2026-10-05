@@ -33,6 +33,18 @@ func (a API) availability(c *fiber.Ctx) error {
 	if e != nil {
 		return e
 	}
+	// Tasks and quizzes share one contract but different published columns.
+	var kind string
+	if e = a.Repo.DB.Raw(`SELECT type FROM lessons WHERE id=?`, id).Scan(&kind).Error; e != nil {
+		return dbError(e)
+	}
+	if kind == "quiz" {
+		out, e := a.quizService().Availability(middleware.User(c).ID, id)
+		if e != nil {
+			return academicError(e)
+		}
+		return c.JSON(out)
+	}
 	out, e := a.academic().Availability(middleware.User(c).ID, id)
 	if e != nil {
 		return academicError(e)

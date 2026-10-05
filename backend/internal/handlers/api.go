@@ -112,6 +112,8 @@ func (a API) Register(app *fiber.App) {
 	teacher.Get("/activities/:activityId/quiz-questions", a.quizQuestionOptions)
 	teacher.Get("/activities/:activityId/quiz-results", a.quizResults)
 	teacher.Get("/quiz-attempts/:attemptId", a.staffQuizAttempt)
+	teacher.Get("/activities/:activityId/quiz-extensions", a.quizExtensions)
+	teacher.Put("/activities/:activityId/quiz-extensions/:studentId", a.saveQuizExtension)
 	teacher.Get("/courses/:courseId/questions", a.staffQuestions)
 	teacher.Post("/courses/:courseId/questions", a.createQuestion)
 	teacher.Get("/questions/:questionId", a.staffQuestion)

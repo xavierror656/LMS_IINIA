@@ -12,6 +12,7 @@ Consultadas el 1 de octubre de 2026 mediante metadatos npm, proxy.golang.org y d
 - Go 1.27.1 descargado de [go.dev](https://go.dev/dl/) y verificado con SHA256 oficial.
 - Fiber v2.52.15, contrib/websocket v1.3.4, GORM v1.31.2, driver PostgreSQL v1.6.3 y x/crypto v0.57.0. Se elige la línea Fiber v2 compatible con [su adaptador WebSocket](https://docs.gofiber.io/contrib/websocket/); no se mezclan APIs v2/v3.
 - PostgreSQL real local para pruebas mediante embedded-postgres 18.4.0-beta.17 en /tmp. Esta herramienta de prueba no es dependencia del producto. Compose usa postgres:18.4-alpine; imágenes Docker no ejecutadas en este entorno sin Docker.
+- Incremento 9: PostgreSQL 18.6 dentro de WSL2 (Ubuntu 26.04), instalado sin privilegios de administrador con `apt-get download` y `dpkg -x` en un prefijo del usuario (`postgresql-18`, `postgresql-client-18`, `libpq5`, `libicu78`, `libnuma1`, `liburing2`) y arrancado con un directorio de socket propio. Se usó para migraciones, seed y pruebas de integración y de navegador. No es dependencia del producto ni se publica fuera de la VM.
 - OpenSpec CLI 1.14.0: init/new/instructions/validate consultados mediante --help. No se instaló otro framework SpecOps.
 - create-astro 5.2.4 --help consultado: admite --template, --no-install, --no-git y --yes. No se ejecutó scaffolding sobre frontend.
 

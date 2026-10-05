@@ -1,0 +1,40 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import ServiceError from "../../../../components/astro/ServiceError.astro";
+import AcademicForm from "../../../../components/astro/AcademicForm.astro";
+import ScheduleView from "../../../../components/astro/ScheduleView.astro";
+import { api } from "../../../../lib/api";
+import type { components } from "../../../../lib/generated/api";
+let error=Astro.locals.apiError;
+let result:components["schemas"]["QuizExtensionList"]|undefined;
+const id=encodeURIComponent(Astro.params.activityId??"");
+const page=Astro.url.searchParams.get("page")??"1";
+if(!error)try{result=await api<components["schemas"]["QuizExtensionList"]>(`/teacher/activities/${id}/quiz-extensions?page=${encodeURIComponent(page)}`,{},Astro.request.headers.get("cookie")??"");}catch(e){error=e instanceof Error?e.message:"No se pudieron cargar las excepciones de tiempo.";}
+const inputDate=(value:string|null)=>value?new Date(value).toISOString().slice(0,19):"";
+const minutes=result?.timeLimitSeconds?Math.round(result.timeLimitSeconds/60):null;
+---
+<Layout title="Tiempos del cuestionario">
+  <a class="crumb" href={`/teacher/activities/${id}`}>← Volver a la actividad</a>
+  <h1>Tiempos del cuestionario</h1>
+  {error ? <ServiceError message={error}/> : result && <>
+    <section class="panel"><h2>Calendario general publicado</h2><ScheduleView schedule={result.schedule} kind="quiz"/>
+      <p>{minutes?`Tiempo máximo publicado: ${minutes} ${minutes===1?"minuto":"minutos"} por intento.`:"Este cuestionario no tiene tiempo máximo publicado, así que no hay minutos que ampliar."}</p>
+    </section>
+    <p>Las excepciones se aplican al guardar y solo amplían límites existentes: no crean un vencimiento donde no lo hay, no acortan plazos ni añaden minutos si el cuestionario no tiene tiempo máximo. Para revocar una excepción, vacía ambas fechas, escribe 0 minutos extra y explica el motivo. Fechas en UTC, no en la hora local del dispositivo.</p>
+    {result.items.length===0 && <p class="panel">No hay estudiantes vinculados e inscritos en esta página.</p>}
+    <div class="path">{result.items.map((student)=><section class="panel">
+      <h2>{student.alias}</h2>
+      {student.version>0&&<p class="notice">Excepción vigente: {student.extraSeconds?`${Math.round(student.extraSeconds/60)} minutos extra`:"sin minutos extra"}{student.closesAt?" y cierre ampliado":""}.</p>}
+      <AcademicForm kind="quiz-extension" path={`/teacher/activities/${id}/quiz-extensions/${student.studentId}`} version={student.version}>
+        <label for={`qdue-${student.studentId}`}>Nuevo vencimiento (UTC)</label><input id={`qdue-${student.studentId}`} name="dueAt" type="datetime-local" step="1" value={inputDate(student.dueAt)}/>
+        <label for={`qclose-${student.studentId}`}>Nuevo cierre (UTC)</label><input id={`qclose-${student.studentId}`} name="closesAt" type="datetime-local" step="1" value={inputDate(student.closesAt)}/>
+        <label for={`qextra-${student.studentId}`}>Minutos extra para resolver (0 a 240)</label><input id={`qextra-${student.studentId}`} name="extraMinutes" type="number" min="0" max="240" step="1" value={Math.round(student.extraSeconds/60)}/>
+        <label for={`qreason-${student.studentId}`}>Motivo de la excepción o revocación</label><textarea id={`qreason-${student.studentId}`} name="reason" required maxlength="1000" rows="3">{student.reason}</textarea>
+      </AcademicForm>
+    </section>)}</div>
+    <nav class="toolbar" aria-label="Páginas de excepciones de tiempo">
+      {result.page>1&&<a class="button quiet" href={`?page=${result.page-1}`}>← Anterior</a>}
+      {result.items.length===20&&<a class="button quiet" href={`?page=${result.page+1}`}>Siguiente →</a>}
+    </nav>
+  </>}
+</Layout>

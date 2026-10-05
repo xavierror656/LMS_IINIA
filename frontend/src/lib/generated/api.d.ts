@@ -423,7 +423,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Save draft UTC task schedule */
+        /** Save draft UTC calendar for a task or a quiz */
         put: operations["saveSchedule"];
         post?: never;
         delete?: never;
@@ -439,7 +439,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Current effective task schedule for enrolled student */
+        /** Current effective calendar for an enrolled student, task or quiz */
         get: operations["assignmentAvailability"];
         put?: never;
         post?: never;
@@ -683,6 +683,40 @@ export interface paths {
         put?: never;
         /** previewQuestion */
         post: operations["previewQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teacher/activities/{activityId}/quiz-extensions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Linked enrolled roster with individual quiz time exceptions */
+        get: operations["quizExtensions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teacher/activities/{activityId}/quiz-extensions/{studentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Grant or revoke an individual quiz time exception with revision and audit */
+        put: operations["saveQuizExtension"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1129,6 +1163,8 @@ export interface components {
             /** @enum {string} */
             state: "upcoming" | "open" | "late" | "closed";
             extended: boolean;
+            timeLimitSeconds: number | null;
+            extraSeconds: number;
         };
         ExtensionInput: {
             version: number;
@@ -1151,6 +1187,34 @@ export interface components {
         ExtensionList: {
             items: components["schemas"]["Extension"][];
             schedule: components["schemas"]["Schedule"];
+            page: number;
+            /** @constant */
+            pageSize: 20;
+        };
+        QuizExtension: {
+            studentId: number;
+            alias: string;
+            version: number;
+            /** Format: date-time */
+            dueAt: string | null;
+            /** Format: date-time */
+            closesAt: string | null;
+            extraSeconds: number;
+            reason: string;
+        };
+        QuizExtensionInput: {
+            version: number;
+            /** Format: date-time */
+            dueAt: string | null;
+            /** Format: date-time */
+            closesAt: string | null;
+            extraSeconds: number;
+            reason: string;
+        };
+        QuizExtensionList: {
+            items: components["schemas"]["QuizExtension"][];
+            schedule: components["schemas"]["Schedule"];
+            timeLimitSeconds: number | null;
             page: number;
             /** @constant */
             pageSize: 20;
@@ -1253,7 +1317,8 @@ export interface components {
             /** @enum {string} */
             gradePolicy: "first" | "last" | "highest" | "average";
             /** @enum {string} */
-            reviewPolicy: "never" | "after_attempt";
+            reviewPolicy: "never" | "after_attempt" | "after_close";
+            timeLimitSeconds: number | null;
         };
         QuizConfigInput: {
             version: number;
@@ -1263,7 +1328,8 @@ export interface components {
             /** @enum {string} */
             gradePolicy: "first" | "last" | "highest" | "average";
             /** @enum {string} */
-            reviewPolicy: "never" | "after_attempt";
+            reviewPolicy: "never" | "after_attempt" | "after_close";
+            timeLimitSeconds: number | null;
         };
         QuizReview: {
             correctChoices: number[];
@@ -1295,6 +1361,12 @@ export interface components {
             answers: components["schemas"]["QuestionAnswer"][];
             questions: components["schemas"]["QuizQuestion"][];
             instructions: string;
+            timeLimitSeconds: number | null;
+            remainingSeconds: number | null;
+            expiresAt: string | null;
+            closesAt: string | null;
+            /** Format: date-time */
+            serverNow: string;
         };
         QuizAttemptSummary: {
             id: number;
@@ -1307,12 +1379,22 @@ export interface components {
             finishedAt: string | null;
         };
         QuizOverview: {
+            opensAt: string | null;
+            dueAt: string | null;
+            closesAt: string | null;
             maxAttempts: number;
             questionCount: number;
             /** @enum {string} */
             gradePolicy: "first" | "last" | "highest" | "average";
             /** @enum {string} */
-            reviewPolicy: "never" | "after_attempt";
+            reviewPolicy: "never" | "after_attempt" | "after_close";
+            timeLimitSeconds: number | null;
+            extraSeconds: number;
+            extended: boolean;
+            /** Format: date-time */
+            serverNow: string;
+            /** @enum {string} */
+            state: "upcoming" | "open" | "late" | "closed";
             attempts: components["schemas"]["QuizAttemptSummary"][];
             attempt: components["schemas"]["QuizAttempt"] | null;
         };
@@ -5502,6 +5584,201 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuestionPreview"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Role or Origin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Object not accessible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Stale version or invalid state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Body exceeds 128 KiB */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Database unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    quizExtensions: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                activityId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Canonical persisted result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuizExtensionList"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Role or Origin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Object not accessible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Stale version or invalid state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Body exceeds 128 KiB */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Database unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    saveQuizExtension: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activityId: number;
+                studentId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuizExtensionInput"];
+            };
+        };
+        responses: {
+            /** @description Canonical persisted result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuizExtension"];
                 };
             };
             /** @description Invalid input */

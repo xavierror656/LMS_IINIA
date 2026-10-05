@@ -30,7 +30,14 @@ type Availability struct {
 	ServerNow time.Time `json:"serverNow"`
 	State     string    `json:"state"`
 	Extended  bool      `json:"extended"`
+	// Quiz-only fields. TimeLimitSeconds and ExtraSeconds stay null/zero for assignments.
+	TimeLimitSeconds *int `json:"timeLimitSeconds"`
+	ExtraSeconds     int  `json:"extraSeconds"`
 }
+
+// CanAccept reports whether submissions or answers may still be saved. Closing a
+// window never removes read access, only the ability to write.
+func (a Availability) CanAccept() bool { return a.State == "open" || a.State == "late" }
 
 func EffectiveSchedule(base Schedule, extension Extension, now time.Time) Availability {
 	a := Availability{Schedule: base, ServerNow: now.UTC(), State: "open"}

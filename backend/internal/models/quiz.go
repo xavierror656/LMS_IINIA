@@ -8,13 +8,19 @@ type QuizItem struct {
 	Weight     int   `json:"weight"`
 }
 type QuizConfig struct {
-	Items        []QuizItem `json:"items"`
-	GradePolicy  string     `json:"gradePolicy"`
-	ReviewPolicy string     `json:"reviewPolicy"`
+	Items            []QuizItem `json:"items"`
+	GradePolicy      string     `json:"gradePolicy"`
+	ReviewPolicy     string     `json:"reviewPolicy"`
+	TimeLimitSeconds *int       `json:"timeLimitSeconds"`
+}
+
+// ValidQuizTimeLimit bounds a quiz timer between one minute and twelve hours.
+func ValidQuizTimeLimit(seconds *int) bool {
+	return seconds == nil || (*seconds >= 60 && *seconds <= 43200)
 }
 
 func (q QuizConfig) Validate() error {
-	if len(q.Items) < 1 || len(q.Items) > 20 || (q.GradePolicy != "first" && q.GradePolicy != "last" && q.GradePolicy != "highest" && q.GradePolicy != "average") || (q.ReviewPolicy != "never" && q.ReviewPolicy != "after_attempt") {
+	if len(q.Items) < 1 || len(q.Items) > 20 || (q.GradePolicy != "first" && q.GradePolicy != "last" && q.GradePolicy != "highest" && q.GradePolicy != "average") || (q.ReviewPolicy != "never" && q.ReviewPolicy != "after_attempt" && q.ReviewPolicy != "after_close") || !ValidQuizTimeLimit(q.TimeLimitSeconds) {
 		return ErrAcademicInput
 	}
 	seen := map[int64]bool{}
@@ -28,18 +34,23 @@ func (q QuizConfig) Validate() error {
 }
 
 // QuizAttemptRecord is internal storage. Only PublicQuizAttempt crosses HTTP.
+// TimeLimitSeconds, ExpiresAt and ClosesAt are the timing snapshot taken when the
+// attempt started: later edits to the quiz do not move an existing attempt's deadline.
 type QuizAttemptRecord struct {
-	ID            int64
-	LessonID      int64
-	UserID        int64
-	PublicationID int64
-	Attempt       int
-	Version       int
-	Status        string
-	Answers       []QuestionAnswer `gorm:"serializer:json"`
-	Score         *int
-	StartedAt     time.Time
-	FinishedAt    *time.Time
+	ID               int64
+	LessonID         int64
+	UserID           int64
+	PublicationID    int64
+	Attempt          int
+	Version          int
+	Status           string
+	Answers          []QuestionAnswer `gorm:"serializer:json"`
+	Score            *int
+	TimeLimitSeconds *int
+	StartedAt        time.Time
+	ExpiresAt        *time.Time
+	ClosesAt         *time.Time
+	FinishedAt       *time.Time
 }
 type QuizReview struct {
 	CorrectChoices  []int    `json:"correctChoices"`
@@ -57,17 +68,22 @@ type QuizQuestion struct {
 	Review   *QuizReview `json:"review"`
 }
 type PublicQuizAttempt struct {
-	Instructions string           `json:"instructions"`
-	ID           int64            `json:"id"`
-	LessonID     int64            `json:"lessonId"`
-	Attempt      int              `json:"attempt"`
-	Version      int              `json:"version"`
-	Status       string           `json:"status"`
-	Answers      []QuestionAnswer `json:"answers"`
-	Score        *int             `json:"score"`
-	StartedAt    time.Time        `json:"startedAt"`
-	FinishedAt   *time.Time       `json:"finishedAt"`
-	Questions    []QuizQuestion   `json:"questions"`
+	Instructions     string           `json:"instructions"`
+	ID               int64            `json:"id"`
+	LessonID         int64            `json:"lessonId"`
+	Attempt          int              `json:"attempt"`
+	Version          int              `json:"version"`
+	Status           string           `json:"status"`
+	Answers          []QuestionAnswer `json:"answers"`
+	Score            *int             `json:"score"`
+	TimeLimitSeconds *int             `json:"timeLimitSeconds"`
+	RemainingSeconds *int             `json:"remainingSeconds"`
+	StartedAt        time.Time        `json:"startedAt"`
+	ExpiresAt        *time.Time       `json:"expiresAt"`
+	ClosesAt         *time.Time       `json:"closesAt"`
+	FinishedAt       *time.Time       `json:"finishedAt"`
+	ServerNow        time.Time        `json:"serverNow"`
+	Questions        []QuizQuestion   `json:"questions"`
 }
 type QuizAttemptSummary struct {
 	ID         int64      `json:"id"`
@@ -78,12 +94,18 @@ type QuizAttemptSummary struct {
 	FinishedAt *time.Time `json:"finishedAt"`
 }
 type QuizOverview struct {
-	MaxAttempts   int                  `json:"maxAttempts"`
-	QuestionCount int                  `json:"questionCount"`
-	GradePolicy   string               `json:"gradePolicy"`
-	ReviewPolicy  string               `json:"reviewPolicy"`
-	Attempts      []QuizAttemptSummary `json:"attempts"`
-	Attempt       *PublicQuizAttempt   `json:"attempt"`
+	Schedule
+	MaxAttempts      int                  `json:"maxAttempts"`
+	QuestionCount    int                  `json:"questionCount"`
+	ServerNow        time.Time            `json:"serverNow"`
+	State            string               `json:"state"`
+	GradePolicy      string               `json:"gradePolicy"`
+	ReviewPolicy     string               `json:"reviewPolicy"`
+	TimeLimitSeconds *int                 `json:"timeLimitSeconds"`
+	ExtraSeconds     int                  `json:"extraSeconds"`
+	Extended         bool                 `json:"extended"`
+	Attempts         []QuizAttemptSummary `json:"attempts"`
+	Attempt          *PublicQuizAttempt   `json:"attempt"`
 }
 type QuizResult struct {
 	QuizAttemptSummary
