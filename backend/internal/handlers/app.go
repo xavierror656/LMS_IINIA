@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-var attachmentUploadPath = regexp.MustCompile(`^/api/v1/lessons/[1-9][0-9]*/submission/attachments$`)
+var attachmentUploadPath = regexp.MustCompile(`^/api/v1/(lessons/[1-9][0-9]*/submission/attachments|teacher/activities/[1-9][0-9]*/attachments)$`)
 
 // friendlyError keeps the child-facing wording for framework errors. A handler
 // that raises its own message keeps that message instead, so the specific texts

@@ -114,6 +114,11 @@ func (s AcademicService) Publish(user, id int64, version int) (models.Activity, 
 		if e = tx.Raw(`INSERT INTO activity_publications(activity_id,lesson_id,version,title,body,published_by,rubric,quiz_config,group_submission) VALUES (?,?,?,?,?,?,?::jsonb,?::jsonb,?) RETURNING id`, a.ID, *a.LessonID, a.Version, a.Title, a.Body, user, rubricJSON, quizJSON, a.GroupSubmission).Scan(&publication).Error; e != nil {
 			return e
 		}
+		// The instruction files are frozen with the version, like the text and the
+		// rubric, so a delivery keeps the instructions it was written against.
+		if e = tx.Exec(`INSERT INTO publication_attachments(id,publication_id,slot,name,content_type,size,content,uploaded_by) SELECT id,?,slot,name,content_type,size,content,uploaded_by FROM activity_attachments WHERE activity_id=?`, publication, a.ID).Error; e != nil {
+			return e
+		}
 		if a.Type == "quiz" {
 			if e = tx.Exec(`UPDATE lessons SET quiz_grade_policy=?,quiz_time_limit_seconds=? WHERE id=?`, a.QuizConfig.GradePolicy, a.QuizConfig.TimeLimitSeconds, *a.LessonID).Error; e != nil {
 				return e
@@ -184,7 +189,7 @@ func (s AcademicService) SaveSubmission(user, lesson int64, body string, version
 			}
 		} else {
 			id = current.ID
-			if e := tx.Exec(`UPDATE submissions SET body=?,publication_id=?,version=version+1 WHERE id=?`, body, pub.ID, id).Error; e != nil {
+			if e := tx.Exec(`UPDATE submissions SET body=?,publication_id=?,version=version+1,updated_at=now() WHERE id=?`, body, pub.ID, id).Error; e != nil {
 				return e
 			}
 		}
@@ -238,7 +243,7 @@ func (s AcademicService) Submit(user, lesson int64, version int) (models.Submiss
 				return ErrAssignmentUnavailable
 			}
 			// Sending freezes the saved snapshot, even if the teacher publishes a newer one.
-			if e := tx.Exec(`UPDATE submissions SET status='submitted',submitted_at=?,effective_due_at=?,late=? WHERE id=?`, availability.ServerNow, availability.DueAt, availability.State == "late", sub.ID).Error; e != nil {
+			if e := tx.Exec(`UPDATE submissions SET status='submitted',submitted_at=?,effective_due_at=?,late=?,updated_at=now() WHERE id=?`, availability.ServerNow, availability.DueAt, availability.State == "late", sub.ID).Error; e != nil {
 				return e
 			}
 		}

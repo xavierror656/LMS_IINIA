@@ -49,4 +49,5 @@ El usuario autorizó continuar con implementación. T1–T3 tienen código y pru
 - [x] T4e Adjuntos privados de borradores/envíos, normalización, cuotas y descarga autorizada (FL1–FL5 / LMS-016/019/021).
 - [x] T4f Validar archivos, límites HTTP/proxy, concurrencia, permisos y recorrido E2E (LMS-022).
 
-- [ ] T4g Ampliar formatos con análisis externo, adjuntos de instrucciones/devolución y gestión de retención; validar Nginx/Docker de las subidas.
+- [x] T4g-1 PDF con análisis estructural real, archivos de instrucciones congelados por publicación y retención con informe previo (FA1–FA3, FI1–FI3, FR1–FR3). Verificado con PostgreSQL real y navegador; Nginx y Docker no pudieron ejecutarse en este entorno.
+- [ ] T4g-2 Adjuntos de devolución por estudiante (archivos del docente junto a la nota). Parte pendiente de T4g.

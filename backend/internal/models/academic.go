@@ -43,6 +43,8 @@ type Activity struct {
 	Body             string  `json:"body"`
 	Version          int     `json:"version"`
 	PublishedVersion int     `json:"publishedVersion"`
+	// Attachments are the instruction files of the draft; publishing freezes a copy.
+	Attachments []Attachment `json:"attachments" gorm:"-"`
 }
 type Grade struct {
 	Assessment *RubricAssessment `json:"assessment" gorm:"serializer:json"`

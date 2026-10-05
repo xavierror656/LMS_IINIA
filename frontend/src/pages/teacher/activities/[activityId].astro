@@ -31,9 +31,23 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
     {activity.type === "assignment" && <a class="button quiet" href={`/teacher/activities/${id}/evaluation`}>Configurar rúbrica y peso</a>}
     {activity.type === "assignment" && <a class="button quiet" href={`/teacher/activities/${id}/attempt-policy`}>Configurar intentos</a>}
     {activity.type === "assignment" && <div class="toolbar"><a class="button quiet" href={`/teacher/activities/${id}/schedule`}>Configurar fechas</a>{activity.lessonId && <a class="button quiet" href={`/teacher/activities/${id}/extensions`}>Gestionar prórrogas</a>}</div>}
+    {(activity.type === "assignment" || activity.type === "reading") && <section class="panel">
+      <h2>Archivos de instrucciones</h2>
+      <instruction-files data-id={activity.id}>
+        <form data-upload>
+          <label for="instruction-file">Añadir un archivo (texto, imagen o PDF; hasta 2 MiB)</label>
+          <input id="instruction-file" type="file" name="file" accept=".txt,.png,.jpg,.jpeg,.pdf" required />
+          <div class="toolbar"><button type="submit">Subir archivo</button></div>
+          <p class="helper" data-status role="status" aria-live="polite">Se congelan al publicar: cada versión publicada conserva los suyos y el borrador sigue siendo tuyo.</p>
+        </form>
+        <ul data-list>{(activity.attachments ?? []).map((file) => <li>
+          {file.name} <span class="helper">({Math.ceil(file.size / 1024)} KiB)</span>
+          <button type="button" class="quiet" data-delete data-file={file.id} data-name={file.name}>Quitar</button>
+        </li>)}</ul>
+      </instruction-files>
+    </section>}
     {activity.type === "assignment" && <section class="panel">
-      <h2>Trabajo en equipo</h2>
-      <group-mode data-id={activity.id} data-version={activity.version}>
+      <h2>Trabajo en equipo</h2>      <group-mode data-id={activity.id} data-version={activity.version}>
         <form>
           <label class="quiz-choice"><input type="checkbox" name="groupSubmission" checked={activity.groupSubmission} /> Entrega grupal compartida</label>
           <p class="helper">Con la entrega grupal activada, cualquier miembro del grupo guarda, adjunta y envía el mismo trabajo, y el libro muestra esa entrega a todo el equipo. Los intentos y las reaperturas cuentan por grupo. Entra en vigor al publicar la actividad. Los grupos se crean y se asignan desde <strong>Grupos del curso</strong>, en la página del curso.</p>
@@ -117,4 +131,39 @@ const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ?
     disconnectedCallback() { this.controller?.abort(); this.controller = undefined; }
   }
   if (!customElements.get("group-mode")) customElements.define("group-mode", GroupModeElement);
+  class InstructionFilesElement extends HTMLElement {
+    private controller?: AbortController;
+    private busy = false;
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const form = this.querySelector("form")!;
+      const status = this.querySelector<HTMLElement>("[data-status]")!;
+      const base = `/teacher/activities/${this.dataset.id}/attachments`;
+      const send = async (path: string, label: string, init: RequestInit, advice: string) => {
+        if (this.busy) return;
+        this.busy = true;
+        status.textContent = label;
+        try { await api(path, init); window.location.reload(); }
+        catch (error) { status.textContent = (error instanceof Error ? error.message : "No se pudo guardar.") + " " + advice; this.busy = false; }
+      };
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const input = form.querySelector<HTMLInputElement>('input[type="file"]')!;
+        const chosen = input.files?.item(0);
+        if (!chosen) { status.textContent = "Elige un archivo para subir."; return; }
+        const body = new FormData();
+        body.append("file", chosen);
+        void send(base, "Subiendo el archivo…", { method: "POST", body }, "Revisa el formato (texto, imagen o PDF) y el tamaño (2 MiB).");
+      }, { signal: this.controller.signal });
+      this.addEventListener("click", (event) => {
+        const button = (event.target as Element | null)?.closest?.("[data-delete]") as HTMLElement | null;
+        if (!button || this.busy) return;
+        if (!window.confirm(`¿Quitar «${button.dataset.name}» del borrador? Las versiones ya publicadas conservan su copia.`)) return;
+        void send(`${base}/${button.dataset.file}`, "Quitando el archivo…", { method: "DELETE" }, "Vuelve a intentarlo.");
+      }, { signal: this.controller.signal });
+    }
+    disconnectedCallback() { this.controller?.abort(); this.controller = undefined; }
+  }
+  if (!customElements.get("instruction-files")) customElements.define("instruction-files", InstructionFilesElement);
 </script>

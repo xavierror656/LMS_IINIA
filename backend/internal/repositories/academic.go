@@ -28,7 +28,11 @@ func (r Repository) Activity(user, id int64, lock bool) (models.Activity, error)
 	if e == nil && out.ID == 0 {
 		e = gorm.ErrRecordNotFound
 	}
-	return out, e
+	if e != nil {
+		return out, e
+	}
+	out.Attachments = []models.Attachment{}
+	return out, r.DB.Raw(`SELECT id,name,content_type,size,uploaded_by FROM activity_attachments WHERE activity_id=? ORDER BY slot`, id).Scan(&out.Attachments).Error
 }
 func (r Repository) Activities(user, course int64, page int) ([]models.Activity, error) {
 	out := []models.Activity{}

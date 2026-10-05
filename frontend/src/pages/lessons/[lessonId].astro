@@ -13,6 +13,7 @@ let plugin: DemoPlugin | undefined;
 let lesson: Lesson | undefined;
 let submission: Submission | null = null;
 let availability: Availability | undefined;
+let instructionFiles: components["schemas"]["Attachment"][] = [];
 let error = Astro.locals.apiError;
 if (!error)
   try {
@@ -26,6 +27,8 @@ if (!error)
       availability = await api<Availability>(`/lessons/${lesson.id}/availability`, {}, Astro.request.headers.get("cookie") ?? "");
       submission = (await api<{submission: Submission | null}>(`/lessons/${lesson.id}/submission`, {}, Astro.request.headers.get("cookie") ?? "")).submission;
     }
+    // Instruction files belong to the published version this student works against.
+    instructionFiles = (await api<{ items: components["schemas"]["Attachment"][] }>(`/lessons/${lesson.id}/instructions`, {}, Astro.request.headers.get("cookie") ?? "")).items;
     if (
       import.meta.env.PUBLIC_DEMO_MODE === "true" &&
       (lesson.type === "code" || lesson.type === "h5p")
@@ -86,7 +89,7 @@ if (!error)
             </div>
           </article>
         ) : lesson.type === "quiz" ? (<Quiz lessonId={lesson.id} overview={quiz!} body={lesson.config.body??""}/>) : lesson.type === "assignment" ? (
-          <Assignment lesson={lesson} submission={submission} availability={availability!} />
+          <Assignment lesson={lesson} submission={submission} availability={availability!} files={instructionFiles} />
         ) : lesson.type === "code" ? (
           <CodePlayground
             lessonId={lesson.id}

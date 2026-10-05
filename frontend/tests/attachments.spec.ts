@@ -15,6 +15,12 @@ test("FL5 adjuntos privados, descarga, borrado y entrega solo con archivo", asyn
   const module=(await (await page.request.get(`/api/v1/teacher/courses/${course.id}/activities`)).json()).modules[0];
   const created=await page.request.post(`/api/v1/teacher/courses/${course.id}/activities`,{headers:{Origin:origin},data:{moduleId:module.id,type:"assignment",title:`Mis archivos ${Date.now()}`,description:"Comparte tu trabajo",body:"Puedes entregar tu trabajo como texto o archivo."}});
   expect(created.status()).toBe(201);let activity=await created.json();
+  // FI1: la guía se sube antes de publicar; el PDF se analiza de verdad.
+  const guide=Buffer.from("%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \ntrailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n190\n%%EOF\n");
+  await page.goto(`/teacher/activities/${activity.id}`);
+  await page.getByLabel("Añadir un archivo (texto, imagen o PDF; hasta 2 MiB)").setInputFiles({name:"guia.pdf",mimeType:"application/pdf",buffer:guide});
+  await page.getByRole("button",{name:"Subir archivo"}).click();
+  await expect(page.getByText("guia.pdf")).toBeVisible();
   const published=await page.request.post(`/api/v1/teacher/activities/${activity.id}/publish`,{headers:{Origin:origin},data:{version:1}});expect(published.ok()).toBeTruthy();activity=await published.json();
   const context=await browser.newContext({viewport:{width:768,height:1024},reducedMotion:"reduce"});const student=await context.newPage();
   try{
@@ -50,6 +56,20 @@ test("FL5 adjuntos privados, descarga, borrado y entrega solo con archivo", asyn
     await page.goto(`/teacher/activities/${activity.id}`);
     await expect(page.getByRole("link",{name:"Descargar entrega.txt",exact:true})).toBeVisible();
     const allowed=await page.request.get(finalPath!);expect(allowed.status()).toBe(200);expect(await allowed.text()).toBe("Esta es mi entrega sin texto adicional.");
+    // FI2/FI3: el alumno ve la guía congelada y quitarla del borrador no la rompe.
+    await student.goto(`/lessons/${activity.lessonId}`);
+    const guideLink=student.getByRole("link",{name:"Descargar guia.pdf",exact:true});
+    await expect(guideLink).toBeVisible();
+    const guideHref=await guideLink.getAttribute("href");
+    const guideDownload=await student.request.get(guideHref!);
+    expect(guideDownload.status()).toBe(200);
+    expect(guideDownload.headers()["content-type"]).toBe("application/octet-stream");
+    await page.goto(`/teacher/activities/${activity.id}`);
+    page.once("dialog",(dialog)=>dialog.accept());
+    await page.getByRole("button",{name:"Quitar",exact:true}).click();
+    await expect(page.getByText("guia.pdf")).toHaveCount(0);
+    await student.reload();
+    await expect(student.getByRole("link",{name:"Descargar guia.pdf",exact:true})).toBeVisible();
     await page.screenshot({path:"../docs/screenshots/attachments-teacher-tablet.png",fullPage:true,animations:"disabled"});
   }finally{await context.close();}
 });

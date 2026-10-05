@@ -119,7 +119,7 @@ func (s AcademicService) UploadAttachment(user, lesson int64, version, lessonVer
 		}
 		// A new draft is version 1; every attachment change of an existing draft advances it.
 		if version > 0 {
-			if e = tx.Exec(`UPDATE submissions SET version=version+1 WHERE id=?`, sub.ID).Error; e != nil {
+			if e = tx.Exec(`UPDATE submissions SET version=version+1,updated_at=now() WHERE id=?`, sub.ID).Error; e != nil {
 				return e
 			}
 		}
@@ -174,7 +174,7 @@ func (s AcademicService) DeleteAttachment(user, lesson int64, id string, version
 		if e = tx.Exec(`UPDATE attachment_accounts SET bytes_used=bytes_used-? WHERE user_id=?`, size, file.UploadedBy).Error; e != nil {
 			return e
 		}
-		if e = tx.Exec(`UPDATE submissions SET version=version+1 WHERE id=?`, sub.ID).Error; e != nil {
+		if e = tx.Exec(`UPDATE submissions SET version=version+1,updated_at=now() WHERE id=?`, sub.ID).Error; e != nil {
 			return e
 		}
 		out, e = (repositories.Repository{DB: tx}).Submission(sub.ID, user, false)

@@ -1,0 +1,14 @@
+---
+import type { Attachment } from "../../lib/api";
+interface Props { files: Attachment[]; lessonId: number; }
+const { files, lessonId } = Astro.props;
+---
+{files.length > 0 && <section aria-label="Archivos de las instrucciones">
+  <h3>Archivos de esta actividad</h3>
+  <ul>{files.map((file) => <li>
+    <a class="crumb" href={`/api/v1/lessons/${lessonId}/instructions/${file.id}`} download data-astro-reload>Descargar {file.name}</a>
+    <span class="helper">({Math.ceil(file.size / 1024)} KiB)</span>
+  </li>)}</ul>
+  <p class="helper">Son los archivos de la versión con la que trabajas. Se descargan siempre; nunca se abren dentro de la página.</p>
+</section>}
+<style>li{margin-block:.5rem;overflow-wrap:anywhere;}a{display:inline-flex;align-items:center;min-height:44px;}</style>

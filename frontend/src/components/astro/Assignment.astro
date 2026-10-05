@@ -1,11 +1,12 @@
 ---
 import AttachmentList from "./AttachmentList.astro";
+import InstructionList from "./InstructionList.astro";
 import ScheduleView from "./ScheduleView.astro";
 import RubricView from "./RubricView.astro";
 import AcademicForm from "./AcademicForm.astro";
-import type { Lesson, Submission, Availability } from "../../lib/api";
-interface Props { lesson: Lesson; submission: Submission | null; availability: Availability; }
-const { lesson, submission, availability } = Astro.props;
+import type { Lesson, Submission, Availability, Attachment } from "../../lib/api";
+interface Props { lesson: Lesson; submission: Submission | null; availability: Availability; files?: Attachment[]; }
+const { lesson, submission, availability, files = [] } = Astro.props;
 const formatDate = (s: string) => new Intl.DateTimeFormat("es-MX", {dateStyle:"medium",timeStyle:"short",timeZone:"UTC"}).format(new Date(s));
 // A group task needs a group: without one there is nothing to deliver against.
 const noGroup = lesson.groupSubmission && !lesson.groupName;
@@ -19,6 +20,7 @@ const unavailable = availability.state === "closed" || availability.state === "u
   {availability.extended && <p class="notice">Tienes una prórroga. Estas son tus fechas efectivas.</p>}
   {availability.state === "late" && submission?.status !== "submitted" && <p class="notice">La fecha de entrega pasó, pero todavía puedes enviar tu trabajo. Quedará registrado como entrega tardía.</p>}
   <div class="reading-body">{lesson.config.body}</div>
+  <InstructionList files={files} lessonId={lesson.id} />
   {submission?.groupName && <p class="helper">Entrega del grupo {submission.groupName}.</p>}
   <AttachmentList files={submission?.attachments??[]}/>
   {submission?.status!=="submitted" && !unavailable && <a class="button quiet" href={`/lessons/${lesson.id}/files`}>Gestionar adjuntos</a>}
