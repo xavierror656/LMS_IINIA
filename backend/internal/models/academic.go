@@ -59,6 +59,14 @@ type SubmissionAttemptSummary struct {
 	Status      string     `json:"status"`
 	SubmittedAt *time.Time `json:"submittedAt"`
 }
+
+// MemberGrade is one member of a group delivery with their own grade. Only the
+// teaching side receives the whole list: a student never sees a classmate's grade.
+type MemberGrade struct {
+	StudentID int64  `json:"studentId"`
+	Alias     string `json:"alias"`
+	Grade     *Grade `json:"grade"`
+}
 type Submission struct {
 	Attempt        int          `json:"attempt"`
 	Attachments    []Attachment `json:"attachments" gorm:"-"`
@@ -79,4 +87,7 @@ type Submission struct {
 	GroupName   string     `json:"groupName"`
 	SubmittedAt *time.Time `json:"submittedAt"`
 	Grade       *Grade     `json:"grade" gorm:"-"`
+	// Members carries every member of a group delivery with their own grade, and is
+	// only populated for the teaching side.
+	Members []MemberGrade `json:"members,omitempty" gorm:"-"`
 }

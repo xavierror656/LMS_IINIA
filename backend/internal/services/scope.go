@@ -11,6 +11,10 @@ import (
 // group in that course, so there is nothing to deliver against.
 var ErrGroupRequired = errors.New("this task requires a group and the student has none")
 
+// ErrGradePerMember means a group delivery is graded member by member instead of as
+// a whole, so the individual route cannot be used on it.
+var ErrGradePerMember = errors.New("group delivery is graded per member")
+
 // submissionScope is the identity a student's delivery belongs to: the group for a
 // group task, the student otherwise. GroupID is nil for individual deliveries.
 type submissionScope struct {
@@ -94,7 +98,7 @@ func (s AcademicService) OwnSubmission(user, lesson, requested int64) (*models.S
 		if id == 0 {
 			return nil
 		}
-		sub, e := (repositories.Repository{DB: tx}).Submission(id, false)
+		sub, e := (repositories.Repository{DB: tx}).Submission(id, user, false)
 		if e != nil {
 			return e
 		}

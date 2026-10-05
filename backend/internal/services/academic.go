@@ -192,7 +192,7 @@ func (s AcademicService) SaveSubmission(user, lesson int64, body string, version
 		if e := markScopeProgress(tx, scope, lesson, "in_progress"); e != nil {
 			return e
 		}
-		out, e = (repositories.Repository{DB: tx}).Submission(id, false)
+		out, e = (repositories.Repository{DB: tx}).Submission(id, user, false)
 		return e
 	})
 	return out, e
@@ -243,35 +243,60 @@ func (s AcademicService) Submit(user, lesson int64, version int) (models.Submiss
 			}
 		}
 		var e error
-		out, e = (repositories.Repository{DB: tx}).Submission(sub.ID, false)
+		out, e = (repositories.Repository{DB: tx}).Submission(sub.ID, user, false)
 		return e
 	})
 	return out, e
 }
-func (s AcademicService) Grade(user, id int64, score int, feedback string, version int, publish bool) (models.Grade, error) {
-	return s.grade(user, id, score, feedback, version, publish, nil)
+
+// Grade scores one student. student is 0 on the individual route, where the only
+// possible owner is the author; a group delivery requires the member explicitly.
+func (s AcademicService) Grade(user, id, student int64, score int, feedback string, version int, publish bool) (models.Grade, error) {
+	return s.grade(user, id, student, score, feedback, version, publish, nil)
 }
-func (s AcademicService) grade(user, id int64, score int, feedback string, version int, publish bool, assessment *models.RubricAssessment) (models.Grade, error) {
+func (s AcademicService) grade(user, id, student int64, score int, feedback string, version int, publish bool, assessment *models.RubricAssessment) (models.Grade, error) {
 	var out models.Grade
 	if version < 0 || (!publish && (score < 0 || score > 100 || !models.ValidText(feedback, 0, 4000))) {
 		return out, models.ErrAcademicInput
 	}
 	e := s.Repo.DB.Transaction(func(tx *gorm.DB) error {
-		var target struct{ LessonID, UserID int64 }
-		if e := tx.Raw(`SELECT lesson_id,user_id FROM submissions WHERE id=? AND status='submitted'`, id).Scan(&target).Error; e != nil {
+		var target struct {
+			LessonID int64
+			UserID   int64
+			GroupID  *int64
+		}
+		if e := tx.Raw(`SELECT lesson_id,user_id,group_id FROM submissions WHERE id=? AND status='submitted'`, id).Scan(&target).Error; e != nil {
 			return e
 		}
 		if target.LessonID == 0 {
 			return gorm.ErrRecordNotFound
 		}
+		// A group delivery is graded member by member; an individual one has only its
+		// author, so asking for anybody else is simply not found.
+		owner := target.UserID
+		if target.GroupID != nil {
+			if student == 0 {
+				return ErrGradePerMember
+			}
+			var member int64
+			if e := tx.Raw(`SELECT count(*) FROM group_members WHERE group_id=? AND user_id=?`, *target.GroupID, student).Scan(&member).Error; e != nil {
+				return e
+			}
+			if member == 0 {
+				return gorm.ErrRecordNotFound
+			}
+			owner = student
+		} else if student != 0 && student != owner {
+			return gorm.ErrRecordNotFound
+		}
 		// Match student writes and reopen: lesson, enrollment, then submission.
-		if e := lockAssignment(tx, target.UserID, target.LessonID); e != nil {
+		if e := lockAssignment(tx, owner, target.LessonID); e != nil {
 			return e
 		}
+		// The teacher must be staff of the course and linked and enrolled with the
+		// member being graded, so nobody grades a student they do not teach.
 		var sub int64
-		// A group delivery is visible to a teacher linked to any of its members; an
-		// individual one keeps the rule of being linked to its author.
-		if e := tx.Raw(`SELECT s.id FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN course_staff cs ON cs.course_id=m.course_id WHERE s.id=? AND s.status='submitted' AND cs.user_id=? AND EXISTS(SELECT 1 FROM teacher_students ts JOIN enrollments en ON en.user_id=ts.student_id AND en.course_id=m.course_id LEFT JOIN group_members gm ON gm.user_id=ts.student_id AND gm.group_id=s.group_id WHERE ts.teacher_id=? AND (ts.student_id=s.user_id OR gm.group_id IS NOT NULL)) FOR UPDATE OF s FOR SHARE OF cs`, id, user, user).Scan(&sub).Error; e != nil {
+		if e := tx.Raw(`SELECT s.id FROM submissions s JOIN lessons l ON l.id=s.lesson_id JOIN modules m ON m.id=l.module_id JOIN course_staff cs ON cs.course_id=m.course_id WHERE s.id=? AND s.status='submitted' AND cs.user_id=? AND EXISTS(SELECT 1 FROM teacher_students ts JOIN enrollments en ON en.user_id=ts.student_id AND en.course_id=m.course_id WHERE ts.teacher_id=? AND ts.student_id=?) FOR UPDATE OF s FOR SHARE OF cs`, id, user, user, owner).Scan(&sub).Error; e != nil {
 			return e
 		}
 		if sub == 0 {
@@ -297,7 +322,7 @@ func (s AcademicService) grade(user, id int64, score int, feedback string, versi
 				return models.ErrAcademicInput
 			}
 		}
-		if e := tx.Raw(`SELECT * FROM submission_grades WHERE submission_id=?`, id).Scan(&out).Error; e != nil {
+		if e := tx.Raw(`SELECT * FROM submission_grades WHERE submission_id=? AND student_id=?`, id, owner).Scan(&out).Error; e != nil {
 			return e
 		}
 		if out.Version != version {
@@ -322,10 +347,10 @@ func (s AcademicService) grade(user, id int64, score int, feedback string, versi
 			}
 			assessmentJSON = string(b)
 		}
-		if e := tx.Exec(`INSERT INTO submission_grades(submission_id,score,feedback,version,status,assessment) VALUES (?,?,?,?,?,?::jsonb) ON CONFLICT(submission_id) DO UPDATE SET score=excluded.score,feedback=excluded.feedback,version=excluded.version,status=excluded.status,assessment=excluded.assessment`, id, out.Score, out.Feedback, out.Version, out.Status, assessmentJSON).Error; e != nil {
+		if e := tx.Exec(`INSERT INTO submission_grades(submission_id,student_id,score,feedback,version,status,assessment) VALUES (?,?,?,?,?,?,?::jsonb) ON CONFLICT(submission_id,student_id) DO UPDATE SET score=excluded.score,feedback=excluded.feedback,version=excluded.version,status=excluded.status,assessment=excluded.assessment`, id, owner, out.Score, out.Feedback, out.Version, out.Status, assessmentJSON).Error; e != nil {
 			return e
 		}
-		return tx.Exec(`INSERT INTO grade_revisions(submission_id,actor_id,score,feedback,version,status,assessment) VALUES (?,?,?,?,?,?,?::jsonb)`, id, user, out.Score, out.Feedback, out.Version, out.Status, assessmentJSON).Error
+		return tx.Exec(`INSERT INTO grade_revisions(submission_id,student_id,actor_id,score,feedback,version,status,assessment) VALUES (?,?,?,?,?,?,?,?::jsonb)`, id, owner, user, out.Score, out.Feedback, out.Version, out.Status, assessmentJSON).Error
 	})
 	return out, e
 }

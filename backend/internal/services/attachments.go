@@ -126,7 +126,7 @@ func (s AcademicService) UploadAttachment(user, lesson int64, version, lessonVer
 		if e = markScopeProgress(tx, scope, lesson, "in_progress"); e != nil {
 			return e
 		}
-		out, e = (repositories.Repository{DB: tx}).Submission(sub.ID, false)
+		out, e = (repositories.Repository{DB: tx}).Submission(sub.ID, user, false)
 		return e
 	})
 	return out, e
@@ -177,7 +177,7 @@ func (s AcademicService) DeleteAttachment(user, lesson int64, id string, version
 		if e = tx.Exec(`UPDATE submissions SET version=version+1 WHERE id=?`, sub.ID).Error; e != nil {
 			return e
 		}
-		out, e = (repositories.Repository{DB: tx}).Submission(sub.ID, false)
+		out, e = (repositories.Repository{DB: tx}).Submission(sub.ID, user, false)
 		return e
 	})
 	return out, e

@@ -142,6 +142,8 @@ func (a API) Register(app *fiber.App) {
 	teacher.Get("/activities/:activityId/submissions", a.staffSubmissions)
 	teacher.Put("/submissions/:submissionId/grade", a.saveGrade)
 	teacher.Post("/submissions/:submissionId/grade/publish", a.publishGrade)
+	teacher.Put("/submissions/:submissionId/grades/:studentId", a.saveGrade)
+	teacher.Post("/submissions/:submissionId/grades/:studentId/publish", a.publishGrade)
 	teacher.Get("/students", a.students)
 	teacher.Get("/students/:studentId/progress", a.studentProgress)
 }

@@ -22,6 +22,9 @@ func academicError(e error) error {
 	if errors.Is(e, services.ErrQuizUnavailable) {
 		return fiber.NewError(409, "Este cuestionario todavía no abre, ya cerró o se agotó tu tiempo. Tus respuestas no se enviaron; revisa las fechas o consulta a tu docente.")
 	}
+	if errors.Is(e, services.ErrGradePerMember) {
+		return fiber.NewError(409, "Esta entrega es de un equipo: califica a cada miembro por separado.")
+	}
 	if errors.Is(e, services.ErrGroupRequired) {
 		return fiber.NewError(409, "Esta tarea se entrega en grupo y todavía no tienes grupo en este curso. Pídele a tu docente que te asigne uno.")
 	}
@@ -275,18 +278,47 @@ func (a API) staffSubmissions(c *fiber.Ctx) error {
 			}
 			var grades []struct {
 				SubmissionID int64
+				StudentID    int64
 				models.Grade
 			}
 			if e = a.Repo.DB.Table("submission_grades").Where("submission_id IN ?", ids).Find(&grades).Error; e != nil {
 				return dbError(e)
 			}
-			byID := map[int64]models.Grade{}
+			// A grade belongs to a student, so the row shows the author's own and a
+			// group delivery carries every member separately.
+			byMember := map[[2]int64]models.Grade{}
 			for _, g := range grades {
-				byID[g.SubmissionID] = g.Grade
+				byMember[[2]int64{g.SubmissionID, g.StudentID}] = g.Grade
 			}
 			for i := range items {
-				if g, ok := byID[items[i].ID]; ok {
+				if g, ok := byMember[[2]int64{items[i].ID, items[i].UserID}]; ok {
 					items[i].Grade = &g
+				}
+			}
+			var memberRows []struct {
+				SubmissionID int64
+				StudentID    int64
+				Alias        string
+				Score        *int
+				Feedback     *string
+				Version      *int
+				Status       *string
+				Assessment   *models.RubricAssessment `gorm:"serializer:json"`
+			}
+			if e = a.Repo.DB.Raw(`SELECT s.id submission_id,gm.user_id student_id,u.alias,g.score,g.feedback,g.version,g.status,g.assessment FROM submissions s JOIN group_members gm ON gm.group_id=s.group_id JOIN users u ON u.id=gm.user_id LEFT JOIN submission_grades g ON g.submission_id=s.id AND g.student_id=gm.user_id WHERE s.id IN ? ORDER BY s.id,u.alias`, ids).Scan(&memberRows).Error; e != nil {
+				return dbError(e)
+			}
+			membersBySubmission := map[int64][]models.MemberGrade{}
+			for _, row := range memberRows {
+				member := models.MemberGrade{StudentID: row.StudentID, Alias: row.Alias}
+				if row.Version != nil {
+					member.Grade = &models.Grade{Assessment: row.Assessment, Score: *row.Score, Feedback: *row.Feedback, Version: *row.Version, Status: *row.Status}
+				}
+				membersBySubmission[row.SubmissionID] = append(membersBySubmission[row.SubmissionID], member)
+			}
+			for i := range items {
+				if list, ok := membersBySubmission[items[i].ID]; ok {
+					items[i].Members = list
 				}
 			}
 		}
@@ -310,11 +342,16 @@ func (a API) saveGrade(c *fiber.Ctx) error {
 	if b.Version == nil || (b.Score == nil) == (b.Selections == nil) {
 		return fiber.ErrBadRequest
 	}
+	// The per-member route names the student; the individual one grades the author.
+	student, e := memberParam(c)
+	if e != nil {
+		return e
+	}
 	var out models.Grade
 	if b.Selections != nil {
-		out, e = a.academic().GradeWithRubric(middleware.User(c).ID, id, *b.Selections, b.Feedback, *b.Version)
+		out, e = a.academic().GradeWithRubric(middleware.User(c).ID, id, student, *b.Selections, b.Feedback, *b.Version)
 	} else {
-		out, e = a.academic().Grade(middleware.User(c).ID, id, *b.Score, b.Feedback, *b.Version, false)
+		out, e = a.academic().Grade(middleware.User(c).ID, id, student, *b.Score, b.Feedback, *b.Version, false)
 	}
 	if e != nil {
 		return academicError(e)
@@ -330,9 +367,22 @@ func (a API) publishGrade(c *fiber.Ctx) error {
 	if e != nil {
 		return e
 	}
-	out, e := a.academic().Grade(middleware.User(c).ID, id, 0, "", v, true)
+	student, e := memberParam(c)
+	if e != nil {
+		return e
+	}
+	out, e := a.academic().Grade(middleware.User(c).ID, id, student, 0, "", v, true)
 	if e != nil {
 		return academicError(e)
 	}
 	return c.JSON(out)
+}
+
+// memberParam returns the graded member when the route names one. The individual
+// route has no member and the service resolves the delivery author instead.
+func memberParam(c *fiber.Ctx) (int64, error) {
+	if c.Params("studentId") == "" {
+		return 0, nil
+	}
+	return ID(c, "studentId")
 }

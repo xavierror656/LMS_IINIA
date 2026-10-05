@@ -16,6 +16,12 @@ if (!error) try {
   activity = await api<Activity>(`/teacher/activities/${id}`, {}, cookie);
   if (activity.type === "assignment") submissions = (await api<{items: Submission[]}>(`/teacher/activities/${id}/submissions?page=${page}${filter}`, {}, cookie)).items;
 } catch (e) { error = e instanceof Error ? e.message : "No se pudo abrir la actividad."; }
+// A group delivery is graded member by member, each with their own revision; an
+// individual one keeps a single form on the author.
+const graders = (s: Submission) => (s.members?.length ?? 0) > 0
+  ? s.members!.map((m) => ({ key: `${s.id}-${m.studentId}`, path: `/teacher/submissions/${s.id}/grades/${m.studentId}`, alias: m.alias, grade: m.grade ?? null }))
+  : [{ key: `${s.id}`, path: `/teacher/submissions/${s.id}/grade`, alias: s.alias, grade: s.grade ?? null }];
+const gradeTag = (grade: Submission["grade"]) => grade?.status === "published" ? "Devolución publicada" : grade ? "Calificación en borrador" : "Por calificar";
 ---
 <Layout title={activity?.title ?? "Editar actividad"}>
   <a class="crumb" href="/teacher/courses">← Mis cursos</a>
@@ -51,24 +57,27 @@ if (!error) try {
       {submissions.length === 0 && <p class="panel">No hay entregas enviadas en esta página.</p>}
       {submissionId !== null && <p>Mostrando una entrega. <a class="crumb" href={`/teacher/activities/${id}`}>Ver todas las entregas</a></p>}
       <div class="path">{submissions.map((s) => <article class="panel" id={`submission-${s.id}`}>
-        <span class="tag">{s.grade?.status === "published" ? "Devolución publicada" : s.grade ? "Calificación en borrador" : "Por calificar"}</span>
+        <span class="tag">{(s.members?.length ?? 0) > 0 ? `Entrega de equipo · ${s.members!.length} miembros` : gradeTag(s.grade)}</span>
         <h3>Entrega de {s.alias}</h3>
-        {s.groupName && <p class="helper">Entrega del grupo {s.groupName}.</p>}
+        {s.groupName && <p class="helper">Entrega del grupo {s.groupName}. Cada miembro recibe su propia nota y su propia devolución; publicar la de uno no publica las demás.</p>}
         <p>Intento {s.attempt}</p>
         <p>{s.effectiveDueAt ? s.late ? "Entrega tardía" : "Entrega a tiempo" : "Sin vencimiento registrado"}</p>
         <details><summary>Instrucciones de esta entrega</summary><p class="reading-body">{s.instructions}</p></details>
         <p class="reading-body">{s.body}</p>
         <AttachmentList files={s.attachments}/>
-        <AcademicForm kind="grade" path={`/teacher/submissions/${s.id}/grade`} version={s.grade?.version ?? 0} canPublish={s.grade?.status === "draft"}>
-          {s.rubric ? <fieldset><legend>Evaluación por criterios de esta entrega</legend>
-            {s.rubric.criteria.map((c,i) => <div><label for={`criterion-${s.id}-${i}`}>{c.title}</label><select id={`criterion-${s.id}-${i}`} name="selection" required>
-              <option value="" disabled selected={s.grade?.assessment == null}>Selecciona un nivel</option>
-              {c.levels.map((l,n) => <option value={n} selected={s.grade?.assessment?.selections[i] === n}>{l.label} — {l.points} puntos</option>)}
-            </select></div>)}
-            <p class="helper">El servidor calcula la nota con los niveles elegidos. {s.grade ? `Última nota guardada: ${s.grade.score} / 100.` : ""}</p>
-          </fieldset> : <><label for={`score-${s.id}`}>Calificación de {s.alias} (0 a 100)</label><input id={`score-${s.id}`} type="number" name="score" min="0" max="100" step="1" required value={s.grade?.score} /></>}
-          <label for={`feedback-${s.id}`}>Comentario para {s.alias}</label><textarea id={`feedback-${s.id}`} name="feedback" rows="4" maxlength="4000">{s.grade?.feedback ?? ""}</textarea>
-        </AcademicForm>
+        {graders(s).map((g) => <div class="grading-block">
+          <h4>Calificación de {g.alias}{(s.members?.length ?? 0) > 0 && <> · <span class="tag">{gradeTag(g.grade)}</span></>}</h4>
+          <AcademicForm kind="grade" path={g.path} version={g.grade?.version ?? 0} canPublish={g.grade?.status === "draft"}>
+            {s.rubric ? <fieldset><legend>Evaluación por criterios de esta entrega</legend>
+              {s.rubric.criteria.map((c,i) => <div><label for={`criterion-${g.key}-${i}`}>{c.title}</label><select id={`criterion-${g.key}-${i}`} name="selection" required>
+                <option value="" disabled selected={g.grade?.assessment == null}>Selecciona un nivel</option>
+                {c.levels.map((l,n) => <option value={n} selected={g.grade?.assessment?.selections[i] === n}>{l.label} — {l.points} puntos</option>)}
+              </select></div>)}
+              <p class="helper">El servidor calcula la nota con los niveles elegidos. {g.grade ? `Última nota guardada: ${g.grade.score} / 100.` : ""}</p>
+            </fieldset> : <><label for={`score-${g.key}`}>Calificación de {g.alias} (0 a 100)</label><input id={`score-${g.key}`} type="number" name="score" min="0" max="100" step="1" required value={g.grade?.score} /></>}
+            <label for={`feedback-${g.key}`}>Comentario para {g.alias}</label><textarea id={`feedback-${g.key}`} name="feedback" rows="4" maxlength="4000">{g.grade?.feedback ?? ""}</textarea>
+          </AcademicForm>
+        </div>)}
         <details><summary>Autorizar otro intento para {s.alias}</summary>
           <p>El límite publicado debe permitirlo. El nuevo intento no cambia las fechas y conserva este trabajo y su devolución en el historial. Repetir la autorización de esta entrega no crea intentos adicionales.</p>
           <AcademicForm kind="reopen" path={`/teacher/submissions/${s.id}/reopen`} version={s.version}>

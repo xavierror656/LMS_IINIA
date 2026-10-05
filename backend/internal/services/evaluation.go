@@ -36,6 +36,6 @@ func (s AcademicService) SaveEvaluation(user, id int64, version, weight int, rub
 	return out, e
 }
 
-func (s AcademicService) GradeWithRubric(user, id int64, selections []int, feedback string, version int) (models.Grade, error) {
-	return s.grade(user, id, 0, feedback, version, false, &models.RubricAssessment{Selections: selections})
+func (s AcademicService) GradeWithRubric(user, id, student int64, selections []int, feedback string, version int) (models.Grade, error) {
+	return s.grade(user, id, student, 0, feedback, version, false, &models.RubricAssessment{Selections: selections})
 }

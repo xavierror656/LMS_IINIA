@@ -205,29 +205,85 @@ func TestGroupSubmissionIntegration(t *testing.T) {
 	if progress != 2 {
 		t.Fatalf("expected progress for both members, got %d", progress)
 	}
-	// GS5: grading the group delivery and reading the book gives it to both members.
-	call("PUT", fmt.Sprintf("/teacher/submissions/%d/grade", current.ID), map[string]any{"version": 0, "score": 75, "feedback": "Buen trabajo en equipo"}, "profe", 200)
-	call("POST", fmt.Sprintf("/teacher/submissions/%d/grade/publish", current.ID), map[string]any{"version": 1}, "profe", 200)
-	call("GET", fmt.Sprintf("/teacher/courses/%d/gradebook", course.ID), nil, "profe", 200)
+	// GS5/GI2: a group delivery is graded member by member; the individual route
+	// refuses it instead of grading the whole team at once.
+	call("PUT", fmt.Sprintf("/teacher/submissions/%d/grade", current.ID), map[string]any{"version": 0, "score": 75, "feedback": "Nota de equipo"}, "profe", 409)
+	members := fmt.Sprintf("/teacher/submissions/%d/grades", current.ID)
+	call("PUT", fmt.Sprintf("%s/%d", members, luna), map[string]any{"version": 0, "score": 75, "feedback": "Buen trabajo, Luna"}, "profe", 200)
+	call("POST", fmt.Sprintf("%s/%d/publish", members, luna), map[string]any{"version": 1}, "profe", 200)
+	// GI3: the other member still has no grade of their own and cannot see hers.
+	var own struct {
+		Submission *models.Submission `json:"submission"`
+	}
+	decode(call("GET", fmt.Sprintf("/lessons/%d/submission", lesson), nil, "sol", 200), &own)
+	if own.Submission == nil || own.Submission.Grade != nil || len(own.Submission.Members) != 0 {
+		t.Fatalf("a member saw another member's grade: %+v", own.Submission)
+	}
+	// GI4: the book gives the delivery to both, but only the graded member has a score.
 	type entry struct {
 		UserID       int64
 		SubmissionID int64
 		Score        *int
 	}
-	entries := []entry{}
-	if e = db.Raw(`SELECT user_id,submission_id,score FROM gradebook_entries WHERE lesson_id=? ORDER BY user_id`, lesson).Scan(&entries).Error; e != nil {
-		t.Fatal(e)
+	readBook := func() []entry {
+		t.Helper()
+		rows := []entry{}
+		if e := db.Raw(`SELECT user_id,submission_id,score FROM gradebook_entries WHERE lesson_id=? ORDER BY user_id`, lesson).Scan(&rows).Error; e != nil {
+			t.Fatal(e)
+		}
+		return rows
 	}
+	entries := readBook()
 	if len(entries) != 2 {
 		t.Fatalf("the book carries %d entries for the group", len(entries))
 	}
 	for _, row := range entries {
-		if row.UserID != luna && row.UserID != sol {
+		if row.SubmissionID != current.ID {
+			t.Fatalf("member without the group delivery: %+v", row)
+		}
+		switch row.UserID {
+		case luna:
+			if row.Score == nil || *row.Score != 75 {
+				t.Fatalf("graded member without her score: %+v", row)
+			}
+		case sol:
+			if row.Score != nil {
+				t.Fatalf("an ungraded member inherited a score: %+v", row)
+			}
+		default:
 			t.Fatalf("unexpected member in the book: %+v", row)
 		}
-		if row.SubmissionID != current.ID || row.Score == nil || *row.Score != 75 {
-			t.Fatalf("member without the group delivery or its grade: %+v", row)
+	}
+	// The teacher sees every member with their own state, and grades the other one.
+	var inbox struct {
+		Items []models.Submission `json:"items"`
+	}
+	decode(call("GET", fmt.Sprintf("/teacher/activities/%d/submissions?page=1&submissionId=%d", assignment.ID, current.ID), nil, "profe", 200), &inbox)
+	if len(inbox.Items) != 1 || len(inbox.Items[0].Members) != 2 {
+		t.Fatalf("the teacher does not see the members %+v", inbox.Items)
+	}
+	for _, member := range inbox.Items[0].Members {
+		if member.Grade == nil && member.StudentID == luna {
+			t.Fatalf("the graded member lost her grade in the inbox: %+v", member)
 		}
+	}
+	call("PUT", fmt.Sprintf("%s/%d", members, sol), map[string]any{"version": 0, "score": 60, "feedback": "Gracias, Sol"}, "profe", 200)
+	call("POST", fmt.Sprintf("%s/%d/publish", members, sol), map[string]any{"version": 1}, "profe", 200)
+	scores := map[int64]int{}
+	for _, row := range readBook() {
+		if row.Score == nil {
+			t.Fatalf("published member without score: %+v", row)
+		}
+		scores[row.UserID] = *row.Score
+	}
+	if scores[luna] != 75 || scores[sol] != 60 {
+		t.Fatalf("grades are not independent: %+v", scores)
+	}
+	// GI5: the audit trail records who was graded.
+	var revisions int64
+	db.Raw(`SELECT count(*) FROM grade_revisions WHERE submission_id=?`, current.ID).Scan(&revisions)
+	if revisions != 4 {
+		t.Fatalf("expected two revisions per member, got %d", revisions)
 	}
 	// GS3: reopening works per group and repeating it returns the same receipt. The
 	// published limit has to allow another attempt first.

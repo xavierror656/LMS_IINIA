@@ -64,6 +64,25 @@ test('GS7 docente activa la entrega grupal y el alumno la comparte con su grupo'
  expect(inbox.items[0].groupName).toBe(team);
  await page.goto(`/teacher/activities/${created.id}?submissionId=${sent.id}`);
  await expect(page.getByText(new RegExp(`Entrega del grupo ${team}`))).toBeVisible();
+ // GI2: el docente califica miembro a miembro; la vía individual rechaza el equipo.
+ await page.goto(`/teacher/activities/${created.id}?submissionId=${sent.id}`);
+ await expect(page.getByRole('heading',{name:/Calificación de Luna/})).toBeVisible();
+ await page.locator(`#score-${sent.id}-${lunaId}`).fill('70');
+ await page.locator(`#feedback-${sent.id}-${lunaId}`).fill('Buen trabajo en equipo, Luna.');
+ await page.getByRole('button',{name:'Guardar calificación'}).click();
+ // Guardar un borrador no recarga: el formulario lo confirma con su versión.
+ await expect(page.getByText(/Borrador guardado · versión 1/).first()).toBeVisible();
+ const refused=await page.request.put(`/api/v1/teacher/submissions/${sent.id}/grade`,{headers:{Origin:origin},data:{version:0,score:90,feedback:'toda la clase'}});
+ expect(refused.status()).toBe(409);
+ await page.getByRole('button',{name:'Publicar devolución'}).click();
+ await expect(page.getByText('Devolución publicada').first()).toBeVisible();
+ // GI3: la alumna ve su propia nota publicada.
+ await student.goto(`/lessons/${lessonId}`);
+ await expect(student.getByText('Calificación: 70 / 100')).toBeVisible();
+ await expect(student.getByText('Buen trabajo en equipo, Luna.')).toBeVisible();
+ // GI5: el historial de notas registra al miembro calificado.
+ const revisions=await(await page.request.get(`/api/v1/teacher/activities/${created.id}/submissions?page=1&submissionId=${sent.id}`)).json();
+ expect(revisions.items[0].members[0].grade.status).toBe('published');
  // Deja el curso como estaba: el grupo con entregas no se borra, se vacía.
  const groupsNow=await(await page.request.get(`/api/v1/teacher/courses/${course.id}/groups?page=1`)).json();
  const mine=groupsNow.items.find((g:{name:string})=>g.name===team);
