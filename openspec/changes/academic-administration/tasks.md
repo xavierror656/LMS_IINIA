@@ -15,7 +15,7 @@
 - [ ] T6 E2E, accesibilidad, recuperación, CSV e integración con flujos existentes; medir rendimiento. Depende T4/T5. LMS-022 / A8.
 - [ ] T7 Completar funciones avanzadas del inventario; ejecutar auditoría contra Moodle y calcular cobertura sin redondeo. Depende T0/T6. LMS-023 / A9.
 
-El usuario autorizó continuar con implementación. T1–T3 tienen código y pruebas Go/PostgreSQL del incremento 1; los incrementos 2–6 añaden libro, rúbricas/pesos, fechas/prórrogas, adjuntos privados y reentregas con evidencia interna. Los incrementos 7–9 añaden banco de preguntas, cuestionarios publicados y fechas/temporizador/revisión del cuestionario, con pruebas de integración y navegador ejecutadas contra PostgreSQL 18.6 real. Las tareas desglosadas distinguen lo implementado de las ampliaciones pendientes. La base existente se conserva. El usuario confirmó primero toda la plataforma y después excluyó foros, wikis, extensiones, respaldos y operación. Ya no existe bloqueo por la elección módulo/plataforma. Sigue pendiente cerrar el inventario y demostrar cobertura; no se declara el objetivo logrado.
+El usuario autorizó continuar con implementación. T1–T3 tienen código y pruebas Go/PostgreSQL del incremento 1; los incrementos 2–6 añaden libro, rúbricas/pesos, fechas/prórrogas, adjuntos privados y reentregas con evidencia interna. Los incrementos 7–9 añaden banco de preguntas, cuestionarios publicados y fechas/temporizador/revisión del cuestionario, con pruebas de integración y navegador ejecutadas contra PostgreSQL 18.6 real. El incremento 10 (TSEC1) reparte los límites por usuario y por dirección real con proxy confiable, verificado encadenando las suites intensivas sin 429. Las tareas desglosadas distinguen lo implementado de las ampliaciones pendientes. La base existente se conserva. El usuario confirmó primero toda la plataforma y después excluyó foros, wikis, extensiones, respaldos y operación. Ya no existe bloqueo por la elección módulo/plataforma. Sigue pendiente cerrar el inventario y demostrar cobertura; no se declara el objetivo logrado.
 
 - [x] P3 Desglosar 43 capacidades candidatas con criterios y fuentes en capabilities.csv; sin fijar pesos ni declarar cobertura.
 
@@ -42,7 +42,7 @@ El usuario autorizó continuar con implementación. T1–T3 tienen código y pru
 - [x] T4c Implementar rúbricas versionadas, corrección por niveles y pesos publicados (RB1..RB5 / LMS-018/019/021).
 - [x] T4d Validar migración, cálculo, aislamiento, snapshots, promedio ponderado e interfaz E2E (LMS-022).
 
-- [ ] TSEC1 Revisar límites por usuario y proxy para concurrencia real de aula; el límite global por IP produjo 429 al encadenar suites. No debilitar protección para pasar pruebas.
+- [x] TSEC1 Límites por usuario y por dirección real, con proxy confiable, verificados con PostgreSQL real y suites de navegador encadenadas sin 429 (RL1–RL7). Queda pendiente el almacén compartido entre réplicas y la ejecución de Nginx/Docker.
 
 - [x] T4e Adjuntos privados de borradores/envíos, normalización, cuotas y descarga autorizada (FL1–FL5 / LMS-016/019/021).
 - [x] T4f Validar archivos, límites HTTP/proxy, concurrencia, permisos y recorrido E2E (LMS-022).

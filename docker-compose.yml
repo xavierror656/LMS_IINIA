@@ -22,6 +22,11 @@ services:
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:4321}
       APP_ENV: ${APP_ENV:-development}
       LISTEN_ADDR: 0.0.0.0:8080
+      # Only this internal network may set X-Forwarded-For. Production must set
+      # the exact ingress range; leaving it empty ignores the header entirely.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.16.0.0/12}
+      RATE_LIMIT_USER: ${RATE_LIMIT_USER:-600}
+      RATE_LIMIT_IP: ${RATE_LIMIT_IP:-180}
       SEED_STUDENT_PASSWORD: ${SEED_STUDENT_PASSWORD:?Set synthetic student password}
       SEED_TEACHER_PASSWORD: ${SEED_TEACHER_PASSWORD:?Set synthetic teacher password}
     depends_on:

@@ -3,6 +3,9 @@ test('QT7-QT13 fechas, temporizador, excepción de tiempo y revisión tras cierr
  test.skip(process.env.E2E_ACADEMIC!=='1','Requiere Go/PostgreSQL sintético');test.setTimeout(150_000);const origin=process.env.E2E_BASE_URL??'http://localhost:4321';
  async function login(p:Page,user:string){await p.goto('/login');await p.getByLabel('Tu usuario').fill(user);await p.getByLabel('Tu contraseña').fill(user==='profe'?process.env.E2E_TEACHER_PASSWORD!:process.env.E2E_STUDENT_PASSWORD!);await p.getByRole('button',{name:'Entrar a mi aventura'}).click();await expect(p).toHaveURL(user==='profe'?/\/teacher$/:/\/courses$/);}
  const date=(offset:number)=>new Date(Date.now()+offset*60_000).toISOString().slice(0,19);
+ // Publicar recarga la página, y el formulario bloquea los enlaces mientras guarda:
+ // se espera la versión publicada, que solo existe después de la recarga.
+ const publishAndWait=async()=>{const text=await page.getByText(/Versión guardada: \d+\./).textContent();const version=text?.match(/Versión guardada: (\d+)/)?.[1];await page.getByRole('button',{name:'Publicar actividad'}).click();await expect(page.getByText(`Última versión publicada: ${version}.`,{exact:false})).toBeVisible({timeout:20_000});};
  await login(page,'profe');const course=(await(await page.request.get('/api/v1/teacher/courses')).json()).items[0];const stamp=Date.now();
  const module=(await(await page.request.get(`/api/v1/teacher/courses/${course.id}/activities`)).json()).modules[0];
  const qr=await page.request.post(`/api/v1/teacher/courses/${course.id}/questions`,{headers:{Origin:origin},data:{name:`Ave ${stamp}`,type:'single_choice',prompt:'Elige el animal que vuela.',options:['Pájaro','Pez'],correctChoices:[0],acceptedAnswers:[],caseSensitive:false,explanation:'Solución privada del cuestionario.'}});
@@ -13,12 +16,12 @@ test('QT7-QT13 fechas, temporizador, excepción de tiempo y revisión tras cierr
  await page.goto(ap);await page.getByRole('link',{name:'Configurar cuestionario',exact:true}).click();
  await page.getByLabel('Máximo de intentos',{exact:true}).fill('2');await page.getByLabel(/Tiempo máximo para resolver/).fill('1');await page.getByLabel('Cuándo mostrar las soluciones').selectOption('after_close');
  await page.getByLabel(`${q1.content.name} · versión 1`,{exact:true}).check();await page.getByRole('button',{name:'Guardar configuración del cuestionario'}).click();
- await expect(page.locator('quiz-composer')).toHaveAttribute('data-version','2');await page.getByRole('link',{name:'Volver a la actividad'}).click();await page.getByRole('button',{name:'Publicar actividad'}).click();
+ await expect(page.locator('quiz-composer')).toHaveAttribute('data-version','2');await page.getByRole('link',{name:'Volver a la actividad'}).click();await publishAndWait();
  // QT7: el calendario del cuestionario se guarda en UTC con vocabulario propio.
  await page.getByRole('link',{name:'Configurar fechas',exact:true}).click();await expect(page.getByRole('heading',{name:'Fechas del cuestionario',exact:true})).toBeVisible();
  await page.getByLabel('Apertura (UTC)',{exact:true}).fill(date(-60));await page.getByLabel('Vencimiento (UTC)',{exact:true}).fill(date(30));await page.getByLabel('Cierre (UTC)',{exact:true}).fill(date(60));
  await page.getByRole('button',{name:'Guardar borrador'}).click();await expect(page.locator('academic-form[data-kind="schedule"]')).toHaveAttribute('data-version','3');
- await page.getByRole('link',{name:'Volver a la actividad'}).click();await page.getByRole('button',{name:'Publicar actividad'}).click();
+ await page.getByRole('link',{name:'Volver a la actividad'}).click();await publishAndWait();
  await expect(page.getByRole('link',{name:'Gestionar tiempos',exact:true})).toBeVisible();
  let activity=await(await page.request.get(`/api/v1${ap}`)).json();
  const context=await browser.newContext({viewport:{width:768,height:1024},reducedMotion:'reduce'});const student=await context.newPage();
@@ -60,7 +63,8 @@ test('QT7-QT13 fechas, temporizador, excepción de tiempo y revisión tras cierr
   // QT8: adelantar la apertura y el cierre bloquea el comienzo sin quitar el acceso de lectura.
   await page.getByRole('link',{name:'Volver a la actividad'}).click();await page.getByRole('link',{name:'Configurar fechas',exact:true}).click();
   await page.getByLabel('Apertura (UTC)',{exact:true}).fill(date(30));await page.getByLabel('Vencimiento (UTC)',{exact:true}).fill(date(60));await page.getByLabel('Cierre (UTC)',{exact:true}).fill(date(90));
-  await page.getByRole('button',{name:'Guardar borrador'}).click();await page.getByRole('link',{name:'Volver a la actividad'}).click();await page.getByRole('button',{name:'Publicar actividad'}).click();
+  await page.getByRole('button',{name:'Guardar borrador'}).click();await expect(page.locator('academic-form[data-kind="schedule"]')).toHaveAttribute('data-version','4');
+  await page.getByRole('link',{name:'Volver a la actividad'}).click();await publishAndWait();
   await student.reload();await expect(student.getByText(/todavía no abre/)).toBeVisible();await expect(student.getByRole('button',{name:/Comenzar intento/})).toHaveCount(0);
   // QT11: revocar la excepción deja de ampliar el cierre del cuestionario.
   await page.getByRole('link',{name:'Gestionar tiempos',exact:true}).click();
@@ -70,7 +74,8 @@ test('QT7-QT13 fechas, temporizador, excepción de tiempo y revisión tras cierr
   // QT8: con el cierre en el pasado el cuestionario queda cerrado sin quitar la lectura.
   await page.getByRole('link',{name:'Volver a la actividad'}).click();await page.getByRole('link',{name:'Configurar fechas',exact:true}).click();
   await page.getByLabel('Apertura (UTC)',{exact:true}).fill(date(-120));await page.getByLabel('Vencimiento (UTC)',{exact:true}).fill(date(-10));await page.getByLabel('Cierre (UTC)',{exact:true}).fill(date(-5));
-  await page.getByRole('button',{name:'Guardar borrador'}).click();await page.getByRole('link',{name:'Volver a la actividad'}).click();await page.getByRole('button',{name:'Publicar actividad'}).click();
+  await page.getByRole('button',{name:'Guardar borrador'}).click();await expect(page.locator('academic-form[data-kind="schedule"]')).toHaveAttribute('data-version','5');
+  await page.getByRole('link',{name:'Volver a la actividad'}).click();await publishAndWait();
   await student.reload();await expect(student.getByText(/ya cerró/)).toBeVisible();await expect(student.getByRole('button',{name:/Comenzar intento/})).toHaveCount(0);
   // La revisión tras el cierre no se revela retroactivamente porque el intento congeló su propio cierre.
   await expect(student.getByRole('heading',{name:/Revisión de la pregunta/})).toHaveCount(0);

@@ -2,13 +2,13 @@ package handlers
 
 import (
 	"aulaquest/internal/config"
+	"aulaquest/internal/middleware"
 	"aulaquest/internal/repositories"
 	"aulaquest/internal/runner"
 	"aulaquest/internal/services"
 	"aulaquest/internal/ws"
 	"errors"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"gorm.io/gorm"
@@ -21,7 +21,16 @@ import (
 var attachmentUploadPath = regexp.MustCompile(`^/api/v1/lessons/[1-9][0-9]*/submission/attachments$`)
 
 func New(db *gorm.DB, cfg config.Config) (*fiber.App, *ws.Hub) {
-	app := fiber.New(fiber.Config{DisableStartupMessage: true, BodyLimit: services.MaxAttachmentBytes + 64*1024, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, ErrorHandler: func(c *fiber.Ctx, e error) error {
+	// Client addresses come from X-Forwarded-For only when the direct peer is a
+	// configured trusted proxy. Leaving ProxyHeader unset otherwise is essential:
+	// Fiber reads "no trusted proxy check" as "trust everything", so a permanent
+	// ProxyHeader would let any client rotate the header to escape its limit.
+	trustedProxies := len(cfg.TrustedProxies) > 0
+	proxyHeader := ""
+	if trustedProxies {
+		proxyHeader = fiber.HeaderXForwardedFor
+	}
+	app := fiber.New(fiber.Config{DisableStartupMessage: true, BodyLimit: services.MaxAttachmentBytes + 64*1024, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, ProxyHeader: proxyHeader, EnableTrustedProxyCheck: trustedProxies, TrustedProxies: cfg.TrustedProxies, ErrorHandler: func(c *fiber.Ctx, e error) error {
 		status := 500
 		message := "No se pudo completar la solicitud"
 		var f *fiber.Error
@@ -57,10 +66,14 @@ func New(db *gorm.DB, cfg config.Config) (*fiber.App, *ws.Hub) {
 		}
 		return c.Next()
 	})
-	app.Use(limiter.New(limiter.Config{Max: 180, Expiration: time.Minute}))
+	// Rate limits live on the route groups: the public group is keyed by client
+	// address and the private group by session user, so a classroom behind one
+	// address no longer shares a single budget. Liveness probes stay unlimited on
+	// purpose: an orchestrator poll must not consume anyone's quota.
+	_, rateLimitIP := cfg.Budgets()
 	repo := repositories.Repository{DB: db}
 	hub := ws.New(repo, runner.MockRunner{})
 	(API{Repo: repo, Config: cfg, Revoke: hub.Revoke}).Register(app)
-	hub.Register(app, cfg.Origin)
+	hub.Register(app, cfg.Origin, middleware.PerIP(rateLimitIP))
 	return app, hub
 }

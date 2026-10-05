@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"io"
@@ -72,9 +71,12 @@ func (a API) Register(app *fiber.App) {
 		}
 		return c.JSON(fiber.Map{"status": "ready"})
 	})
-	api := app.Group("/api/v1", middleware.Origin(a.Config.Origin))
-	api.Post("/auth/login", limiter.New(limiter.Config{Max: 10, Expiration: time.Minute}), a.login)
-	private := api.Group("", middleware.Session(a.Repo.DB))
+	// Unauthenticated traffic is keyed by client address; authenticated traffic is
+	// keyed by session user so one classroom address is not a shared budget.
+	rateLimitUser, rateLimitIP := a.Config.Budgets()
+	api := app.Group("/api/v1", middleware.Origin(a.Config.Origin), middleware.PerIP(rateLimitIP))
+	api.Post("/auth/login", middleware.PerIP(10), a.login)
+	private := api.Group("", middleware.Session(a.Repo.DB), middleware.PerUser(rateLimitUser))
 	private.Get("/auth/session", func(c *fiber.Ctx) error { return c.JSON(middleware.User(c)) })
 	private.Post("/auth/logout", a.logout)
 	student := private
@@ -98,10 +100,10 @@ func (a API) Register(app *fiber.App) {
 	student.Post("/lessons/:lessonId/quiz/attempts/:attemptId/submit", middleware.Student, a.submitQuiz)
 	student.Put("/lessons/:lessonId/submission", middleware.Student, a.saveSubmission)
 	student.Post("/lessons/:lessonId/submission/submit", middleware.Student, a.submit)
-	student.Post("/lessons/:lessonId/submission/attachments", middleware.Student, limiter.New(limiter.Config{Max: 20, Expiration: time.Minute, KeyGenerator: func(c *fiber.Ctx) string { return strconv.FormatInt(middleware.User(c).ID, 10) }}), a.uploadAttachment)
+	student.Post("/lessons/:lessonId/submission/attachments", middleware.Student, middleware.PerUser(20), a.uploadAttachment)
 	student.Delete("/lessons/:lessonId/submission/attachments/:attachmentId", middleware.Student, a.deleteAttachment)
 	private.Get("/attachments/:attachmentId", a.downloadAttachment)
-	student.Post("/lessons/:lessonId/attempts", middleware.Student, limiter.New(limiter.Config{Max: 30, Expiration: time.Minute}), a.attempt)
+	student.Post("/lessons/:lessonId/attempts", middleware.Student, middleware.PerUser(30), a.attempt)
 	teacher := private.Group("/teacher", middleware.Teacher)
 	teacher.Get("/courses", a.staffCourses)
 	teacher.Get("/courses/:courseId/activities", a.staffActivities)

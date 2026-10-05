@@ -59,8 +59,12 @@ func (h *Hub) Close() {
 		c.conn.Close()
 	}
 }
-func (h *Hub) Register(app *fiber.App, origin string) {
-	app.Get("/ws/code", middleware.Session(h.Repo.DB), middleware.Student, func(c *fiber.Ctx) error {
+
+// Register mounts the code socket. The caller passes the rate limiter that keeps
+// the upgrade attempt bounded per client address, since the socket sits outside
+// the authenticated API group.
+func (h *Hub) Register(app *fiber.App, origin string, limit fiber.Handler) {
+	app.Get("/ws/code", limit, middleware.Session(h.Repo.DB), middleware.Student, func(c *fiber.Ctx) error {
 		if c.Get("Origin") != origin {
 			return fiber.ErrForbidden
 		}
