@@ -1,0 +1,120 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import ServiceError from "../../../../components/astro/ServiceError.astro";
+import { api } from "../../../../lib/api";
+import type { components } from "../../../../lib/generated/api";
+let error = Astro.locals.apiError;
+let data: components["schemas"]["GroupList"] | undefined;
+const id = encodeURIComponent(Astro.params.courseId ?? "");
+const page = Astro.url.searchParams.get("page") ?? "1";
+if (!error) try {
+  data = await api<components["schemas"]["GroupList"]>(`/teacher/courses/${id}/groups?page=${encodeURIComponent(page)}`, {}, Astro.request.headers.get("cookie") ?? "");
+} catch (e) { error = e instanceof Error ? e.message : "No se pudieron cargar los grupos."; }
+const groupName = (groupId: number) => data?.items.find((g) => g.id === groupId)?.name;
+---
+<Layout title="Grupos del curso">
+  <a class="crumb" href={`/teacher/courses/${id}`}>← Volver al curso</a>
+  <h1>Grupos del curso</h1>
+  {error ? <ServiceError message={error} /> : data && <group-admin data-course={id}>
+    <section class="panel">
+      <h2>Crear un grupo</h2>
+      <form data-create>
+        <label for="new-group">Nombre del grupo</label>
+        <input id="new-group" name="name" required maxlength="100" />
+        <button type="submit">Crear grupo</button>
+      </form>
+      <p class="helper" data-status role="status" aria-live="polite">Un estudiante pertenece como máximo a un grupo de este curso.</p>
+    </section>
+    <section class="admin-section" aria-labelledby="groups-title">
+      <h2 id="groups-title">Grupos</h2>
+      {data.items.length === 0 && <p class="panel">Todavía no hay grupos en este curso.</p>}
+      <div class="path">{data.items.map((group) => <article class="panel">
+        <h3>{group.name}</h3>
+        <p>{group.members} {group.members === 1 ? "estudiante" : "estudiantes"}</p>
+        <form data-rename data-id={group.id} data-version={group.version}>
+          <label for={`rename-${group.id}`}>Nuevo nombre del grupo</label>
+          <input id={`rename-${group.id}`} name="name" required maxlength="100" value={group.name} />
+          <div class="toolbar">
+            <button type="submit">Guardar nombre</button>
+            <button type="button" class="quiet" data-delete data-id={group.id} data-name={group.name}>Eliminar grupo</button>
+          </div>
+        </form>
+      </article>)}</div>
+    </section>
+    <section class="admin-section" aria-labelledby="roster-title">
+      <h2 id="roster-title">Estudiantes vinculados e inscritos</h2>
+      {data.roster.length === 0 && <p class="panel">No hay estudiantes vinculados e inscritos en esta página.</p>}
+      <div class="path">{data.roster.map((student) => <form class="panel" data-member data-student={student.studentId} data-group={student.groupId}>
+        <h3>{student.alias}</h3>
+        {student.groupId === 0
+          ? <><label for={`pick-${student.studentId}`}>Grupo para {student.alias}</label>
+            <select id={`pick-${student.studentId}`} name="groupId" required>
+              <option value="" disabled selected>Elige un grupo</option>
+              {data.items.map((group) => <option value={group.id}>{group.name}</option>)}
+            </select>
+            <button type="submit" disabled={data.items.length === 0}>Añadir al grupo</button></>
+          : <><p>Pertenece a {groupName(student.groupId) ?? "un grupo del curso"}.</p>
+            <button type="submit" class="quiet" data-remove>Quitar del grupo</button></>}
+      </form>)}</div>
+    </section>
+    <nav class="toolbar" aria-label="Páginas de grupos">
+      {data.page > 1 && <a class="button quiet" href={`?page=${data.page - 1}`}>← Anterior</a>}
+      {data.items.length === 20 && <a class="button quiet" href={`?page=${data.page + 1}`}>Siguiente →</a>}
+    </nav>
+  </group-admin>}
+</Layout>
+<script>
+  import { api } from "../../../../lib/api";
+  class GroupAdminElement extends HTMLElement {
+    private controller?: AbortController;
+    private busy = false;
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const signal = this.controller.signal;
+      const course = this.dataset.course!;
+      const status = this.querySelector<HTMLElement>("[data-status]")!;
+      const run = async (label: string, action: () => Promise<unknown>) => {
+        if (this.busy) return;
+        this.busy = true;
+        status.textContent = label;
+        try { await action(); window.location.reload(); }
+        catch (error) { status.textContent = (error instanceof Error ? error.message : "No se pudo completar.") + " Revisa los datos y vuelve a intentarlo."; this.busy = false; }
+      };
+      this.addEventListener("submit", (event) => {
+        const form = (event.target as Element | null)?.closest?.("form");
+        if (!form) return;
+        event.preventDefault();
+        const data = new FormData(form);
+        const name = String(data.get("name") ?? "").trim();
+        if (form.hasAttribute("data-create")) {
+          if (!name) { status.textContent = "Escribe un nombre para el grupo."; return; }
+          void run("Creando el grupo…", () => api(`/teacher/courses/${course}/groups`, { method: "POST", body: JSON.stringify({ name }) }));
+          return;
+        }
+        if (form.hasAttribute("data-rename")) {
+          if (!name) { status.textContent = "Escribe un nombre para el grupo."; return; }
+          void run("Guardando el nombre…", () => api(`/teacher/courses/${course}/groups/${form.dataset.id}`, { method: "PUT", body: JSON.stringify({ name, version: Number(form.dataset.version) }) }));
+          return;
+        }
+        if (!form.hasAttribute("data-member")) return;
+        const student = Number(form.dataset.student);
+        if ((event as SubmitEvent).submitter?.hasAttribute("data-remove")) {
+          void run("Quitando del grupo…", () => api(`/teacher/courses/${course}/groups/${form.dataset.group}/members/${student}`, { method: "DELETE" }));
+          return;
+        }
+        const group = Number(data.get("groupId") ?? 0);
+        if (!group) { status.textContent = "Elige un grupo para ese estudiante."; return; }
+        void run("Añadiendo al grupo…", () => api(`/teacher/courses/${course}/groups/${group}/members/${student}`, { method: "PUT" }));
+      }, { signal });
+      this.addEventListener("click", (event) => {
+        const button = (event.target as Element | null)?.closest?.("[data-delete]") as HTMLElement | null;
+        if (!button || this.busy) return;
+        if (!window.confirm(`¿Eliminar el grupo «${button.dataset.name}»? Sus estudiantes quedarán sin grupo.`)) return;
+        void run("Eliminando el grupo…", () => api(`/teacher/courses/${course}/groups/${button.dataset.id}`, { method: "DELETE" }));
+      }, { signal });
+    }
+    disconnectedCallback() { this.controller?.abort(); this.controller = undefined; }
+  }
+  if (!customElements.get("group-admin")) customElements.define("group-admin", GroupAdminElement);
+</script>

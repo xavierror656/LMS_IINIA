@@ -15,7 +15,7 @@
 - [ ] T6 E2E, accesibilidad, recuperación, CSV e integración con flujos existentes; medir rendimiento. Depende T4/T5. LMS-022 / A8.
 - [ ] T7 Completar funciones avanzadas del inventario; ejecutar auditoría contra Moodle y calcular cobertura sin redondeo. Depende T0/T6. LMS-023 / A9.
 
-El usuario autorizó continuar con implementación. T1–T3 tienen código y pruebas Go/PostgreSQL del incremento 1; los incrementos 2–6 añaden libro, rúbricas/pesos, fechas/prórrogas, adjuntos privados y reentregas con evidencia interna. Los incrementos 7–9 añaden banco de preguntas, cuestionarios publicados y fechas/temporizador/revisión del cuestionario, con pruebas de integración y navegador ejecutadas contra PostgreSQL 18.6 real. El incremento 10 (TSEC1) reparte los límites por usuario y por dirección real con proxy confiable, verificado encadenando las suites intensivas sin 429. Las tareas desglosadas distinguen lo implementado de las ampliaciones pendientes. La base existente se conserva. El usuario confirmó primero toda la plataforma y después excluyó foros, wikis, extensiones, respaldos y operación. Ya no existe bloqueo por la elección módulo/plataforma. Sigue pendiente cerrar el inventario y demostrar cobertura; no se declara el objetivo logrado.
+El usuario autorizó continuar con implementación. T1–T3 tienen código y pruebas Go/PostgreSQL del incremento 1; los incrementos 2–6 añaden libro, rúbricas/pesos, fechas/prórrogas, adjuntos privados y reentregas con evidencia interna. Los incrementos 7–9 añaden banco de preguntas, cuestionarios publicados y fechas/temporizador/revisión del cuestionario, con pruebas de integración y navegador ejecutadas contra PostgreSQL 18.6 real. El incremento 10 (TSEC1) reparte los límites por usuario y por dirección real con proxy confiable, verificado encadenando las suites intensivas sin 429. El incremento 11 añade grupos de curso (T2c-1) y descubre que el manejador de errores descartaba los mensajes específicos, ya corregido. Las tareas desglosadas distinguen lo implementado de las ampliaciones pendientes. La base existente se conserva. El usuario confirmó primero toda la plataforma y después excluyó foros, wikis, extensiones, respaldos y operación. Ya no existe bloqueo por la elección módulo/plataforma. Sigue pendiente cerrar el inventario y demostrar cobertura; no se declara el objetivo logrado.
 
 - [x] P3 Desglosar 43 capacidades candidatas con criterios y fuentes en capabilities.csv; sin fijar pesos ni declarar cobertura.
 
@@ -31,7 +31,9 @@ El usuario autorizó continuar con implementación. T1–T3 tienen código y pru
 
 - [x] T2a Añadir apertura, vencimiento, cierre y prórrogas (MDL-003..005); DT1–DT5 verificados internamente, comparación Moodle pendiente.
 - [x] T2b Añadir reapertura y límite configurable de intentos (MDL-009..010); AT1–AT6 verificados internamente, historial y libro coherentes. Comparación Moodle pendiente.
-- [ ] T2c Añadir entregas grupales y notas individuales de grupo (MDL-011..012).
+- [x] T2c-1 Grupos de curso y pertenencia, con un estudiante por grupo y curso (CG1–CG7 / MDL-011). Verificado con PostgreSQL real y navegador; no cambia entregas ni notas.
+- [ ] T2c-2 Entrega grupal compartida y libro por miembro (GS1–GS6 / MDL-011). Especificado en increment-12.md.
+- [ ] T2c-3 Notas individuales por miembro (GI1–GI6 / MDL-012). Especificado en increment-13.md.
 - [ ] T3a Añadir anotación, anonimato y corrección por varios evaluadores (MDL-017..022).
 
 - [ ] TH5P Autoría y biblioteca H5P con contenido real, aislamiento y atribución (MDL-042..043); fuera del incremento 1.

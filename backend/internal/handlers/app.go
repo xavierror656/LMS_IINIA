@@ -20,6 +20,21 @@ import (
 
 var attachmentUploadPath = regexp.MustCompile(`^/api/v1/lessons/[1-9][0-9]*/submission/attachments$`)
 
+// friendlyError keeps the child-facing wording for framework errors. A handler
+// that raises its own message keeps that message instead, so the specific texts
+// for a closed task, a closed quiz or a duplicate group name actually reach the
+// client.
+var friendlyError = map[int]string{
+	400: "Revisa los datos enviados",
+	401: "Revisa tu acceso o vuelve a iniciar sesión",
+	403: "No tienes acceso a esta acción",
+	404: "Esta aventura no está disponible",
+	409: "Hay cambios más recientes o esta actividad ya no admite esa acción. Revisa la versión guardada antes de continuar",
+	413: "El archivo o la solicitud supera el tamaño permitido",
+	429: "Hagamos una pausa. Inténtalo en un minuto",
+	503: "No podemos conectar. Vuelve a intentarlo",
+}
+
 func New(db *gorm.DB, cfg config.Config) (*fiber.App, *ws.Hub) {
 	// Client addresses come from X-Forwarded-For only when the direct peer is a
 	// configured trusted proxy. Leaving ProxyHeader unset otherwise is essential:
@@ -36,9 +51,10 @@ func New(db *gorm.DB, cfg config.Config) (*fiber.App, *ws.Hub) {
 		var f *fiber.Error
 		if errors.As(e, &f) {
 			status = f.Code
-			message = map[int]string{400: "Revisa los datos enviados", 413: "El archivo o la solicitud supera el tamaño permitido", 401: "Revisa tu acceso o vuelve a iniciar sesión", 403: "No tienes acceso a esta acción", 404: "Esta aventura no está disponible", 409: "Hay cambios más recientes o esta actividad ya no admite esa acción. Revisa la versión guardada antes de continuar", 429: "Hagamos una pausa. Inténtalo en un minuto", 503: "No podemos conectar. Vuelve a intentarlo"}[status]
-			if message == "" {
-				message = "No se pudo completar la solicitud"
+			if f.Message != "" && f.Message != http.StatusText(f.Code) {
+				message = f.Message
+			} else if friendly := friendlyError[status]; friendly != "" {
+				message = friendly
 			}
 		}
 		return c.Status(status).JSON(fiber.Map{"error": fiber.Map{"code": http.StatusText(status), "message": message, "requestId": c.GetRespHeader("X-Request-ID")}})
