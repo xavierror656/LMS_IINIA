@@ -282,4 +282,6 @@ En una entrega de equipo, cada miembro recibe **su propia nota y su propia devol
 
 En una tanda larga de pruebas de navegador, el límite de inicio de sesión (10 por minuto y por dirección) puede agotarse y las últimas suites fallan al entrar. No es un defecto: ejecuta `npm run test:e2e` por tandas o espera un minuto entre ellas. **No relajes los límites para pasar las pruebas.**
 
+Si acabas de cambiar archivos `.astro` (o de ejecutar `astro check` o `astro build`) mientras el servidor de desarrollo estaba levantado, Vite reoptimiza dependencias y la primera página puede quedar **sin hidratar**: el formulario de acceso no responde y las suites fallan al iniciar sesión. Reinicia el servidor de desarrollo, espera a que responda `/login` y navega una vez antes de lanzar las pruebas.
+
 Las notas individuales por miembro están implementadas (incremento 13): cada miembro del equipo tiene su propia nota y su propia publicación selectiva. Queda pendiente el resto del catálogo: T4g (más formatos y adjuntos docentes), T6 (CSV del libro y medición), PL1 (administración real con capacidades por contexto) y T3a (anotación, anonimato y varios evaluadores).
